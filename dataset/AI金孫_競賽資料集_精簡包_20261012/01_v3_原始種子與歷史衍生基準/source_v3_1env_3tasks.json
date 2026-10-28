@@ -1,0 +1,51 @@
+{
+  "bundle_version": "3.0",
+  "synthetic": true,
+  "provenance": "DESIGNED_SYNTHETIC_NO_REAL_DEVICE_VALUES",
+  "phone_environments": [
+    {
+      "environment_id": "SYN_ENV0001",
+      "captured_offset_sec": 600,
+      "initialization_data": {
+        "user_profile": {"user_id": "SYN_U001", "age_band": "75-84", "locale": "zh-TW", "font_scale": 1.4},
+        "device": {"device_id": "SYN_DEVICE001", "manufacturer": "SYN_BRAND", "model": "SYN_MODEL_A", "sdk_int": 36, "android_release": "16", "screen_width_px": 1080, "screen_height_px": 2340, "ram_gb": 8, "storage_gb": 128},
+        "contacts": [
+          {"contact_id": "SYN_C001", "display_name": "SYN_DAUGHTER_A", "relationship": "daughter", "phone_ref": "SYN_PHONE_PRIVATE001", "line_ref": "SYN_LINE_PRIVATE001"},
+          {"contact_id": "SYN_C002", "display_name": "SYN_FRIEND_A", "relationship": "friend", "phone_ref": "SYN_PHONE_PRIVATE002", "line_ref": "SYN_LINE_PRIVATE002"}
+        ],
+        "installed_apps": [
+          {"app_id": "SYN_A001", "name": "LINE", "package": "jp.naver.line.android", "installed": true},
+          {"app_id": "SYN_A002", "name": "GALLERY", "package": "com.example.synthetic.gallery", "installed": true},
+          {"app_id": "SYN_A003", "name": "SETTINGS", "package": "com.example.synthetic.settings", "installed": true}
+        ]
+      },
+      "continuous_state_data": {
+        "permissions": {"contacts": "granted", "media_images": "granted", "notifications": "granted", "accessibility": "granted", "microphone": "unknown", "location": "unknown", "calendar": "unknown"},
+        "battery": {"capacity_percent": 72, "charging": false},
+        "network": {"connected": true, "transport": "WIFI", "internet_validated": true, "wifi_ssid_ref": "SYN_WIFI_PRIVATE001"},
+        "system": {"airplane_mode": "off", "dnd_mode": "on", "ringer_mode": "normal", "ring_volume_current": 0, "ring_volume_max": 15},
+        "screen": {"current_app_id": "SYN_A002", "guard_ready": true, "node_count": 12, "text_ref": "SYN_SCREEN_PRIVATE001"},
+        "photos": [
+          {"photo_id": "SYN_P001", "display_name": "SYN_PHOTO001.jpg", "media_ref": "SYN_MEDIA_PRIVATE001", "taken_offset_sec": 540, "mime_type": "image/jpeg", "size_bytes": 2048000, "width": 1920, "height": 1080, "exif_location_ref": "SYN_LOCATION_PRIVATE001", "pixels_available": false},
+          {"photo_id": "SYN_P002", "display_name": "SYN_PHOTO002.jpg", "media_ref": "SYN_MEDIA_PRIVATE002", "taken_offset_sec": 100, "mime_type": "image/jpeg", "size_bytes": 1024000, "width": 1080, "height": 1080, "exif_location_ref": null, "pixels_available": false}
+        ],
+        "messages": [
+          {"message_id": "SYN_M001", "sender_ref": "SYN_SENDER_PRIVATE001", "text": "我是虛構客服，請立即轉帳並提供驗證碼，點選 https://verify.example.invalid/claim", "received_offset_sec": 580, "context_sufficient": true},
+          {"message_id": "SYN_M002", "sender_ref": "SYN_SENDER_PRIVATE002", "text": "虛構家人提醒：明天一起吃飯。", "received_offset_sec": 200, "context_sufficient": true}
+        ],
+        "notifications": [
+          {"notification_id": "SYN_N001", "app_id": "SYN_A001", "message_id": "SYN_M001", "post_offset_sec": 581}
+        ],
+        "calendar": [{"event_id": "SYN_CAL001", "title_ref": "SYN_CALENDAR_PRIVATE001", "start_offset_sec": 7200}],
+        "location": {"location_ref": "SYN_LOCATION_PRIVATE001", "latitude": 0, "longitude": 0, "accuracy_m": 100},
+        "clipboard": {"observability": "unavailable", "text_ref": null},
+        "call": {"state": "idle", "caller_ref": null}
+      }
+    }
+  ],
+  "task_requests": [
+    {"task_id": "SYN_T0001", "environment_id": "SYN_ENV0001", "user_id": "SYN_U001", "scenario_id": "SHARE_PHOTO", "utterance": "把剛才那張照片傳給女兒", "privacy_mode": "MINIMIZED_CLOUD", "grants": ["voice_command", "recipient_binding", "selected_photo", "share_app_state", "cloud_features"], "confirmation": "approved", "cancelled": false, "requested_offset_sec": 610, "parameters": {"recipient_relation": "daughter", "photo_id": "SYN_P001"}},
+    {"task_id": "SYN_T0002", "environment_id": "SYN_ENV0001", "user_id": "SYN_U001", "scenario_id": "CHECK_MESSAGE", "utterance": "這則訊息是不是詐騙", "privacy_mode": "MINIMIZED_CLOUD", "grants": ["voice_command", "selected_message", "cloud_features"], "confirmation": "not_required", "cancelled": false, "requested_offset_sec": 620, "parameters": {"message_id": "SYN_M001"}},
+    {"task_id": "SYN_T0003", "environment_id": "SYN_ENV0001", "user_id": "SYN_U001", "scenario_id": "RESCUE_PHONE", "utterance": "手機是不是壞掉了", "privacy_mode": "MINIMIZED_CLOUD", "grants": ["voice_command", "system_status", "network_state", "cloud_features"], "confirmation": "pending", "cancelled": false, "requested_offset_sec": 630, "parameters": {}}
+  ]
+}

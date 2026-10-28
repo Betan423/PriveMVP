@@ -1,0 +1,46 @@
+# Android / Gradle
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.tools/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Python
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime data and local secrets
+receiver/data/*
+!receiver/data/.gitignore
+!receiver/data/.gitkeep
+*.enc
+.env
+.env.*
+!.env.example
+
+# Generated archives and document working files
+*.zip
+~$*.docx
+~$*.xlsx
+~$*.pptx
+deliverables/_qa*/
+deliverables/_doc_work/
+
+# Duplicate directory accidentally nested inside the expanded competition package
+dataset/AI金孫_競賽資料集_精簡包_20261012/AI金孫_競賽資料集_精簡包_20261012/

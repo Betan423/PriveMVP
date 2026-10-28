@@ -1,0 +1,4 @@
+task_id,environment_id,user_id,scenario_id,utterance,privacy_mode,grants,confirmation,cancelled,requested_offset_sec,parameters.recipient_relation,parameters.photo_id,parameters.message_id
+SYN_T0001,SYN_ENV0001,SYN_U001,SHARE_PHOTO,把剛才那張照片傳給女兒,MINIMIZED_CLOUD,"[""voice_command"",""recipient_binding"",""selected_photo"",""share_app_state"",""cloud_features""]",approved,false,610,daughter,SYN_P001,
+SYN_T0002,SYN_ENV0001,SYN_U001,CHECK_MESSAGE,這則訊息是不是詐騙,MINIMIZED_CLOUD,"[""voice_command"",""selected_message"",""cloud_features""]",not_required,false,620,,,SYN_M001
+SYN_T0003,SYN_ENV0001,SYN_U001,RESCUE_PHONE,手機是不是壞掉了,MINIMIZED_CLOUD,"[""voice_command"",""system_status"",""network_state"",""cloud_features""]",pending,false,630,,,

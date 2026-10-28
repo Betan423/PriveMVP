@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "basis": "Designed test scenarios; not estimated population behavior or observed elderly behavior.",
+  "default_batch": {
+    "users": 6,
+    "days_per_user": 1,
+    "assignment": {"SYN_U001": "routine", "SYN_U002": "routine", "SYN_U003": "notification_burst", "SYN_U004": "notification_burst", "SYN_U005": "low_activity", "SYN_U006": "low_activity"}
+  },
+  "definitions": {
+    "routine": {
+      "description": "一般使用測試，使用與通知分散於日間。",
+      "app_usage_count": [2, 4], "notification_count": [4, 8], "device_state_count": [3, 3],
+      "usage_duration_sec": [60, 1200], "max_daily_usage_sec": 4800,
+      "notification_window_sec": null
+    },
+    "notification_burst": {
+      "description": "通知密集測試，至少12筆通知聚集在600秒內，不代表真實高風險者。",
+      "app_usage_count": [3, 6], "notification_count": [12, 24], "device_state_count": [3, 3],
+      "usage_duration_sec": [60, 1200], "max_daily_usage_sec": 7200,
+      "notification_window_sec": {"min_events": 12, "span_sec": 600}
+    },
+    "low_activity": {
+      "description": "低活動測試，少量使用、不超過1筆通知；不能推論失能或健康異常。",
+      "app_usage_count": [1, 2], "notification_count": [0, 1], "device_state_count": [3, 3],
+      "usage_duration_sec": [60, 300], "max_daily_usage_sec": 600,
+      "notification_window_sec": null
+    }
+  },
+  "conventions": {
+    "battery_band": {"low": "0-20%", "medium": "21-60%", "high": "61-100%", "unknown": "missing; not 0%"},
+    "message_length_band": {"none": "no text", "short": "1-20 fictional characters", "medium": "21-80 fictional characters", "long": "81+ fictional characters", "unknown": "unavailable or intentionally redacted"},
+    "device_state_offsets_sec": [28800, 43200, 72000],
+    "time_basis": "Relative simulated day; never a real date or source timestamp.",
+    "redacted_notification": "content_redacted=true requires message_length_band=unknown",
+    "network": "offline requires internet_available=false; unknown requires internet_available=null; other transports may have true/false/null"
+  }
+}

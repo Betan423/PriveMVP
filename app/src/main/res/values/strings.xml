@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PrivAgent Raw Collector</string>
+    <string name="accessibility_desc">用於高齡友善手機助理研究，擷取目前畫面結構與互動事件；僅在使用者主動啟用後運作。</string>
+</resources>

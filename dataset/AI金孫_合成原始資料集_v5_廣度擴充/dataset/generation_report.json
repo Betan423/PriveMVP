@@ -1,0 +1,43 @@
+{
+  "version": "5.0-raw",
+  "synthetic": true,
+  "privacy_processing_applied": false,
+  "environment_count": 192,
+  "task_count": 5184,
+  "scenario_counts": {
+    "SHARE_PHOTO": 576,
+    "CHECK_MESSAGE": 576,
+    "RESCUE_PHONE": 576,
+    "CALL_CONTACT": 576,
+    "SEND_MESSAGE": 576,
+    "READ_NOTIFICATION": 576,
+    "SET_REMINDER": 576,
+    "NAVIGATE_TO_PLACE": 576,
+    "OPEN_APP": 576
+  },
+  "subscenario_count": 72,
+  "utterance_pattern_count": 288,
+  "unique_utterances": 480,
+  "message_family_count": 32,
+  "message_pattern_count": 96,
+  "actual_network_calls": 0,
+  "per_row_llm_calls": 0,
+  "actual_phone_actions": 0,
+  "new_privacy_derived_tasks": 0,
+  "success_rate": null,
+  "generator_configuration": {
+    "version": "5.0-raw",
+    "seed": 20261012,
+    "environments": 192,
+    "tasks_per_environment": 27,
+    "per_row_llm_calls": 0,
+    "template_catalog_sha256": "84a89dcb958f56f4b201c13280474b3c9ecaf7d8aa304a8a04a5e314ecb78c20",
+    "encoding": "UTF-8 JSON / UTF-8 BOM CSV"
+  },
+  "limitations": [
+    "Source quality checks are not PETs effectiveness evaluation.",
+    "No distributional fidelity to real older adults established.",
+    "Repeated template variants are correlated, not independent user samples.",
+    "All 5184 default tasks are newly generated; old v4 576 and v3 3-row derived baseline are not merged."
+  ]
+}

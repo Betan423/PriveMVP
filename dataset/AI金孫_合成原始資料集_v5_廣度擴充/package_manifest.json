@@ -1,0 +1,28 @@
+{
+  "sha256": {
+    "build_catalog.py": "676249cc4532e66a5e882fa6f4aef8b4c06725dcf4e8ba697dfb74c5538130d8",
+    "build_schema.py": "ff45da12b79bab9771aa0610153a605e7334073147f733e274c4ab5148919e67",
+    "competition-documents/附件6_AI金孫_v5_最終版.docx": "774355c3d612b7f0d8faac3176cbc19a91b84c81046106fc1f5289ae3a4c67d3",
+    "dataset/generation_report.json": "374460836e520711384d680917ed31fcd7c242a3e182fe06a61a65246c3bc373",
+    "dataset/phone_environments.csv": "71d21573d40e95d2e6a560d94b3f1f0980414560c57d84ee22592a18307f7d7a",
+    "dataset/scenario_catalog.csv": "bb1a35cfdb1ae393fccf41c72c8a3c899fd51d7b1d835c379154857d1edb116d",
+    "dataset/source_raw_v5.json": "050c508715b43ce0d8d6def7c5e78445064c587052cb856c5101d2e2db703959",
+    "dataset/task_requests.csv": "6533f634c1719b6660d67278d46cbc3cca1e81d8986f0c0d77f6df9c5bc51b2b",
+    "dataset/validation_report.json": "f13b94c20a5f85c4ce0fab96f879dea06a16d6f5f2422104649a33beb77e42a7",
+    "engineering_tests.json": "c5dd6895fed8228920648202a20fe01076ae24beaaafdcb59f86acf0aa0cac40",
+    "generate_raw_dataset.py": "5e1ef0722c4d80a9afcee9b2943e582134af634716c86735872e369d4db5f31f",
+    "legacy_v3_baseline/derived_tasks_v3_3rows.csv": "e9cd807fc136e46f78b5b9d66617328c37bfd0470ae3d2910309eeeabf65ea7f",
+    "legacy_v3_baseline/source_v3_1env_3tasks.json": "b83e3b4c01395e14c33d37062e31bf5d80215450b1b0e7184e573f5e4ac19cb3",
+    "README_使用說明.md": "471720163b6db70e7a547edcc9dc790c6d83bdbe223c89e38ba4994b9d1b494d",
+    "reproducibility_report.json": "d9329c44e16922ff134b2371f9ae59a0644267464cc33477f18e8d1dae246400",
+    "review/audit_dataset.py": "8958f6b78c3582f07c3d57094f1d2dc204da16d6df9e4d44430334c64c8e3296",
+    "review/originals_preserved.json": "781666ef1518af6993e7775b5468015826fc76f818dbe37268f6b55ad0441a0b",
+    "review/v4_audit_report.json": "cf16e2eb1a3988985e44cfe48c92913c696be0298ca785d861b218c6af8191f5",
+    "review/現況盤點.md": "cd1feb06a574bf1f1bbcf1b428346272bdecab1762f2ceab86a74faeca2ad51b",
+    "source_schema.json": "881d1f097953434ded38c0e737523ce71b4a8db3ea56768bce4dc0f4f033a745",
+    "template_catalog.json": "84a89dcb958f56f4b201c13280474b3c9ecaf7d8aa304a8a04a5e314ecb78c20",
+    "test_raw_dataset.py": "f211d9cca985fccb93c9e712f09ae8b5f42a4ca3007ee8047bce0d84a6e42dc2",
+    "validate_raw_dataset.py": "32f70cbb09307a530682ca92e93191d802ab1ce660b04fefbd3eebfb947178a7"
+  },
+  "payload_files": 23
+}

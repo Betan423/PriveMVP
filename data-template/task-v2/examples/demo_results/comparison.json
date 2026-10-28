@@ -1,0 +1,44 @@
+{
+  "template_version": "2.0",
+  "validation": {
+    "passed": true,
+    "error_count": 0,
+    "errors": [],
+    "errors_truncated": false,
+    "valid_contract_rows": 12
+  },
+  "mock_tasks": 12,
+  "scenario_task_counts": {
+    "SHARE_PHOTO": 4,
+    "CHECK_MESSAGE": 4,
+    "RESCUE_PHONE": 4
+  },
+  "actual_network_requests": 0,
+  "actual_phone_actions": 0,
+  "simulated_cloud_packets": 6,
+  "totals": {
+    "baseline_context_values": 86,
+    "minimized_context_values": 35,
+    "baseline_packet_bytes": 3253,
+    "minimized_packet_bytes": 1297,
+    "baseline_direct_private_fields": 20,
+    "minimized_direct_private_fields": 0
+  },
+  "matched_cloud_comparison_tasks": 6,
+  "matched_cloud_totals": {
+    "baseline_context_values": 51,
+    "minimized_context_values": 35,
+    "baseline_packet_bytes": 1941,
+    "minimized_packet_bytes": 1297,
+    "baseline_direct_private_fields": 12,
+    "minimized_direct_private_fields": 0
+  },
+  "limitations": [
+    "Synthetic designed contexts only; no raw phone data used",
+    "Rule-based mock, not AI or actual Android execution",
+    "Disclosure and bytes are proposed/hypothetical, not captured network traffic",
+    "Totals combine local-only/opt-out and minimization; matched_cloud_totals isolates the same cloud-eligible tasks",
+    "No real privacy attack, differential privacy, elderly population fidelity or task success evaluation",
+    "Direct private field count does not cover inference, traffic metadata or encoded secrets"
+  ]
+}

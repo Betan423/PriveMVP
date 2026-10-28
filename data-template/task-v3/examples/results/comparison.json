@@ -1,0 +1,30 @@
+{
+  "bundle_version": "3.0",
+  "synthetic": true,
+  "validation_passed": true,
+  "phone_environment_count": 1,
+  "task_count": 3,
+  "scenario_counts": {
+    "SHARE_PHOTO": 1,
+    "CHECK_MESSAGE": 1,
+    "RESCUE_PHONE": 1
+  },
+  "actual_network_requests": 0,
+  "actual_phone_actions": 0,
+  "matched_cloud_tasks": 3,
+  "matched_cloud_totals": {
+    "original_leaf_values": 354,
+    "original_bytes": 9974,
+    "proposed_packet_leaf_values": 26,
+    "proposed_packet_bytes": 626
+  },
+  "limitations": [
+    "Designed synthetic source, not collected real-device data",
+    "Rule-based mock, not AI or phone execution",
+    "Matched hypothetical packet sizes, not network traffic or privacy attack results",
+    "Source repeated per task for matched comparisons; not physical dataset size",
+    "No differential privacy guarantee, real population fidelity or verified task success",
+    "Schema whitelist cannot prove absence of all encoded secrets",
+    "Snapshot age is reported; no live state refresh or automatic stale-state safety guarantee"
+  ]
+}

@@ -1,0 +1,11 @@
+template_version,synthetic,user_id,event_id,scenario_id,day_index,offset_sec,event_type,app_category,duration_sec,notification_kind,message_length_band,content_redacted,battery_band,charging,network_class,internet_available
+1.0,true,SYN_U001,SYN_E000001,routine,0,28800,device_state,,,,,,high,false,cellular,true
+1.0,true,SYN_U001,SYN_E000002,routine,0,30000,notification,communication,,message,short,false,,,,
+1.0,true,SYN_U001,SYN_E000003,routine,0,30100,app_usage,communication,180,,,,,,,
+1.0,true,SYN_U001,SYN_E000004,routine,0,40000,notification,utility,,reminder,medium,false,,,,
+1.0,true,SYN_U001,SYN_E000005,routine,0,43200,device_state,,,,,,medium,false,wifi,true
+1.0,true,SYN_U001,SYN_E000006,routine,0,45000,app_usage,video,600,,,,,,,
+1.0,true,SYN_U001,SYN_E000007,routine,0,60000,notification,social,,other,unknown,true,,,,
+1.0,true,SYN_U001,SYN_E000008,routine,0,65000,app_usage,utility,120,,,,,,,
+1.0,true,SYN_U001,SYN_E000009,routine,0,70000,notification,utility,,system,none,false,,,,
+1.0,true,SYN_U001,SYN_E000010,routine,0,72000,device_state,,,,,,medium,true,offline,false

@@ -1,0 +1,10 @@
+﻿scenario_id,base_or_extension,task_count,supported_by_v3_processor,description_zh
+SHARE_PHOTO,v3,144,yes,選定照片分享
+CHECK_MESSAGE,v3,144,yes,可疑訊息線索判讀
+RESCUE_PHONE,v3,144,yes,手機聲音與網路設定排除
+CALL_CONTACT,v4_candidate,24,no,撥打聯絡人
+SEND_MESSAGE,v4_candidate,24,no,傳送訊息
+READ_NOTIFICATION,v4_candidate,24,no,讀取通知
+SET_REMINDER,v4_candidate,24,no,建立提醒
+NAVIGATE_TO_PLACE,v4_candidate,24,no,導航至指定地點
+OPEN_APP,v4_candidate,24,no,開啟 App

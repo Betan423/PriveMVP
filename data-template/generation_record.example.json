@@ -1,0 +1,20 @@
+{
+  "record_status": "template_not_execution_record",
+  "tool": "TO_FILL_ACTUAL_TOOL",
+  "model_identifier": "TO_FILL_OR_UNCONFIRMED",
+  "generated_at": "TO_FILL_ACTUAL_TIME",
+  "purpose": "Create fictional phone scenario baseline; not real elderly population data",
+  "template_version": "1.0",
+  "prompt_file": "AI_PROMPT.md",
+  "input_files": ["schema.json", "scenarios.json"],
+  "raw_phone_file_uploaded": false,
+  "generation_settings": {"temperature": "TO_FILL_OR_UNAVAILABLE", "seed": "TO_FILL_OR_UNAVAILABLE"},
+  "batch_users": "TO_FILL",
+  "batch_days_per_user": "TO_FILL",
+  "raw_model_output_file": "TO_FILL",
+  "human_changes": [],
+  "validation_report_file": "TO_FILL_AFTER_RUN",
+  "pets_processing_status": "not_implemented",
+  "privacy_evaluation_status": "not_performed",
+  "limitations": ["Designed scenarios, not a learned population distribution", "Schema validation is not a privacy guarantee"]
+}

@@ -1,0 +1,4337 @@
+{
+  "audit_version": "1.0",
+  "scope": "READ_ONLY_INTAKE_NOT_PRIVACY_PROCESSING",
+  "dataset_source": "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選",
+  "engine_found": "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\bundle_engine.py",
+  "handoff_found_in_dataset": false,
+  "all_files_read": [
+    "baseline_derived_tasks_v3_3rows.csv",
+    "generate_raw_dataset.py",
+    "phone_environments_expanded.csv",
+    "quality_report.json",
+    "README_使用說明.md",
+    "scenario_catalog.csv",
+    "seed_phone_environments.csv",
+    "seed_source_v3.json",
+    "seed_task_requests.csv",
+    "source_expanded_v3.json",
+    "source_extension_v4_candidate.json",
+    "task_requests_expanded.csv",
+    "task_requests_extension_v4_candidate.csv"
+  ],
+  "json_documents_parsed": 4,
+  "csv_documents_parsed": 7,
+  "word_document_read": "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI.docx",
+  "word_paragraph_count_including_tables": 34,
+  "counts": {
+    "phone_environments": 72,
+    "tasks_v3_compatible": 432,
+    "tasks_extension_only": 144,
+    "total_task_requests": 576,
+    "scenarios_v3": {
+      "SHARE_PHOTO": 144,
+      "CHECK_MESSAGE": 144,
+      "RESCUE_PHONE": 144
+    },
+    "scenarios_extension_only": {
+      "CALL_CONTACT": 24,
+      "SEND_MESSAGE": 24,
+      "READ_NOTIFICATION": 24,
+      "SET_REMINDER": 24,
+      "NAVIGATE_TO_PLACE": 24,
+      "OPEN_APP": 24
+    },
+    "privacy_modes": {
+      "MINIMIZED_CLOUD": 421,
+      "STRICT_LOCAL": 155
+    },
+    "confirmation": {
+      "approved": 144,
+      "not_required": 145,
+      "pending": 145,
+      "rejected": 142
+    },
+    "cancelled": 39,
+    "base_missing_photo": 48,
+    "base_missing_message": 42
+  },
+  "quality_report_counts_match": true,
+  "duplicated_environment_arrays_equal": true,
+  "csv_json_comparisons": {
+    "phone_environments_expanded.csv": {
+      "rows": 72,
+      "json_rows": 72,
+      "columns": 51,
+      "matched": true,
+      "mismatches": []
+    },
+    "task_requests_expanded.csv": {
+      "rows": 432,
+      "json_rows": 432,
+      "columns": 13,
+      "matched": true,
+      "mismatches": []
+    },
+    "task_requests_extension_v4_candidate.csv": {
+      "rows": 144,
+      "json_rows": 144,
+      "columns": 19,
+      "matched": true,
+      "mismatches": []
+    },
+    "seed_phone_environments.csv": {
+      "rows": 1,
+      "json_rows": 1,
+      "columns": 51,
+      "matched": true,
+      "mismatches": []
+    },
+    "seed_task_requests.csv": {
+      "rows": 3,
+      "json_rows": 3,
+      "columns": 13,
+      "matched": true,
+      "mismatches": []
+    }
+  },
+  "reference_time_placeholder_errors": [],
+  "original_seed_environments_preserved": true,
+  "original_seed_tasks_preserved": true,
+  "baseline_derived_rows": 3,
+  "baseline_byte_identical_to_existing_v3": true,
+  "source_provenance": "AI_ASSISTED_SCENARIO_DESIGN_SEE_README_PROGRAMMATIC_SYNTHETIC_NO_REAL_DEVICE_VALUES",
+  "old_v3_required_provenance": "DESIGNED_SYNTHETIC_NO_REAL_DEVICE_VALUES",
+  "v3_whole_source_validation": {
+    "passed": false,
+    "error_code": "contract_invalid"
+  },
+  "v3_environment_contract_valid_count": 1,
+  "v3_environment_errors_by_path": {
+    "$.initialization_data.contacts[].relationship": 58,
+    "$.initialization_data.user_profile.age_band": 71,
+    "$.initialization_data.device.android_release": 44,
+    "$.initialization_data.installed_apps[].name": 71,
+    "$.initialization_data.device.sdk_int": 44,
+    "$.continuous_state_data.messages[].text": 57,
+    "$.continuous_state_data.call.state": 24
+  },
+  "v3_task_contract_valid_count_ignoring_environment": 3,
+  "v3_task_errors_by_path": {
+    "$.utterance:enum": 429,
+    "$.confirmation:enum": 178,
+    "$.confirmation": 106,
+    "$.confirmation:const": 107
+  },
+  "v3_joint_task_environment_contract_valid_ids": [
+    "SYN_T0001",
+    "SYN_T0002",
+    "SYN_T0003"
+  ],
+  "v3_errors_per_environment": {
+    "SYN_ENV0001": [],
+    "SYN_ENV0002": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0003": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0004": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0005": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0006": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0007": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0008": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0009": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0010": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0011": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0012": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0013": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0014": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0015": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0016": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0017": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0018": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0019": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0020": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0021": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0022": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0023": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0024": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0025": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0026": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0027": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0028": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0029": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0030": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0031": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0032": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0033": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0034": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0035": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0036": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0037": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0038": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0039": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0040": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0041": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0042": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0043": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0044": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0045": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0046": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0047": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0048": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0049": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0050": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0051": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0052": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0053": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0054": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0055": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0056": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0057": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0058": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0059": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0060": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0061": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0062": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0063": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0064": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0065": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0066": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0067": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0068": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0069": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ],
+    "SYN_ENV0070": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name"
+    ],
+    "SYN_ENV0071": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.contacts[].relationship",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.call.state"
+    ],
+    "SYN_ENV0072": [
+      "$.initialization_data.user_profile.age_band",
+      "$.initialization_data.device.sdk_int",
+      "$.initialization_data.device.android_release",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.initialization_data.installed_apps[].name",
+      "$.continuous_state_data.messages[].text",
+      "$.continuous_state_data.messages[].text"
+    ]
+  },
+  "v3_errors_per_task": {
+    "SYN_T0001": [],
+    "SYN_T0002": [],
+    "SYN_T0003": [],
+    "SYN_T0004": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0005": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0006": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0007": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0008": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0009": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0010": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0011": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0012": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0013": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0014": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0015": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0016": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0017": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0018": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0019": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0020": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0021": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0022": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0023": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0024": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0025": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0026": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0027": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0028": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0029": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0030": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0031": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0032": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0033": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0034": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0035": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0036": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0037": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0038": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0039": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0040": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0041": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0042": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0043": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0044": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0045": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0046": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0047": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0048": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0049": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0050": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0051": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0052": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0053": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0054": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0055": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0056": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0057": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0058": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0059": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0060": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0061": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0062": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0063": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0064": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0065": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0066": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0067": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0068": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0069": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0070": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0071": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0072": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0073": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0074": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0075": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0076": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0077": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0078": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0079": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0080": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0081": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0082": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0083": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0084": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0085": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0086": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0087": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0088": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0089": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0090": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0091": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0092": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0093": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0094": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0095": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0096": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0097": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0098": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0099": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0100": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0101": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0102": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0103": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0104": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0105": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0106": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0107": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0108": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0109": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0110": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0111": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0112": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0113": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0114": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0115": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0116": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0117": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0118": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0119": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0120": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0121": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0122": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0123": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0124": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0125": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0126": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0127": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0128": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0129": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0130": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0131": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0132": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0133": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0134": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0135": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0136": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0137": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0138": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0139": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0140": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0141": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0142": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0143": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0144": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0145": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0146": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0147": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0148": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0149": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0150": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0151": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0152": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0153": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0154": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0155": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0156": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0157": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0158": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0159": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0160": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0161": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0162": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0163": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0164": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0165": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0166": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0167": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0168": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0169": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0170": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0171": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0172": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0173": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0174": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0175": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0176": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0177": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0178": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0179": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0180": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0181": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0182": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0183": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0184": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0185": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0186": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0187": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0188": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0189": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0190": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0191": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0192": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0193": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0194": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0195": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0196": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0197": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0198": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0199": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0200": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0201": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0202": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0203": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0204": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0205": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0206": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0207": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0208": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0209": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0210": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0211": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0212": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0213": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0214": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0215": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0216": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0217": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0218": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0219": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0220": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0221": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0222": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0223": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0224": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0225": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0226": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0227": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0228": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0229": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0230": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0231": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0232": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0233": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0234": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0235": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0236": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0237": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0238": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0239": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0240": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0241": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0242": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0243": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0244": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0245": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0246": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0247": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0248": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0249": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0250": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0251": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0252": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0253": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0254": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0255": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0256": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0257": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0258": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0259": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0260": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0261": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0262": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0263": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0264": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0265": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0266": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0267": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0268": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0269": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0270": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0271": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0272": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0273": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0274": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0275": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0276": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0277": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0278": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0279": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0280": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0281": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0282": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0283": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0284": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0285": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0286": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0287": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0288": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0289": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0290": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0291": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0292": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0293": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0294": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0295": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0296": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0297": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0298": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0299": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0300": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0301": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0302": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0303": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0304": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0305": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0306": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0307": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0308": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0309": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0310": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0311": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0312": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0313": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0314": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0315": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0316": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0317": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0318": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0319": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0320": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0321": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0322": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0323": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0324": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0325": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0326": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0327": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0328": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0329": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0330": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0331": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0332": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0333": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0334": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0335": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0336": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0337": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0338": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0339": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0340": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0341": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0342": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0343": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0344": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0345": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0346": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0347": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0348": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0349": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0350": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0351": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0352": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0353": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0354": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0355": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0356": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0357": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0358": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0359": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0360": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0361": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0362": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0363": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0364": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0365": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0366": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0367": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0368": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0369": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0370": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0371": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0372": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0373": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0374": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0375": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0376": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0377": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0378": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0379": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0380": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0381": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0382": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0383": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0384": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0385": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0386": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0387": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0388": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0389": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0390": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0391": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0392": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0393": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0394": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0395": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0396": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0397": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0398": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0399": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0400": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0401": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0402": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0403": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0404": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0405": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0406": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0407": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0408": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0409": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0410": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0411": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0412": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0413": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0414": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0415": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0416": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0417": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0418": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0419": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0420": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0421": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0422": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0423": [
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0424": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0425": [
+      "$.utterance:enum",
+      "$.confirmation:enum"
+    ],
+    "SYN_T0426": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0427": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0428": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0429": [
+      "$.confirmation",
+      "$.confirmation:enum",
+      "$.utterance:enum",
+      "$.confirmation:const"
+    ],
+    "SYN_T0430": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0431": [
+      "$.utterance:enum"
+    ],
+    "SYN_T0432": [
+      "$.utterance:enum"
+    ]
+  },
+  "android_release_mismatches": [
+    {
+      "environment_id": "SYN_ENV0002",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0008",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0009",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0010",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0016",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0017",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0018",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0024",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0025",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0026",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0032",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0033",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0034",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0040",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0041",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0042",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0048",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0049",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0050",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0056",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0057",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0058",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0064",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    },
+    {
+      "environment_id": "SYN_ENV0065",
+      "sdk_int": 30,
+      "reported": "10",
+      "expected": "11"
+    },
+    {
+      "environment_id": "SYN_ENV0066",
+      "sdk_int": 31,
+      "reported": "11",
+      "expected": "12"
+    },
+    {
+      "environment_id": "SYN_ENV0072",
+      "sdk_int": 29,
+      "reported": "9",
+      "expected": "10"
+    }
+  ],
+  "android_mapping_source": "https://developer.android.com/guide/topics/manifest/uses-sdk-element#ApiLevels",
+  "age_band_counts": {
+    "75-84": 1,
+    "65-69": 36,
+    "80-84": 35
+  },
+  "sdk_counts": {
+    "36": 10,
+    "31": 9,
+    "32": 9,
+    "33": 9,
+    "34": 9,
+    "35": 9,
+    "29": 9,
+    "30": 8
+  },
+  "unique_message_texts": 22,
+  "selected_message_texts": 21,
+  "semantic_checks_are_heuristics_not_ground_truth": true,
+  "semantic_conflict_unique_tasks": 148,
+  "semantic_conflict_counts": {
+    "explicit_recipient_conflict": 116,
+    "explicit_message_day_conflict": 9,
+    "explicit_reminder_kind_conflict": 12,
+    "explicit_app_conflict": 17
+  },
+  "semantic_conflicts": [
+    {
+      "task_id": "SYN_T0007",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0013",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0025",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0032",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0038",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0050",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0056",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0061",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0067",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0068",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0079",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0092",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0097",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0103",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0104",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0109",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0110",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0116",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0121",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0133",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0134",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0139",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0146",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0157",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0164",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0170",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0176",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0182",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0187",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0188",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0194",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0205",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0206",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0211",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0212",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0217",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0218",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0230",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0236",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0241",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0242",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0247",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0248",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0254",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0260",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0266",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0272",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0277",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0283",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0284",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0295",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0301",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0308",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0313",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0320",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0325",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0326",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0337",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0344",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0349",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0355",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0361",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0367",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0373",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0379",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0386",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0392",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_T0403",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0404",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0409",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0415",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把這張照片傳給女兒",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_T0421",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "這張照片分享給兒子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_T0422",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我把照片傳給孫子",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_T0427",
+      "scenario_id": "SHARE_PHOTO",
+      "code": "explicit_recipient_conflict",
+      "utterance": "可以幫我傳照片給朋友嗎",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0002",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0004",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "下週提醒我繳費",
+      "parameter_value": "checkup",
+      "expected_from_explicit_word": "bill"
+    },
+    {
+      "task_id": "SYN_EXT_T0006",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "SETTINGS",
+      "expected_from_explicit_word": "MAPS"
+    },
+    {
+      "task_id": "SYN_EXT_T0007",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給女兒",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0008",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0012",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開設定",
+      "parameter_value": "MAPS",
+      "expected_from_explicit_word": "SETTINGS"
+    },
+    {
+      "task_id": "SYN_EXT_T0013",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我撥給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0014",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0014",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0018",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "LINE",
+      "expected_from_explicit_word": "MAPS"
+    },
+    {
+      "task_id": "SYN_EXT_T0019",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "doctor",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0020",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0025",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我要打給鄰居",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "neighbor"
+    },
+    {
+      "task_id": "SYN_EXT_T0026",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0030",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開 LINE",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "LINE"
+    },
+    {
+      "task_id": "SYN_EXT_T0031",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我撥給兒子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0032",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0036",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開設定",
+      "parameter_value": "MAPS",
+      "expected_from_explicit_word": "SETTINGS"
+    },
+    {
+      "task_id": "SYN_EXT_T0037",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我撥給兒子",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0038",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "跟女兒說晚點回家",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0040",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "提醒我明天下午回診",
+      "parameter_value": "medicine",
+      "expected_from_explicit_word": "checkup"
+    },
+    {
+      "task_id": "SYN_EXT_T0042",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開設定",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "SETTINGS"
+    },
+    {
+      "task_id": "SYN_EXT_T0043",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給女兒",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0044",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "跟女兒說晚點回家",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0048",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "我要看相簿",
+      "parameter_value": "SETTINGS",
+      "expected_from_explicit_word": "GALLERY"
+    },
+    {
+      "task_id": "SYN_EXT_T0049",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給女兒",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0050",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0052",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "今天晚上提醒我吃藥",
+      "parameter_value": "bill",
+      "expected_from_explicit_word": "medicine"
+    },
+    {
+      "task_id": "SYN_EXT_T0054",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "我要看相簿",
+      "parameter_value": "SETTINGS",
+      "expected_from_explicit_word": "GALLERY"
+    },
+    {
+      "task_id": "SYN_EXT_T0055",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給朋友",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0056",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0060",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "MAPS"
+    },
+    {
+      "task_id": "SYN_EXT_T0061",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我要打給鄰居",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "neighbor"
+    },
+    {
+      "task_id": "SYN_EXT_T0064",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "提醒我明天下午回診",
+      "parameter_value": "medicine",
+      "expected_from_explicit_word": "checkup"
+    },
+    {
+      "task_id": "SYN_EXT_T0066",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "LINE",
+      "expected_from_explicit_word": "MAPS"
+    },
+    {
+      "task_id": "SYN_EXT_T0067",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0068",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0068",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0072",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開 LINE",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "LINE"
+    },
+    {
+      "task_id": "SYN_EXT_T0073",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我要打給鄰居",
+      "parameter_value": "son",
+      "expected_from_explicit_word": "neighbor"
+    },
+    {
+      "task_id": "SYN_EXT_T0074",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0078",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "我要看相簿",
+      "parameter_value": "MAPS",
+      "expected_from_explicit_word": "GALLERY"
+    },
+    {
+      "task_id": "SYN_EXT_T0079",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我要打給鄰居",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "neighbor"
+    },
+    {
+      "task_id": "SYN_EXT_T0080",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我跟孫子說記得帶雨傘",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0085",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我要打給鄰居",
+      "parameter_value": "doctor",
+      "expected_from_explicit_word": "neighbor"
+    },
+    {
+      "task_id": "SYN_EXT_T0086",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "doctor",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0088",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "下週提醒我繳費",
+      "parameter_value": "checkup",
+      "expected_from_explicit_word": "bill"
+    },
+    {
+      "task_id": "SYN_EXT_T0091",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給女兒",
+      "parameter_value": "friend",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0092",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我跟孫子說記得帶雨傘",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0094",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "下週提醒我繳費",
+      "parameter_value": "medicine",
+      "expected_from_explicit_word": "bill"
+    },
+    {
+      "task_id": "SYN_EXT_T0098",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "doctor",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0100",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "下週提醒我繳費",
+      "parameter_value": "family_event",
+      "expected_from_explicit_word": "bill"
+    },
+    {
+      "task_id": "SYN_EXT_T0102",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開 LINE",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "LINE"
+    },
+    {
+      "task_id": "SYN_EXT_T0103",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "neighbor",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0104",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0104",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0106",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "提醒我明天下午回診",
+      "parameter_value": "family_event",
+      "expected_from_explicit_word": "checkup"
+    },
+    {
+      "task_id": "SYN_EXT_T0108",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "LINE",
+      "expected_from_explicit_word": "MAPS"
+    },
+    {
+      "task_id": "SYN_EXT_T0109",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我打電話給女兒",
+      "parameter_value": "neighbor",
+      "expected_from_explicit_word": "daughter"
+    },
+    {
+      "task_id": "SYN_EXT_T0110",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我跟孫子說記得帶雨傘",
+      "parameter_value": "neighbor",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0112",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "今天晚上提醒我吃藥",
+      "parameter_value": "family_event",
+      "expected_from_explicit_word": "medicine"
+    },
+    {
+      "task_id": "SYN_EXT_T0115",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我撥給兒子",
+      "parameter_value": "neighbor",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0116",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "doctor",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0116",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0118",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "提醒我明天下午回診",
+      "parameter_value": "medicine",
+      "expected_from_explicit_word": "checkup"
+    },
+    {
+      "task_id": "SYN_EXT_T0120",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "幫我打開 LINE",
+      "parameter_value": "MAPS",
+      "expected_from_explicit_word": "LINE"
+    },
+    {
+      "task_id": "SYN_EXT_T0121",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我撥給兒子",
+      "parameter_value": "grandson",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0122",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "告訴兒子我已經到了",
+      "parameter_value": "granddaughter",
+      "expected_from_explicit_word": "son"
+    },
+    {
+      "task_id": "SYN_EXT_T0124",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "今天晚上提醒我吃藥",
+      "parameter_value": "checkup",
+      "expected_from_explicit_word": "medicine"
+    },
+    {
+      "task_id": "SYN_EXT_T0126",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "我要看相簿",
+      "parameter_value": "LINE",
+      "expected_from_explicit_word": "GALLERY"
+    },
+    {
+      "task_id": "SYN_EXT_T0127",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0128",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0128",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0133",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0134",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "caregiver",
+      "expected_from_explicit_word": "friend"
+    },
+    {
+      "task_id": "SYN_EXT_T0134",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_message_day_conflict",
+      "utterance": "傳訊息跟朋友約明天下午",
+      "parameter_value": "虛構家人提醒：今晚七點回家。",
+      "expected_from_explicit_word": "tomorrow, not tonight"
+    },
+    {
+      "task_id": "SYN_EXT_T0136",
+      "scenario_id": "SET_REMINDER",
+      "code": "explicit_reminder_kind_conflict",
+      "utterance": "下週提醒我繳費",
+      "parameter_value": "checkup",
+      "expected_from_explicit_word": "bill"
+    },
+    {
+      "task_id": "SYN_EXT_T0139",
+      "scenario_id": "CALL_CONTACT",
+      "code": "explicit_recipient_conflict",
+      "utterance": "我想聯絡孫子",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0140",
+      "scenario_id": "SEND_MESSAGE",
+      "code": "explicit_recipient_conflict",
+      "utterance": "幫我跟孫子說記得帶雨傘",
+      "parameter_value": "daughter",
+      "expected_from_explicit_word": "grandson"
+    },
+    {
+      "task_id": "SYN_EXT_T0144",
+      "scenario_id": "OPEN_APP",
+      "code": "explicit_app_conflict",
+      "utterance": "開啟地圖",
+      "parameter_value": "GALLERY",
+      "expected_from_explicit_word": "MAPS"
+    }
+  ],
+  "extension_grants_patterns": {
+    "voice_command": 144
+  },
+  "extension_cloud_features_granted": 0,
+  "navigation_tasks_without_destination_catalog": 24,
+  "generator_return_code": 0,
+  "generator_reproduction": {
+    "phone_environments_expanded.csv": {
+      "matched_sha256": true
+    },
+    "quality_report.json": {
+      "matched_sha256": false
+    },
+    "scenario_catalog.csv": {
+      "matched_sha256": true
+    },
+    "source_expanded_v3.json": {
+      "matched_sha256": false
+    },
+    "source_extension_v4_candidate.json": {
+      "matched_sha256": false
+    },
+    "task_requests_expanded.csv": {
+      "matched_sha256": true
+    },
+    "task_requests_extension_v4_candidate.csv": {
+      "matched_sha256": true
+    }
+  },
+  "source_files_unchanged": true,
+  "source_manifest_sha256": {
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\baseline_derived_tasks_v3_3rows.csv": "e9cd807fc136e46f78b5b9d66617328c37bfd0470ae3d2910309eeeabf65ea7f",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\generate_raw_dataset.py": "ee367ef63250dc2813861651b3f3141222979cb4b8d5d06ca86a24005327cb9f",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\phone_environments_expanded.csv": "aaff3baec2753b7d5fe231feb7cd64b1887041c2128604734a86f6599ac81dec",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\quality_report.json": "ea73f28560df0f0e19adc13621af3bc30237ea192f99f31d571ed0dee1c48f06",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\README_使用說明.md": "2615a311a3c47d5842a96f7d90120bef9d1d3bcded9c3165d323696e5162f8a8",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\scenario_catalog.csv": "14a608efea208c3fe2fdf22e47cab656a5f90ee0a95b7b16d3e81e13e64186f9",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_phone_environments.csv": "835ceebb9d879a2741724f69c23cb11bb237feb54b90f1f507712fd181ec6f21",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_source_v3.json": "b83e3b4c01395e14c33d37062e31bf5d80215450b1b0e7184e573f5e4ac19cb3",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_task_requests.csv": "9f4717bd1add2605acc1786ec3a7814e96929533ccbabec33e66f801e7ab6ff4",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\source_expanded_v3.json": "f53d194c3d7d5c2cc7b2bcf96afc28991dd7c657b74e5b87503f29bfbee48592",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\source_extension_v4_candidate.json": "62e5a0b269cdcdffe7329fcd8f101d0bb595cc57ba9fd3b149b4fe524094905e",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\task_requests_expanded.csv": "d764de6e5e3a51469962d6d7e9b0bfb7af1bf810f3e528919206f864fbdc0d00",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\task_requests_extension_v4_candidate.csv": "928a3829b445fe475035bad06cb56045127cb763989c0f23485c291589a2f5b4",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\bundle_engine.py": "78f7ac6a97967bb1a1cf58ebae29d0b30a641e6a687f8359e9b6201c2686670a",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\privacy_policy.json": "38c536fd46e565c35baa4d9e480e36bfe8c8b8b21cd51153782ea532caea612c",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\sops.json": "78e4b6c925328c874145ee312be90d051f3302dee1462afdb8a4c0eefec29ced",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\task_engine.py": "5b496a61f94164acc155a5052249f2fdc4f401ecfce9e58a2881c1bcaa3afe80",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\task_schema.json": "5da3a81b581fd3571c8495fa0882418d33f99ae615a3ddb8f65680eb887220e9",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI.docx": "cb2c4bfb5637c825cdcf1b92aa68b3982ff1ba503101eddf4b27b0bb8d71f754"
+  },
+  "limitations": [
+    "No new derived tasks generated; 576 tasks remain raw synthetic data.",
+    "No genuine phone execution, Gemini API call or privacy/fidelity/utility experiment performed.",
+    "Semantic word checks identify contradictions, not a complete NLU correctness assessment.",
+    "72 synthetic environments do not represent 72 measured older adults.",
+    "Fixture-only old engine rejects this new raw bundle; scenario-name support is not compatibility."
+  ]
+}

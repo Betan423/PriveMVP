@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Synthetic assistive task input v2",
+  "type": "object", "additionalProperties": false,
+  "required": ["template_version", "synthetic", "task_id", "user_id", "scenario_id", "utterance", "privacy_mode", "grants", "confirmation", "cancelled", "local_context"],
+  "properties": {
+    "template_version": {"const": "2.0"}, "synthetic": {"const": true},
+    "task_id": {"type": "string", "pattern": "^SYN_T[0-9]{4,8}$"},
+    "user_id": {"type": "string", "pattern": "^SYN_U[0-9]{3,6}$"},
+    "scenario_id": {"enum": ["SHARE_PHOTO", "CHECK_MESSAGE", "RESCUE_PHONE"]},
+    "utterance": {"type": "string"},
+    "privacy_mode": {"enum": ["STRICT_LOCAL", "MINIMIZED_CLOUD"]},
+    "grants": {"type": "array", "uniqueItems": true, "maxItems": 8, "items": {"enum": ["voice_command", "recipient_binding", "selected_photo", "share_app_state", "selected_message", "system_status", "network_state", "cloud_features"]}},
+    "confirmation": {"enum": ["approved", "pending", "denied", "not_required"]},
+    "cancelled": {"type": "boolean"},
+    "local_context": {"type": "object"}
+  },
+  "allOf": [
+    {"if": {"properties": {"scenario_id": {"const": "SHARE_PHOTO"}}}, "then": {"properties": {
+      "utterance": {"enum": ["把剛才那張照片傳給女兒", "幫我把照片傳給女兒", "我要分享一張照片給家人"]},
+      "confirmation": {"enum": ["approved", "pending", "denied"]},
+      "local_context": {"$ref": "#/$defs/photo"}
+    }}},
+    {"if": {"properties": {"scenario_id": {"const": "CHECK_MESSAGE"}}}, "then": {"properties": {
+      "utterance": {"enum": ["這則訊息是不是詐騙", "幫我看看這則訊息有沒有風險", "這個通知要我轉帳怎麼辦"]},
+      "confirmation": {"const": "not_required"},
+      "local_context": {"$ref": "#/$defs/message"}
+    }}},
+    {"if": {"properties": {"scenario_id": {"const": "RESCUE_PHONE"}}}, "then": {"properties": {
+      "utterance": {"enum": ["手機是不是壞掉了", "手機怎麼沒有聲音", "手機怎麼沒有網路"]},
+      "confirmation": {"enum": ["approved", "pending", "denied"]},
+      "local_context": {"$ref": "#/$defs/rescue"}
+    }}}
+  ],
+  "$defs": {
+    "photo": {
+      "type": "object", "additionalProperties": false,
+      "required": ["recipient_binding", "photo_state", "share_app", "ui_state"],
+      "properties": {
+        "recipient_binding": {"enum": ["ready", "missing", "ambiguous"]},
+        "photo_state": {"enum": ["selected", "missing", "ambiguous"]},
+        "share_app": {"enum": ["available", "unavailable"]},
+        "ui_state": {"enum": ["ready", "unknown"]}
+      }
+    },
+    "message": {
+      "type": "object", "additionalProperties": false,
+      "required": ["message_state", "features"],
+      "properties": {
+        "message_state": {"enum": ["selected", "missing"]},
+        "features": {
+          "type": "object", "additionalProperties": false,
+          "required": ["asks_transfer", "requests_otp", "urgency", "has_link", "impersonation", "context_sufficient"],
+          "properties": {
+            "asks_transfer": {"type": "boolean"}, "requests_otp": {"type": "boolean"}, "urgency": {"type": "boolean"},
+            "has_link": {"type": "boolean"}, "impersonation": {"type": "boolean"}, "context_sufficient": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "rescue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["airplane_mode", "dnd_mode", "ringer_mode", "ring_volume_band", "network_connected"],
+      "properties": {
+        "airplane_mode": {"enum": ["on", "off", "unknown"]},
+        "dnd_mode": {"enum": ["on", "off", "unknown"]},
+        "ringer_mode": {"enum": ["normal", "silent", "vibrate", "unknown"]},
+        "ring_volume_band": {"enum": ["zero", "low", "normal", "unknown"]},
+        "network_connected": {"type": ["boolean", "null"]}
+      }
+    }
+  }
+}

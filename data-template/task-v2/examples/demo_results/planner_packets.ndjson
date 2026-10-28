@@ -1,0 +1,12 @@
+{"synthetic_task_id": "SYN_T0001", "packet": {"intent": "SHARE_PHOTO", "candidate_sop_ids": ["SHARE_PHOTO_GUIDED", "ASK_USER"], "facts": {"recipient_ready": true, "photo_ready": true, "share_app_ready": true, "ui_ready": true, "confirmation": "approved"}}}
+{"synthetic_task_id": "SYN_T0002", "packet": null}
+{"synthetic_task_id": "SYN_T0003", "packet": null}
+{"synthetic_task_id": "SYN_T0004", "packet": null}
+{"synthetic_task_id": "SYN_T0005", "packet": {"intent": "CHECK_MESSAGE", "candidate_sop_ids": ["MESSAGE_CAUTION", "ASK_USER"], "facts": {"asks_transfer": true, "requests_otp": false, "urgency": true, "has_link": true, "impersonation": false, "context_sufficient": true}}}
+{"synthetic_task_id": "SYN_T0006", "packet": null}
+{"synthetic_task_id": "SYN_T0007", "packet": {"intent": "CHECK_MESSAGE", "candidate_sop_ids": ["ASK_USER"], "facts": {"asks_transfer": false, "requests_otp": false, "urgency": false, "has_link": false, "impersonation": false, "context_sufficient": false}}}
+{"synthetic_task_id": "SYN_T0008", "packet": null}
+{"synthetic_task_id": "SYN_T0009", "packet": {"intent": "RESCUE_PHONE", "candidate_sop_ids": ["OPEN_AIRPLANE_SETTINGS", "ASK_USER"], "facts": {"airplane_mode": "on", "dnd_mode": "off", "ringer_mode": "normal", "ring_volume_band": "normal", "network_connected": false, "confirmation": "approved"}}}
+{"synthetic_task_id": "SYN_T0010", "packet": {"intent": "RESCUE_PHONE", "candidate_sop_ids": ["OPEN_DND_SETTINGS", "ASK_USER"], "facts": {"airplane_mode": "off", "dnd_mode": "on", "ringer_mode": "normal", "ring_volume_band": "normal", "network_connected": true, "confirmation": "pending"}}}
+{"synthetic_task_id": "SYN_T0011", "packet": null}
+{"synthetic_task_id": "SYN_T0012", "packet": {"intent": "RESCUE_PHONE", "candidate_sop_ids": ["PHONE_HELP_MANUAL", "ASK_USER"], "facts": {"airplane_mode": "unknown", "dnd_mode": "unknown", "ringer_mode": "unknown", "ring_volume_band": "unknown", "network_connected": null, "confirmation": "approved"}}}

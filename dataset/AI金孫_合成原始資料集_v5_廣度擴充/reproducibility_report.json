@@ -1,0 +1,34 @@
+{
+  "seed": 20261012,
+  "environments": 192,
+  "main_files_checked": 5,
+  "all_byte_identical": true,
+  "files": {
+    "source_raw_v5.json": {
+      "first_sha256": "050c508715b43ce0d8d6def7c5e78445064c587052cb856c5101d2e2db703959",
+      "second_sha256": "050c508715b43ce0d8d6def7c5e78445064c587052cb856c5101d2e2db703959",
+      "byte_identical": true
+    },
+    "phone_environments.csv": {
+      "first_sha256": "71d21573d40e95d2e6a560d94b3f1f0980414560c57d84ee22592a18307f7d7a",
+      "second_sha256": "71d21573d40e95d2e6a560d94b3f1f0980414560c57d84ee22592a18307f7d7a",
+      "byte_identical": true
+    },
+    "task_requests.csv": {
+      "first_sha256": "6533f634c1719b6660d67278d46cbc3cca1e81d8986f0c0d77f6df9c5bc51b2b",
+      "second_sha256": "6533f634c1719b6660d67278d46cbc3cca1e81d8986f0c0d77f6df9c5bc51b2b",
+      "byte_identical": true
+    },
+    "scenario_catalog.csv": {
+      "first_sha256": "bb1a35cfdb1ae393fccf41c72c8a3c899fd51d7b1d835c379154857d1edb116d",
+      "second_sha256": "bb1a35cfdb1ae393fccf41c72c8a3c899fd51d7b1d835c379154857d1edb116d",
+      "byte_identical": true
+    },
+    "generation_report.json": {
+      "first_sha256": "374460836e520711384d680917ed31fcd7c242a3e182fe06a61a65246c3bc373",
+      "second_sha256": "374460836e520711384d680917ed31fcd7c242a3e182fe06a61a65246c3bc373",
+      "byte_identical": true
+    }
+  },
+  "note": "Generated in two distinct output folders; no LLM/API calls."
+}

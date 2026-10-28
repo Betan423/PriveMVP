@@ -1,0 +1,108 @@
+{
+  "original_audit_inputs_unchanged": true,
+  "original_inputs": {
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\baseline_derived_tasks_v3_3rows.csv": {
+      "before_sha256": "e9cd807fc136e46f78b5b9d66617328c37bfd0470ae3d2910309eeeabf65ea7f",
+      "current_sha256": "e9cd807fc136e46f78b5b9d66617328c37bfd0470ae3d2910309eeeabf65ea7f",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\generate_raw_dataset.py": {
+      "before_sha256": "ee367ef63250dc2813861651b3f3141222979cb4b8d5d06ca86a24005327cb9f",
+      "current_sha256": "ee367ef63250dc2813861651b3f3141222979cb4b8d5d06ca86a24005327cb9f",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\phone_environments_expanded.csv": {
+      "before_sha256": "aaff3baec2753b7d5fe231feb7cd64b1887041c2128604734a86f6599ac81dec",
+      "current_sha256": "aaff3baec2753b7d5fe231feb7cd64b1887041c2128604734a86f6599ac81dec",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\quality_report.json": {
+      "before_sha256": "ea73f28560df0f0e19adc13621af3bc30237ea192f99f31d571ed0dee1c48f06",
+      "current_sha256": "ea73f28560df0f0e19adc13621af3bc30237ea192f99f31d571ed0dee1c48f06",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\README_使用說明.md": {
+      "before_sha256": "2615a311a3c47d5842a96f7d90120bef9d1d3bcded9c3165d323696e5162f8a8",
+      "current_sha256": "2615a311a3c47d5842a96f7d90120bef9d1d3bcded9c3165d323696e5162f8a8",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\scenario_catalog.csv": {
+      "before_sha256": "14a608efea208c3fe2fdf22e47cab656a5f90ee0a95b7b16d3e81e13e64186f9",
+      "current_sha256": "14a608efea208c3fe2fdf22e47cab656a5f90ee0a95b7b16d3e81e13e64186f9",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_phone_environments.csv": {
+      "before_sha256": "835ceebb9d879a2741724f69c23cb11bb237feb54b90f1f507712fd181ec6f21",
+      "current_sha256": "835ceebb9d879a2741724f69c23cb11bb237feb54b90f1f507712fd181ec6f21",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_source_v3.json": {
+      "before_sha256": "b83e3b4c01395e14c33d37062e31bf5d80215450b1b0e7184e573f5e4ac19cb3",
+      "current_sha256": "b83e3b4c01395e14c33d37062e31bf5d80215450b1b0e7184e573f5e4ac19cb3",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\seed_task_requests.csv": {
+      "before_sha256": "9f4717bd1add2605acc1786ec3a7814e96929533ccbabec33e66f801e7ab6ff4",
+      "current_sha256": "9f4717bd1add2605acc1786ec3a7814e96929533ccbabec33e66f801e7ab6ff4",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\source_expanded_v3.json": {
+      "before_sha256": "f53d194c3d7d5c2cc7b2bcf96afc28991dd7c657b74e5b87503f29bfbee48592",
+      "current_sha256": "f53d194c3d7d5c2cc7b2bcf96afc28991dd7c657b74e5b87503f29bfbee48592",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\source_extension_v4_candidate.json": {
+      "before_sha256": "62e5a0b269cdcdffe7329fcd8f101d0bb595cc57ba9fd3b149b4fe524094905e",
+      "current_sha256": "62e5a0b269cdcdffe7329fcd8f101d0bb595cc57ba9fd3b149b4fe524094905e",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\task_requests_expanded.csv": {
+      "before_sha256": "d764de6e5e3a51469962d6d7e9b0bfb7af1bf810f3e528919206f864fbdc0d00",
+      "current_sha256": "d764de6e5e3a51469962d6d7e9b0bfb7af1bf810f3e528919206f864fbdc0d00",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI\\AI金孫_合成原始資料集_v4_候選\\task_requests_extension_v4_candidate.csv": {
+      "before_sha256": "928a3829b445fe475035bad06cb56045127cb763989c0f23485c291589a2f5b4",
+      "current_sha256": "928a3829b445fe475035bad06cb56045127cb763989c0f23485c291589a2f5b4",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\bundle_engine.py": {
+      "before_sha256": "78f7ac6a97967bb1a1cf58ebae29d0b30a641e6a687f8359e9b6201c2686670a",
+      "current_sha256": "78f7ac6a97967bb1a1cf58ebae29d0b30a641e6a687f8359e9b6201c2686670a",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\privacy_policy.json": {
+      "before_sha256": "38c536fd46e565c35baa4d9e480e36bfe8c8b8b21cd51153782ea532caea612c",
+      "current_sha256": "38c536fd46e565c35baa4d9e480e36bfe8c8b8b21cd51153782ea532caea612c",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\sops.json": {
+      "before_sha256": "78e4b6c925328c874145ee312be90d051f3302dee1462afdb8a4c0eefec29ced",
+      "current_sha256": "78e4b6c925328c874145ee312be90d051f3302dee1462afdb8a4c0eefec29ced",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\task_engine.py": {
+      "before_sha256": "5b496a61f94164acc155a5052249f2fdc4f401ecfce9e58a2881c1bcaa3afe80",
+      "current_sha256": "5b496a61f94164acc155a5052249f2fdc4f401ecfce9e58a2881c1bcaa3afe80",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\data-template\\task-v3\\core\\task_schema.json": {
+      "before_sha256": "5da3a81b581fd3571c8495fa0882418d33f99ae615a3ddb8f65680eb887220e9",
+      "current_sha256": "5da3a81b581fd3571c8495fa0882418d33f99ae615a3ddb8f65680eb887220e9",
+      "unchanged": true
+    },
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\AI.docx": {
+      "before_sha256": "cb2c4bfb5637c825cdcf1b92aa68b3982ff1ba503101eddf4b27b0bb8d71f754",
+      "current_sha256": "cb2c4bfb5637c825cdcf1b92aa68b3982ff1ba503101eddf4b27b0bb8d71f754",
+      "unchanged": true
+    }
+  },
+  "update_readonly_snapshot": {
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\update\\AI金孫_系統概述_隱私版.docx": "943579bf12c97d0c9be9cb145dc8005996b54cc48c7bb4a85b9d5dda264e2c69",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\update\\HANDOFF.md": "ceeee1aa260f95b6e4c95549f7e554ac51812f110a75f908391cbf36cd990efb",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\update\\RAW_DATASET_72env_576tasks.zip": "c0edb6af81a61a85e6edd0d5eeb8b0334c15be74d3a7355c44fc733189fd522a",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\update\\附件6_官方範本.docx": "33e2492a499fb8652ac2bc0c08187d5b055a1f6b1f48b2cea36c922d9d559714",
+    "D:\\PriveMVP\\PrivAgentRawCollectorMVP_v0.1\\PrivAgentRawCollectorMVP\\dataset\\update\\附件6_目前最新版.docx": "cb2c4bfb5637c825cdcf1b92aa68b3982ff1ba503101eddf4b27b0bb8d71f754"
+  },
+  "scope": "No original source, v3 engine or supplied Word file overwritten."
+}

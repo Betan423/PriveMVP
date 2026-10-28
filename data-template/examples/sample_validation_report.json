@@ -1,0 +1,25 @@
+{
+  "template_version": "1.0",
+  "passed": true,
+  "scope": "structure_and_designed_scenarios_only",
+  "privacy_evaluation_performed": false,
+  "population_fidelity_evaluation_performed": false,
+  "records_seen": 10,
+  "json_parsed_records": 10,
+  "schema_pass_records": 10,
+  "schema_pass_rate": 1.0,
+  "synthetic_users": 1,
+  "synthetic_user_days": 1,
+  "scenario_user_counts": {
+    "routine": 1
+  },
+  "error_count": 0,
+  "errors": [],
+  "errors_truncated": false,
+  "limitations": [
+    "Not a general-purpose JSON Schema engine; implements supplied schema subset",
+    "Whitelist cannot detect private information encoded into valid numeric values",
+    "No reidentification/membership inference attack or differential privacy proof performed",
+    "Designed scenarios are not estimates of a real elderly population"
+  ]
+}

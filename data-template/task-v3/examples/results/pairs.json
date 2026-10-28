@@ -1,0 +1,800 @@
+[
+  {
+    "record_id": "SYN_T0001",
+    "part_1_original": {
+      "phone_environment": {
+        "environment_id": "SYN_ENV0001",
+        "captured_offset_sec": 600,
+        "initialization_data": {
+          "user_profile": {
+            "user_id": "SYN_U001",
+            "age_band": "75-84",
+            "locale": "zh-TW",
+            "font_scale": 1.4
+          },
+          "device": {
+            "device_id": "SYN_DEVICE001",
+            "manufacturer": "SYN_BRAND",
+            "model": "SYN_MODEL_A",
+            "sdk_int": 36,
+            "android_release": "16",
+            "screen_width_px": 1080,
+            "screen_height_px": 2340,
+            "ram_gb": 8,
+            "storage_gb": 128
+          },
+          "contacts": [
+            {
+              "contact_id": "SYN_C001",
+              "display_name": "SYN_DAUGHTER_A",
+              "relationship": "daughter",
+              "phone_ref": "SYN_PHONE_PRIVATE001",
+              "line_ref": "SYN_LINE_PRIVATE001"
+            },
+            {
+              "contact_id": "SYN_C002",
+              "display_name": "SYN_FRIEND_A",
+              "relationship": "friend",
+              "phone_ref": "SYN_PHONE_PRIVATE002",
+              "line_ref": "SYN_LINE_PRIVATE002"
+            }
+          ],
+          "installed_apps": [
+            {
+              "app_id": "SYN_A001",
+              "name": "LINE",
+              "package": "jp.naver.line.android",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A002",
+              "name": "GALLERY",
+              "package": "com.example.synthetic.gallery",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A003",
+              "name": "SETTINGS",
+              "package": "com.example.synthetic.settings",
+              "installed": true
+            }
+          ]
+        },
+        "continuous_state_data": {
+          "permissions": {
+            "contacts": "granted",
+            "media_images": "granted",
+            "notifications": "granted",
+            "accessibility": "granted",
+            "microphone": "unknown",
+            "location": "unknown",
+            "calendar": "unknown"
+          },
+          "battery": {
+            "capacity_percent": 72,
+            "charging": false
+          },
+          "network": {
+            "connected": true,
+            "transport": "WIFI",
+            "internet_validated": true,
+            "wifi_ssid_ref": "SYN_WIFI_PRIVATE001"
+          },
+          "system": {
+            "airplane_mode": "off",
+            "dnd_mode": "on",
+            "ringer_mode": "normal",
+            "ring_volume_current": 0,
+            "ring_volume_max": 15
+          },
+          "screen": {
+            "current_app_id": "SYN_A002",
+            "guard_ready": true,
+            "node_count": 12,
+            "text_ref": "SYN_SCREEN_PRIVATE001"
+          },
+          "photos": [
+            {
+              "photo_id": "SYN_P001",
+              "display_name": "SYN_PHOTO001.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE001",
+              "taken_offset_sec": 540,
+              "mime_type": "image/jpeg",
+              "size_bytes": 2048000,
+              "width": 1920,
+              "height": 1080,
+              "exif_location_ref": "SYN_LOCATION_PRIVATE001",
+              "pixels_available": false
+            },
+            {
+              "photo_id": "SYN_P002",
+              "display_name": "SYN_PHOTO002.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE002",
+              "taken_offset_sec": 100,
+              "mime_type": "image/jpeg",
+              "size_bytes": 1024000,
+              "width": 1080,
+              "height": 1080,
+              "exif_location_ref": null,
+              "pixels_available": false
+            }
+          ],
+          "messages": [
+            {
+              "message_id": "SYN_M001",
+              "sender_ref": "SYN_SENDER_PRIVATE001",
+              "text": "我是虛構客服，請立即轉帳並提供驗證碼，點選 https://verify.example.invalid/claim",
+              "received_offset_sec": 580,
+              "context_sufficient": true
+            },
+            {
+              "message_id": "SYN_M002",
+              "sender_ref": "SYN_SENDER_PRIVATE002",
+              "text": "虛構家人提醒：明天一起吃飯。",
+              "received_offset_sec": 200,
+              "context_sufficient": true
+            }
+          ],
+          "notifications": [
+            {
+              "notification_id": "SYN_N001",
+              "app_id": "SYN_A001",
+              "message_id": "SYN_M001",
+              "post_offset_sec": 581
+            }
+          ],
+          "calendar": [
+            {
+              "event_id": "SYN_CAL001",
+              "title_ref": "SYN_CALENDAR_PRIVATE001",
+              "start_offset_sec": 7200
+            }
+          ],
+          "location": {
+            "location_ref": "SYN_LOCATION_PRIVATE001",
+            "latitude": 0,
+            "longitude": 0,
+            "accuracy_m": 100
+          },
+          "clipboard": {
+            "observability": "unavailable",
+            "text_ref": null
+          },
+          "call": {
+            "state": "idle",
+            "caller_ref": null
+          }
+        }
+      },
+      "task_request": {
+        "task_id": "SYN_T0001",
+        "environment_id": "SYN_ENV0001",
+        "user_id": "SYN_U001",
+        "scenario_id": "SHARE_PHOTO",
+        "utterance": "把剛才那張照片傳給女兒",
+        "privacy_mode": "MINIMIZED_CLOUD",
+        "grants": [
+          "voice_command",
+          "recipient_binding",
+          "selected_photo",
+          "share_app_state",
+          "cloud_features"
+        ],
+        "confirmation": "approved",
+        "cancelled": false,
+        "requested_offset_sec": 610,
+        "parameters": {
+          "recipient_relation": "daughter",
+          "photo_id": "SYN_P001"
+        }
+      }
+    },
+    "part_2_derived": {
+      "template_version": "3.0",
+      "synthetic": true,
+      "task_id": "SYN_T0001",
+      "scenario_id": "SHARE_PHOTO",
+      "privacy_mode": "MINIMIZED_CLOUD",
+      "required_data": [
+        "voice_command",
+        "recipient_binding",
+        "selected_photo",
+        "share_app_state"
+      ],
+      "accessed_data": [
+        "voice_command",
+        "recipient_binding",
+        "selected_photo",
+        "share_app_state"
+      ],
+      "stage_access": {
+        "INIT": [
+          "recipient_binding"
+        ],
+        "STATE": [
+          "share_app_state"
+        ],
+        "TASK": [
+          "voice_command",
+          "selected_photo"
+        ]
+      },
+      "disclosed_data": [
+        "recipient_ready",
+        "photo_ready",
+        "share_app_ready",
+        "ui_ready",
+        "confirmation"
+      ],
+      "sensitive_data_count": 0,
+      "planner_packet": {
+        "intent": "SHARE_PHOTO",
+        "candidate_sop_ids": [
+          "SHARE_PHOTO_GUIDED",
+          "ASK_USER"
+        ],
+        "facts": {
+          "recipient_ready": true,
+          "photo_ready": true,
+          "share_app_ready": true,
+          "ui_ready": true,
+          "confirmation": "approved"
+        }
+      },
+      "candidate_sop_ids": [
+        "SHARE_PHOTO_GUIDED",
+        "ASK_USER"
+      ],
+      "selected_sop": "SHARE_PHOTO_GUIDED",
+      "symbolic_action": "OPEN_SHARE_UI",
+      "task_outcome": "USER_ACTION_REQUIRED",
+      "reason": "SEND_NOT_VERIFIED",
+      "success": null,
+      "planner_kind": "RULE_BASED_MOCK",
+      "actual_network_requests": 0,
+      "actual_phone_actions": 0,
+      "cloud_opt_out_fallback": false,
+      "task_context_release_design": "clear_at_completion_or_cancel; no real bindings exist in this simulation",
+      "comparison": {
+        "basis": "fictional_full_phone_and_task_vs_hypothetical_minimized_packet",
+        "original_leaf_values": 120,
+        "original_bytes": 3375,
+        "proposed_packet_leaf_values": 8,
+        "proposed_packet_bytes": 195,
+        "matched_cloud_task": true
+      },
+      "platform_permissions_checked": [
+        "contacts",
+        "media_images",
+        "accessibility"
+      ],
+      "platform_permissions_sufficient": true,
+      "snapshot_age_sec": 10
+    }
+  },
+  {
+    "record_id": "SYN_T0002",
+    "part_1_original": {
+      "phone_environment": {
+        "environment_id": "SYN_ENV0001",
+        "captured_offset_sec": 600,
+        "initialization_data": {
+          "user_profile": {
+            "user_id": "SYN_U001",
+            "age_band": "75-84",
+            "locale": "zh-TW",
+            "font_scale": 1.4
+          },
+          "device": {
+            "device_id": "SYN_DEVICE001",
+            "manufacturer": "SYN_BRAND",
+            "model": "SYN_MODEL_A",
+            "sdk_int": 36,
+            "android_release": "16",
+            "screen_width_px": 1080,
+            "screen_height_px": 2340,
+            "ram_gb": 8,
+            "storage_gb": 128
+          },
+          "contacts": [
+            {
+              "contact_id": "SYN_C001",
+              "display_name": "SYN_DAUGHTER_A",
+              "relationship": "daughter",
+              "phone_ref": "SYN_PHONE_PRIVATE001",
+              "line_ref": "SYN_LINE_PRIVATE001"
+            },
+            {
+              "contact_id": "SYN_C002",
+              "display_name": "SYN_FRIEND_A",
+              "relationship": "friend",
+              "phone_ref": "SYN_PHONE_PRIVATE002",
+              "line_ref": "SYN_LINE_PRIVATE002"
+            }
+          ],
+          "installed_apps": [
+            {
+              "app_id": "SYN_A001",
+              "name": "LINE",
+              "package": "jp.naver.line.android",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A002",
+              "name": "GALLERY",
+              "package": "com.example.synthetic.gallery",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A003",
+              "name": "SETTINGS",
+              "package": "com.example.synthetic.settings",
+              "installed": true
+            }
+          ]
+        },
+        "continuous_state_data": {
+          "permissions": {
+            "contacts": "granted",
+            "media_images": "granted",
+            "notifications": "granted",
+            "accessibility": "granted",
+            "microphone": "unknown",
+            "location": "unknown",
+            "calendar": "unknown"
+          },
+          "battery": {
+            "capacity_percent": 72,
+            "charging": false
+          },
+          "network": {
+            "connected": true,
+            "transport": "WIFI",
+            "internet_validated": true,
+            "wifi_ssid_ref": "SYN_WIFI_PRIVATE001"
+          },
+          "system": {
+            "airplane_mode": "off",
+            "dnd_mode": "on",
+            "ringer_mode": "normal",
+            "ring_volume_current": 0,
+            "ring_volume_max": 15
+          },
+          "screen": {
+            "current_app_id": "SYN_A002",
+            "guard_ready": true,
+            "node_count": 12,
+            "text_ref": "SYN_SCREEN_PRIVATE001"
+          },
+          "photos": [
+            {
+              "photo_id": "SYN_P001",
+              "display_name": "SYN_PHOTO001.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE001",
+              "taken_offset_sec": 540,
+              "mime_type": "image/jpeg",
+              "size_bytes": 2048000,
+              "width": 1920,
+              "height": 1080,
+              "exif_location_ref": "SYN_LOCATION_PRIVATE001",
+              "pixels_available": false
+            },
+            {
+              "photo_id": "SYN_P002",
+              "display_name": "SYN_PHOTO002.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE002",
+              "taken_offset_sec": 100,
+              "mime_type": "image/jpeg",
+              "size_bytes": 1024000,
+              "width": 1080,
+              "height": 1080,
+              "exif_location_ref": null,
+              "pixels_available": false
+            }
+          ],
+          "messages": [
+            {
+              "message_id": "SYN_M001",
+              "sender_ref": "SYN_SENDER_PRIVATE001",
+              "text": "我是虛構客服，請立即轉帳並提供驗證碼，點選 https://verify.example.invalid/claim",
+              "received_offset_sec": 580,
+              "context_sufficient": true
+            },
+            {
+              "message_id": "SYN_M002",
+              "sender_ref": "SYN_SENDER_PRIVATE002",
+              "text": "虛構家人提醒：明天一起吃飯。",
+              "received_offset_sec": 200,
+              "context_sufficient": true
+            }
+          ],
+          "notifications": [
+            {
+              "notification_id": "SYN_N001",
+              "app_id": "SYN_A001",
+              "message_id": "SYN_M001",
+              "post_offset_sec": 581
+            }
+          ],
+          "calendar": [
+            {
+              "event_id": "SYN_CAL001",
+              "title_ref": "SYN_CALENDAR_PRIVATE001",
+              "start_offset_sec": 7200
+            }
+          ],
+          "location": {
+            "location_ref": "SYN_LOCATION_PRIVATE001",
+            "latitude": 0,
+            "longitude": 0,
+            "accuracy_m": 100
+          },
+          "clipboard": {
+            "observability": "unavailable",
+            "text_ref": null
+          },
+          "call": {
+            "state": "idle",
+            "caller_ref": null
+          }
+        }
+      },
+      "task_request": {
+        "task_id": "SYN_T0002",
+        "environment_id": "SYN_ENV0001",
+        "user_id": "SYN_U001",
+        "scenario_id": "CHECK_MESSAGE",
+        "utterance": "這則訊息是不是詐騙",
+        "privacy_mode": "MINIMIZED_CLOUD",
+        "grants": [
+          "voice_command",
+          "selected_message",
+          "cloud_features"
+        ],
+        "confirmation": "not_required",
+        "cancelled": false,
+        "requested_offset_sec": 620,
+        "parameters": {
+          "message_id": "SYN_M001"
+        }
+      }
+    },
+    "part_2_derived": {
+      "template_version": "3.0",
+      "synthetic": true,
+      "task_id": "SYN_T0002",
+      "scenario_id": "CHECK_MESSAGE",
+      "privacy_mode": "MINIMIZED_CLOUD",
+      "required_data": [
+        "voice_command",
+        "selected_message"
+      ],
+      "accessed_data": [
+        "voice_command",
+        "selected_message"
+      ],
+      "stage_access": {
+        "INIT": [],
+        "STATE": [],
+        "TASK": [
+          "voice_command",
+          "selected_message"
+        ]
+      },
+      "disclosed_data": [
+        "asks_transfer",
+        "requests_otp",
+        "urgency",
+        "has_link",
+        "impersonation",
+        "context_sufficient"
+      ],
+      "sensitive_data_count": 0,
+      "planner_packet": {
+        "intent": "CHECK_MESSAGE",
+        "candidate_sop_ids": [
+          "MESSAGE_CAUTION",
+          "ASK_USER"
+        ],
+        "facts": {
+          "asks_transfer": true,
+          "requests_otp": true,
+          "urgency": true,
+          "has_link": true,
+          "impersonation": true,
+          "context_sufficient": true
+        }
+      },
+      "candidate_sop_ids": [
+        "MESSAGE_CAUTION",
+        "ASK_USER"
+      ],
+      "selected_sop": "MESSAGE_CAUTION",
+      "symbolic_action": "SHOW_CAUTION",
+      "task_outcome": "GUIDANCE_ONLY",
+      "reason": "RISK_SIGNAL_NOT_VERDICT",
+      "success": null,
+      "planner_kind": "RULE_BASED_MOCK",
+      "actual_network_requests": 0,
+      "actual_phone_actions": 0,
+      "cloud_opt_out_fallback": false,
+      "task_context_release_design": "clear_at_completion_or_cancel; no real bindings exist in this simulation",
+      "comparison": {
+        "basis": "fictional_full_phone_and_task_vs_hypothetical_minimized_packet",
+        "original_leaf_values": 117,
+        "original_bytes": 3309,
+        "proposed_packet_leaf_values": 9,
+        "proposed_packet_bytes": 206,
+        "matched_cloud_task": true
+      },
+      "platform_permissions_checked": [
+        "notifications"
+      ],
+      "platform_permissions_sufficient": true,
+      "snapshot_age_sec": 20
+    }
+  },
+  {
+    "record_id": "SYN_T0003",
+    "part_1_original": {
+      "phone_environment": {
+        "environment_id": "SYN_ENV0001",
+        "captured_offset_sec": 600,
+        "initialization_data": {
+          "user_profile": {
+            "user_id": "SYN_U001",
+            "age_band": "75-84",
+            "locale": "zh-TW",
+            "font_scale": 1.4
+          },
+          "device": {
+            "device_id": "SYN_DEVICE001",
+            "manufacturer": "SYN_BRAND",
+            "model": "SYN_MODEL_A",
+            "sdk_int": 36,
+            "android_release": "16",
+            "screen_width_px": 1080,
+            "screen_height_px": 2340,
+            "ram_gb": 8,
+            "storage_gb": 128
+          },
+          "contacts": [
+            {
+              "contact_id": "SYN_C001",
+              "display_name": "SYN_DAUGHTER_A",
+              "relationship": "daughter",
+              "phone_ref": "SYN_PHONE_PRIVATE001",
+              "line_ref": "SYN_LINE_PRIVATE001"
+            },
+            {
+              "contact_id": "SYN_C002",
+              "display_name": "SYN_FRIEND_A",
+              "relationship": "friend",
+              "phone_ref": "SYN_PHONE_PRIVATE002",
+              "line_ref": "SYN_LINE_PRIVATE002"
+            }
+          ],
+          "installed_apps": [
+            {
+              "app_id": "SYN_A001",
+              "name": "LINE",
+              "package": "jp.naver.line.android",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A002",
+              "name": "GALLERY",
+              "package": "com.example.synthetic.gallery",
+              "installed": true
+            },
+            {
+              "app_id": "SYN_A003",
+              "name": "SETTINGS",
+              "package": "com.example.synthetic.settings",
+              "installed": true
+            }
+          ]
+        },
+        "continuous_state_data": {
+          "permissions": {
+            "contacts": "granted",
+            "media_images": "granted",
+            "notifications": "granted",
+            "accessibility": "granted",
+            "microphone": "unknown",
+            "location": "unknown",
+            "calendar": "unknown"
+          },
+          "battery": {
+            "capacity_percent": 72,
+            "charging": false
+          },
+          "network": {
+            "connected": true,
+            "transport": "WIFI",
+            "internet_validated": true,
+            "wifi_ssid_ref": "SYN_WIFI_PRIVATE001"
+          },
+          "system": {
+            "airplane_mode": "off",
+            "dnd_mode": "on",
+            "ringer_mode": "normal",
+            "ring_volume_current": 0,
+            "ring_volume_max": 15
+          },
+          "screen": {
+            "current_app_id": "SYN_A002",
+            "guard_ready": true,
+            "node_count": 12,
+            "text_ref": "SYN_SCREEN_PRIVATE001"
+          },
+          "photos": [
+            {
+              "photo_id": "SYN_P001",
+              "display_name": "SYN_PHOTO001.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE001",
+              "taken_offset_sec": 540,
+              "mime_type": "image/jpeg",
+              "size_bytes": 2048000,
+              "width": 1920,
+              "height": 1080,
+              "exif_location_ref": "SYN_LOCATION_PRIVATE001",
+              "pixels_available": false
+            },
+            {
+              "photo_id": "SYN_P002",
+              "display_name": "SYN_PHOTO002.jpg",
+              "media_ref": "SYN_MEDIA_PRIVATE002",
+              "taken_offset_sec": 100,
+              "mime_type": "image/jpeg",
+              "size_bytes": 1024000,
+              "width": 1080,
+              "height": 1080,
+              "exif_location_ref": null,
+              "pixels_available": false
+            }
+          ],
+          "messages": [
+            {
+              "message_id": "SYN_M001",
+              "sender_ref": "SYN_SENDER_PRIVATE001",
+              "text": "我是虛構客服，請立即轉帳並提供驗證碼，點選 https://verify.example.invalid/claim",
+              "received_offset_sec": 580,
+              "context_sufficient": true
+            },
+            {
+              "message_id": "SYN_M002",
+              "sender_ref": "SYN_SENDER_PRIVATE002",
+              "text": "虛構家人提醒：明天一起吃飯。",
+              "received_offset_sec": 200,
+              "context_sufficient": true
+            }
+          ],
+          "notifications": [
+            {
+              "notification_id": "SYN_N001",
+              "app_id": "SYN_A001",
+              "message_id": "SYN_M001",
+              "post_offset_sec": 581
+            }
+          ],
+          "calendar": [
+            {
+              "event_id": "SYN_CAL001",
+              "title_ref": "SYN_CALENDAR_PRIVATE001",
+              "start_offset_sec": 7200
+            }
+          ],
+          "location": {
+            "location_ref": "SYN_LOCATION_PRIVATE001",
+            "latitude": 0,
+            "longitude": 0,
+            "accuracy_m": 100
+          },
+          "clipboard": {
+            "observability": "unavailable",
+            "text_ref": null
+          },
+          "call": {
+            "state": "idle",
+            "caller_ref": null
+          }
+        }
+      },
+      "task_request": {
+        "task_id": "SYN_T0003",
+        "environment_id": "SYN_ENV0001",
+        "user_id": "SYN_U001",
+        "scenario_id": "RESCUE_PHONE",
+        "utterance": "手機是不是壞掉了",
+        "privacy_mode": "MINIMIZED_CLOUD",
+        "grants": [
+          "voice_command",
+          "system_status",
+          "network_state",
+          "cloud_features"
+        ],
+        "confirmation": "pending",
+        "cancelled": false,
+        "requested_offset_sec": 630,
+        "parameters": {}
+      }
+    },
+    "part_2_derived": {
+      "template_version": "3.0",
+      "synthetic": true,
+      "task_id": "SYN_T0003",
+      "scenario_id": "RESCUE_PHONE",
+      "privacy_mode": "MINIMIZED_CLOUD",
+      "required_data": [
+        "voice_command",
+        "system_status",
+        "network_state"
+      ],
+      "accessed_data": [
+        "voice_command",
+        "system_status",
+        "network_state"
+      ],
+      "stage_access": {
+        "INIT": [],
+        "STATE": [
+          "system_status",
+          "network_state"
+        ],
+        "TASK": [
+          "voice_command"
+        ]
+      },
+      "disclosed_data": [
+        "airplane_mode",
+        "dnd_mode",
+        "ringer_mode",
+        "ring_volume_band",
+        "network_connected",
+        "confirmation"
+      ],
+      "sensitive_data_count": 0,
+      "planner_packet": {
+        "intent": "RESCUE_PHONE",
+        "candidate_sop_ids": [
+          "OPEN_DND_SETTINGS",
+          "ASK_USER"
+        ],
+        "facts": {
+          "airplane_mode": "off",
+          "dnd_mode": "on",
+          "ringer_mode": "normal",
+          "ring_volume_band": "zero",
+          "network_connected": true,
+          "confirmation": "pending"
+        }
+      },
+      "candidate_sop_ids": [
+        "OPEN_DND_SETTINGS",
+        "ASK_USER"
+      ],
+      "selected_sop": "OPEN_DND_SETTINGS",
+      "symbolic_action": "ASK_CONFIRM",
+      "task_outcome": "WAIT_CONFIRM",
+      "reason": "CONFIRMATION_REQUIRED",
+      "success": null,
+      "planner_kind": "RULE_BASED_MOCK",
+      "actual_network_requests": 0,
+      "actual_phone_actions": 0,
+      "cloud_opt_out_fallback": false,
+      "task_context_release_design": "clear_at_completion_or_cancel; no real bindings exist in this simulation",
+      "comparison": {
+        "basis": "fictional_full_phone_and_task_vs_hypothetical_minimized_packet",
+        "original_leaf_values": 117,
+        "original_bytes": 3290,
+        "proposed_packet_leaf_values": 9,
+        "proposed_packet_bytes": 225,
+        "matched_cloud_task": true
+      },
+      "platform_permissions_checked": [],
+      "platform_permissions_sufficient": true,
+      "snapshot_age_sec": 30
+    }
+  }
+]

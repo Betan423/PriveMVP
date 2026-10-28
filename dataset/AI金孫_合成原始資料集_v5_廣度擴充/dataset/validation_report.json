@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "validation_kind": "RAW_SOURCE_STRUCTURAL_AND_AUTHORED_TEMPLATE_COHERENCE",
+  "privacy_processing_applied": false,
+  "checked_environments": 192,
+  "checked_tasks": 5184,
+  "error_count": 0,
+  "errors": [],
+  "assertion_checks": 247699,
+  "checks": {
+    "root_keys": 1,
+    "raw_only_markers": 1,
+    "fictional_identifier_only": 69678,
+    "unique_environment_id": 1,
+    "unique_task_id": 1,
+    "unique_fictional_user_id": 1,
+    "task_count_formula": 1,
+    "balanced_nine_scenarios": 1,
+    "environment_keys": 192,
+    "captured_time_type": 192,
+    "initialization_keys": 192,
+    "state_keys": 192,
+    "android_version_mapping": 192,
+    "age_band": 192,
+    "permission_values": 192,
+    "battery_range": 192,
+    "volume_range": 192,
+    "network_consistency": 192,
+    "location_placeholder": 192,
+    "unique_contact_id": 192,
+    "unique_app_id": 192,
+    "unique_destination_id": 192,
+    "unique_photo_id": 192,
+    "unique_message_id": 192,
+    "unique_notification_id": 192,
+    "unique_event_id": 192,
+    "unique_app_name": 192,
+    "screen_installed_app": 192,
+    "photo_time": 896,
+    "no_photo_pixels": 896,
+    "destination_placeholder": 1398,
+    "message_template_exists": 6144,
+    "message_time": 6144,
+    "fictional_message_pattern": 6144,
+    "message_source_category": 6144,
+    "message_context_label": 6144,
+    "notification_app_reference": 5483,
+    "notification_message_reference": 5483,
+    "notification_time": 5483,
+    "task_keys": 5184,
+    "task_environment_reference": 5184,
+    "task_user_reference": 5184,
+    "task_time": 5184,
+    "privacy_mode": 5184,
+    "confirmation_values": 5184,
+    "cancel_followup": 5184,
+    "grant_values": 5184,
+    "no_cloud_grant_for_strict_local": 5184,
+    "cloud_consent_label": 5184,
+    "snapshot_age_label": 5184,
+    "task_unprocessed_markers": 5184,
+    "task_template_reference": 5184,
+    "task_subscenario": 5184,
+    "pattern_index": 5184,
+    "utterance_parameter_alignment": 5184,
+    "recipient_relation_values": 5184,
+    "selected_photo_id_reference": 5184,
+    "selected_message_id_reference": 5184,
+    "selected_notification_id_reference": 5184,
+    "selected_destination_ref_reference": 5184,
+    "selected_missing_label": 5184,
+    "recipient_binding_label": 1728,
+    "photo_intent_semantics": 576,
+    "latest_photo_selection": 72,
+    "photo_album_selection": 144,
+    "selected_message_semantics": 546,
+    "rescue_intent_semantics": 576,
+    "call_intent_semantics": 576,
+    "explicit_local_request": 576,
+    "message_draft_semantics": 576,
+    "notification_app_semantics": 576,
+    "notification_app_selection": 533,
+    "latest_notification_selection": 329,
+    "reminder_kind_semantics": 576,
+    "reminder_time_alignment": 576,
+    "destination_intent_semantics": 576,
+    "destination_category_reference": 523,
+    "app_intent_semantics": 576,
+    "photo_exif_fixture": 72,
+    "photo_background_fixture": 60
+  },
+  "limitations": [
+    "Checks use the same authored semantic specifications as generation, not an independent task-planning oracle.",
+    "Not a Privacy, population Fidelity or Agent Utility effectiveness result."
+  ],
+  "csv_json_roundtrip": {
+    "phone_environments.csv": {
+      "passed": true,
+      "rows": 192,
+      "json_rows": 192,
+      "columns": 57,
+      "mismatch_rows": []
+    },
+    "task_requests.csv": {
+      "passed": true,
+      "rows": 5184,
+      "json_rows": 5184,
+      "columns": 46,
+      "mismatch_rows": []
+    }
+  },
+  "age_band_counts": {
+    "65-69": 32,
+    "70-74": 32,
+    "75-79": 32,
+    "80-84": 32,
+    "85-89": 32,
+    "90+": 32
+  },
+  "sdk_counts": {
+    "29": 24,
+    "30": 24,
+    "31": 24,
+    "32": 24,
+    "33": 24,
+    "34": 24,
+    "35": 24,
+    "36": 24
+  },
+  "fixture_counts": {
+    "recipient_binding_case": {
+      "unique": 1470,
+      "not_applicable": 3456,
+      "missing": 231,
+      "ambiguous": 27
+    },
+    "selected_resource_missing": {
+      "False": 5022,
+      "True": 162
+    },
+    "grant_case": {
+      "missing_purpose": 864,
+      "voice_only": 864,
+      "none": 864,
+      "full": 2592
+    },
+    "cloud_features_consent": {
+      "True": 2716,
+      "False": 2468
+    },
+    "snapshot_freshness_fixture": {
+      "within_300sec": 3456,
+      "stale_over_300sec": 1728
+    }
+  },
+  "privacy_modes": {
+    "MINIMIZED_CLOUD": 3408,
+    "STRICT_LOCAL": 1776
+  },
+  "confirmation": {
+    "pending": 1296,
+    "rejected": 1296,
+    "not_required": 1296,
+    "approved": 1296
+  },
+  "cancelled_tasks": 304,
+  "input_sha256": {
+    "source_raw_v5.json": "050c508715b43ce0d8d6def7c5e78445064c587052cb856c5101d2e2db703959",
+    "phone_environments.csv": "71d21573d40e95d2e6a560d94b3f1f0980414560c57d84ee22592a18307f7d7a",
+    "task_requests.csv": "6533f634c1719b6660d67278d46cbc3cca1e81d8986f0c0d77f6df9c5bc51b2b",
+    "scenario_catalog.csv": "bb1a35cfdb1ae393fccf41c72c8a3c899fd51d7b1d835c379154857d1edb116d",
+    "generation_report.json": "374460836e520711384d680917ed31fcd7c242a3e182fe06a61a65246c3bc373"
+  },
+  "validation_tools_sha256": {
+    "validate_raw_dataset.py": "32f70cbb09307a530682ca92e93191d802ab1ce660b04fefbd3eebfb947178a7",
+    "source_schema.json": "881d1f097953434ded38c0e737523ce71b4a8db3ea56768bce4dc0f4f033a745",
+    "template_catalog.json": "84a89dcb958f56f4b201c13280474b3c9ecaf7d8aa304a8a04a5e314ecb78c20"
+  }
+}

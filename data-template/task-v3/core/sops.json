@@ -1,0 +1,18 @@
+{
+  "version": "2.0",
+  "executor": "not implemented on Android; symbolic actions only",
+  "definitions": {
+    "SHARE_PHOTO_GUIDED": {"scenario": "SHARE_PHOTO", "action": "OPEN_SHARE_UI", "confirmation_required": true},
+    "PHOTO_HELP_MANUAL": {"scenario": "SHARE_PHOTO", "action": "SHOW_GUIDANCE", "confirmation_required": false},
+    "CONFIRM_PHOTO_SHARE": {"scenario": "SHARE_PHOTO", "action": "ASK_CONFIRM", "confirmation_required": false},
+    "MESSAGE_CAUTION": {"scenario": "CHECK_MESSAGE", "action": "SHOW_CAUTION", "confirmation_required": false},
+    "MESSAGE_REVIEW": {"scenario": "CHECK_MESSAGE", "action": "SHOW_REVIEW", "confirmation_required": false},
+    "OPEN_AIRPLANE_SETTINGS": {"scenario": "RESCUE_PHONE", "action": "OPEN_SETTINGS", "confirmation_required": true},
+    "OPEN_DND_SETTINGS": {"scenario": "RESCUE_PHONE", "action": "OPEN_SETTINGS", "confirmation_required": true},
+    "OPEN_SOUND_SETTINGS": {"scenario": "RESCUE_PHONE", "action": "OPEN_SETTINGS", "confirmation_required": true},
+    "OPEN_NETWORK_SETTINGS": {"scenario": "RESCUE_PHONE", "action": "OPEN_SETTINGS", "confirmation_required": true},
+    "PHONE_HELP_MANUAL": {"scenario": "RESCUE_PHONE", "action": "SHOW_GUIDANCE", "confirmation_required": false},
+    "ASK_USER": {"scenario": "ANY", "action": "ASK_USER", "confirmation_required": false},
+    "STOP": {"scenario": "ANY", "action": "STOP", "confirmation_required": false}
+  }
+}

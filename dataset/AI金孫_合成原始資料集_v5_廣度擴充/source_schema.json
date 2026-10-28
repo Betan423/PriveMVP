@@ -1,0 +1,2084 @@
+{
+  "type": "object",
+  "properties": {
+    "bundle_version": {
+      "type": "string",
+      "const": "5.0-raw"
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "privacy_processing_applied": {
+      "type": "boolean",
+      "const": false
+    },
+    "provenance": {
+      "type": "string"
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "environments": {
+          "type": "integer"
+        },
+        "tasks_per_environment": {
+          "type": "integer"
+        },
+        "per_row_llm_calls": {
+          "type": "integer"
+        },
+        "template_catalog_sha256": {
+          "type": "string"
+        },
+        "encoding": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "seed",
+        "environments",
+        "tasks_per_environment",
+        "per_row_llm_calls",
+        "template_catalog_sha256",
+        "encoding"
+      ],
+      "additionalProperties": false
+    },
+    "phone_environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "environment_id": {
+            "type": "string"
+          },
+          "captured_offset_sec": {
+            "type": "integer"
+          },
+          "initialization_data": {
+            "type": "object",
+            "properties": {
+              "user_profile": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string"
+                  },
+                  "age_band": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "type": "string"
+                  },
+                  "font_scale": {
+                    "type": "number"
+                  },
+                  "assistance_preference": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "age_band",
+                  "locale",
+                  "font_scale",
+                  "assistance_preference"
+                ],
+                "additionalProperties": false
+              },
+              "device": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "manufacturer": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "sdk_int": {
+                    "type": "integer"
+                  },
+                  "android_release": {
+                    "type": "string"
+                  },
+                  "screen_width_px": {
+                    "type": "integer"
+                  },
+                  "screen_height_px": {
+                    "type": "integer"
+                  },
+                  "ram_gb": {
+                    "type": "integer"
+                  },
+                  "storage_gb": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "manufacturer",
+                  "model",
+                  "sdk_int",
+                  "android_release",
+                  "screen_width_px",
+                  "screen_height_px",
+                  "ram_gb",
+                  "storage_gb"
+                ],
+                "additionalProperties": false
+              },
+              "contacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "contact_id": {
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "type": "string"
+                    },
+                    "relationship": {
+                      "type": "string"
+                    },
+                    "phone_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "line_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "contact_id",
+                    "display_name",
+                    "relationship",
+                    "phone_ref",
+                    "line_ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "installed_apps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "app_id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "package": {
+                      "type": "string"
+                    },
+                    "installed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "app_id",
+                    "name",
+                    "package",
+                    "installed"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "saved_destinations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "destination_id": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "type": "string"
+                    },
+                    "address_ref": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "integer"
+                    },
+                    "longitude": {
+                      "type": "integer"
+                    },
+                    "coordinate_kind": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "destination_id",
+                    "category",
+                    "display_name",
+                    "address_ref",
+                    "latitude",
+                    "longitude",
+                    "coordinate_kind"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "user_profile",
+              "device",
+              "contacts",
+              "installed_apps",
+              "saved_destinations"
+            ],
+            "additionalProperties": false
+          },
+          "continuous_state_data": {
+            "type": "object",
+            "properties": {
+              "permissions": {
+                "type": "object",
+                "properties": {
+                  "contacts": {
+                    "type": "string"
+                  },
+                  "media_images": {
+                    "type": "string"
+                  },
+                  "notifications": {
+                    "type": "string"
+                  },
+                  "accessibility": {
+                    "type": "string"
+                  },
+                  "microphone": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "calendar": {
+                    "type": "string"
+                  },
+                  "call_phone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "contacts",
+                  "media_images",
+                  "notifications",
+                  "accessibility",
+                  "microphone",
+                  "location",
+                  "calendar",
+                  "call_phone"
+                ],
+                "additionalProperties": false
+              },
+              "battery": {
+                "type": "object",
+                "properties": {
+                  "capacity_percent": {
+                    "type": "integer"
+                  },
+                  "charging": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capacity_percent",
+                  "charging"
+                ],
+                "additionalProperties": false
+              },
+              "network": {
+                "type": "object",
+                "properties": {
+                  "connected": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "transport": {
+                    "type": "string"
+                  },
+                  "internet_validated": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "wifi_ssid_ref": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "connected",
+                  "transport",
+                  "internet_validated",
+                  "wifi_ssid_ref"
+                ],
+                "additionalProperties": false
+              },
+              "system": {
+                "type": "object",
+                "properties": {
+                  "airplane_mode": {
+                    "type": "string"
+                  },
+                  "dnd_mode": {
+                    "type": "string"
+                  },
+                  "ringer_mode": {
+                    "type": "string"
+                  },
+                  "ring_volume_current": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ring_volume_max": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "airplane_mode",
+                  "dnd_mode",
+                  "ringer_mode",
+                  "ring_volume_current",
+                  "ring_volume_max"
+                ],
+                "additionalProperties": false
+              },
+              "screen": {
+                "type": "object",
+                "properties": {
+                  "current_app_id": {
+                    "type": "string"
+                  },
+                  "guard_ready": {
+                    "type": "boolean"
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "node_count": {
+                    "type": "integer"
+                  },
+                  "text_ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "current_app_id",
+                  "guard_ready",
+                  "locked",
+                  "node_count",
+                  "text_ref"
+                ],
+                "additionalProperties": false
+              },
+              "photos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "photo_id": {
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "type": "string"
+                    },
+                    "media_ref": {
+                      "type": "string"
+                    },
+                    "taken_offset_sec": {
+                      "type": "integer"
+                    },
+                    "album_category": {
+                      "type": "string"
+                    },
+                    "mime_type": {
+                      "type": "string"
+                    },
+                    "size_bytes": {
+                      "type": "integer"
+                    },
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    },
+                    "exif_location_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "background_privacy_hint": {
+                      "type": "string"
+                    },
+                    "pixels_available": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "photo_id",
+                    "display_name",
+                    "media_ref",
+                    "taken_offset_sec",
+                    "album_category",
+                    "mime_type",
+                    "size_bytes",
+                    "width",
+                    "height",
+                    "exif_location_ref",
+                    "background_privacy_hint",
+                    "pixels_available"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "messages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "message_id": {
+                      "type": "string"
+                    },
+                    "sender_ref": {
+                      "type": "string"
+                    },
+                    "source_category": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "received_offset_sec": {
+                      "type": "integer"
+                    },
+                    "context_sufficient": {
+                      "type": "boolean"
+                    },
+                    "template_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message_id",
+                    "sender_ref",
+                    "source_category",
+                    "text",
+                    "received_offset_sec",
+                    "context_sufficient",
+                    "template_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "notifications": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "notification_id": {
+                      "type": "string"
+                    },
+                    "app_id": {
+                      "type": "string"
+                    },
+                    "message_id": {
+                      "type": "string"
+                    },
+                    "post_offset_sec": {
+                      "type": "integer"
+                    },
+                    "title_ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "notification_id",
+                    "app_id",
+                    "message_id",
+                    "post_offset_sec",
+                    "title_ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "calendar": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "event_id": {
+                      "type": "string"
+                    },
+                    "title_ref": {
+                      "type": "string"
+                    },
+                    "start_offset_sec": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "event_id",
+                    "title_ref",
+                    "start_offset_sec"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "location_ref": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "integer"
+                  },
+                  "longitude": {
+                    "type": "integer"
+                  },
+                  "accuracy_m": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "coordinate_kind": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "location_ref",
+                  "latitude",
+                  "longitude",
+                  "accuracy_m",
+                  "coordinate_kind"
+                ],
+                "additionalProperties": false
+              },
+              "clipboard": {
+                "type": "object",
+                "properties": {
+                  "observability": {
+                    "type": "string"
+                  },
+                  "text_ref": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "observability",
+                  "text_ref"
+                ],
+                "additionalProperties": false
+              },
+              "call": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string"
+                  },
+                  "caller_ref": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "caller_ref"
+                ],
+                "additionalProperties": false
+              },
+              "app_usage": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "app_id": {
+                      "type": "string"
+                    },
+                    "foreground_sec": {
+                      "type": "integer"
+                    },
+                    "last_used_offset_sec": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "app_id",
+                    "foreground_sec",
+                    "last_used_offset_sec"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "permissions",
+              "battery",
+              "network",
+              "system",
+              "screen",
+              "photos",
+              "messages",
+              "notifications",
+              "calendar",
+              "location",
+              "clipboard",
+              "call",
+              "app_usage"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "environment_id",
+          "captured_offset_sec",
+          "initialization_data",
+          "continuous_state_data"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "task_requests": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "SHARE_PHOTO"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "recipient_relation": {
+                    "type": "string"
+                  },
+                  "photo_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "selection_method": {
+                    "type": "string"
+                  },
+                  "app_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "recipient_relation",
+                  "photo_id",
+                  "selection_method",
+                  "app_name"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "CHECK_MESSAGE"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "message_id"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "RESCUE_PHONE"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "symptom_category": {
+                    "type": "string"
+                  },
+                  "requested_scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "symptom_category",
+                  "requested_scope"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "CALL_CONTACT"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "recipient_relation": {
+                    "type": "string"
+                  },
+                  "channel": {
+                    "type": "string"
+                  },
+                  "requested_scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "recipient_relation",
+                  "channel",
+                  "requested_scope"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "SEND_MESSAGE"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "recipient_relation": {
+                    "type": "string"
+                  },
+                  "message_text": {
+                    "type": "string"
+                  },
+                  "app_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "recipient_relation",
+                  "message_text",
+                  "app_name"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "READ_NOTIFICATION"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "notification_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "selection_method": {
+                    "type": "string"
+                  },
+                  "source_app": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "requested_scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "notification_id",
+                  "selection_method",
+                  "source_app",
+                  "requested_scope"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "SET_REMINDER"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "reminder_kind": {
+                    "type": "string"
+                  },
+                  "time_spec": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "day_offset": {
+                        "type": "integer"
+                      },
+                      "hour": {
+                        "type": "integer"
+                      },
+                      "minute": {
+                        "type": "integer"
+                      },
+                      "seconds": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "scheduled_at": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reminder_kind",
+                  "time_spec",
+                  "scheduled_at",
+                  "timezone"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "NAVIGATE_TO_PLACE"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "destination_category": {
+                    "type": "string"
+                  },
+                  "destination_ref": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "app_name": {
+                    "type": "string"
+                  },
+                  "route_mode": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "destination_category",
+                  "destination_ref",
+                  "app_name",
+                  "route_mode"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "environment_id": {
+                "type": "string"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "scenario_id": {
+                "type": "string",
+                "const": "OPEN_APP"
+              },
+              "subscenario": {
+                "type": "string"
+              },
+              "template_id": {
+                "type": "string"
+              },
+              "utterance_pattern_index": {
+                "type": "integer"
+              },
+              "utterance": {
+                "type": "string"
+              },
+              "privacy_mode": {
+                "type": "string"
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confirmation": {
+                "type": "string"
+              },
+              "cancelled": {
+                "type": "boolean"
+              },
+              "followup_utterance": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "requested_offset_sec": {
+                "type": "integer"
+              },
+              "time_anchor": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "app_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "app_name"
+                ],
+                "additionalProperties": false
+              },
+              "fixture_labels": {
+                "type": "object",
+                "properties": {
+                  "recipient_binding_case": {
+                    "type": "string"
+                  },
+                  "selected_resource_missing": {
+                    "type": "boolean"
+                  },
+                  "grant_case": {
+                    "type": "string"
+                  },
+                  "cloud_features_consent": {
+                    "type": "boolean"
+                  },
+                  "snapshot_age_sec": {
+                    "type": "integer"
+                  },
+                  "snapshot_freshness_fixture": {
+                    "type": "string"
+                  },
+                  "interpretation_status": {
+                    "type": "string"
+                  },
+                  "phone_execution_verified": {
+                    "type": "boolean"
+                  },
+                  "privacy_processing_applied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipient_binding_case",
+                  "selected_resource_missing",
+                  "grant_case",
+                  "cloud_features_consent",
+                  "snapshot_age_sec",
+                  "snapshot_freshness_fixture",
+                  "interpretation_status",
+                  "phone_execution_verified",
+                  "privacy_processing_applied"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task_id",
+              "environment_id",
+              "user_id",
+              "scenario_id",
+              "subscenario",
+              "template_id",
+              "utterance_pattern_index",
+              "utterance",
+              "privacy_mode",
+              "grants",
+              "confirmation",
+              "cancelled",
+              "followup_utterance",
+              "requested_offset_sec",
+              "time_anchor",
+              "parameters",
+              "fixture_labels"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "bundle_version",
+    "synthetic",
+    "privacy_processing_applied",
+    "provenance",
+    "generator",
+    "phone_environments",
+    "task_requests"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ai-grandchild:raw:5.0",
+  "title": "AI Grandchild fictional raw source, NOT privacy processed"
+}

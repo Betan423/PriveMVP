@@ -1,0 +1,57 @@
+{
+  "dataset_version": "AI_ASSISTED_RAW_V4_CANDIDATE_20261012",
+  "synthetic": true,
+  "generator": "ChatGPT-authored scenario templates + deterministic Python composition; not Gemini API generation per record",
+  "seed": 20261012,
+  "source_schema_version": "3.0",
+  "phone_environments": 72,
+  "tasks_v3_compatible": 432,
+  "tasks_extension_only": 144,
+  "total_task_requests": 576,
+  "scenarios_v3": {
+    "SHARE_PHOTO": 144,
+    "CHECK_MESSAGE": 144,
+    "RESCUE_PHONE": 144
+  },
+  "scenarios_extension_only": {
+    "CALL_CONTACT": 24,
+    "SEND_MESSAGE": 24,
+    "READ_NOTIFICATION": 24,
+    "SET_REMINDER": 24,
+    "NAVIGATE_TO_PLACE": 24,
+    "OPEN_APP": 24
+  },
+  "privacy_modes": {
+    "MINIMIZED_CLOUD": 421,
+    "STRICT_LOCAL": 155
+  },
+  "confirmation": {
+    "approved": 144,
+    "not_required": 145,
+    "pending": 145,
+    "rejected": 142
+  },
+  "cancelled": 39,
+  "base_missing_photo": 48,
+  "base_missing_message": 42,
+  "validations": [
+    "Unique environment/task IDs",
+    "valid environment/user references",
+    "valid selected photo and message references",
+    "valid notification references",
+    "synthetic 0/0 location",
+    "*.example.invalid links only",
+    "photo pixels unavailable",
+    "task timestamps after snapshot",
+    "two privacy modes"
+  ],
+  "limitations": [
+    "Not collected from real individuals or a representative older-adult population",
+    "Raw AI-assisted synthetic source only; no expanded derived_tasks.csv created",
+    "Original v3 processing engine was not supplied or run",
+    "v3 processor accepts only the three supported scenarios and may reject non-whitelisted generated messages",
+    "Six additional task types are v4 candidate schema and require future new processing rules",
+    "No privacy protection effect, re-identification resistance, task accuracy or real Android action claimed",
+    "Original v3 baseline derived file remains exactly three tasks, separate from this expanded raw data"
+  ]
+}

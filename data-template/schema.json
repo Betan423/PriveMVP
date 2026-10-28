@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Synthetic phone scenario event version 1.0",
+  "description": "Structural contract only. Does not establish anonymization, differential privacy, or population fidelity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["template_version", "synthetic", "user_id", "event_id", "scenario_id", "day_index", "offset_sec", "event_type", "payload"],
+  "properties": {
+    "template_version": {"const": "1.0"},
+    "synthetic": {"const": true},
+    "user_id": {"type": "string", "pattern": "^SYN_U[0-9]{3,6}$"},
+    "event_id": {"type": "string", "pattern": "^SYN_E[0-9]{6,10}$"},
+    "scenario_id": {"enum": ["routine", "notification_burst", "low_activity"]},
+    "day_index": {"type": "integer", "minimum": 0, "maximum": 364},
+    "offset_sec": {"type": "integer", "minimum": 0, "maximum": 86399},
+    "event_type": {"enum": ["app_usage", "notification", "device_state"]},
+    "payload": {"type": "object"}
+  },
+  "allOf": [
+    {"if": {"properties": {"event_type": {"const": "app_usage"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/appUsage"}}}},
+    {"if": {"properties": {"event_type": {"const": "notification"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/notification"}}}},
+    {"if": {"properties": {"event_type": {"const": "device_state"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/deviceState"}}}}
+  ],
+  "$defs": {
+    "appCategory": {"enum": ["communication", "social", "video", "utility", "navigation", "other"]},
+    "appUsage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["app_category", "duration_sec"],
+      "properties": {
+        "app_category": {"$ref": "#/$defs/appCategory"},
+        "duration_sec": {"type": "integer", "minimum": 1, "maximum": 7200}
+      }
+    },
+    "notification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["app_category", "notification_kind", "message_length_band", "content_redacted"],
+      "properties": {
+        "app_category": {"$ref": "#/$defs/appCategory"},
+        "notification_kind": {"enum": ["message", "reminder", "system", "promotion", "other"]},
+        "message_length_band": {"enum": ["none", "short", "medium", "long", "unknown"]},
+        "content_redacted": {"type": "boolean"}
+      }
+    },
+    "deviceState": {
+      "type": "object", "additionalProperties": false,
+      "required": ["battery_band", "charging", "network_class", "internet_available"],
+      "properties": {
+        "battery_band": {"enum": ["low", "medium", "high", "unknown"]},
+        "charging": {"type": "boolean"},
+        "network_class": {"enum": ["wifi", "cellular", "offline", "other", "unknown"]},
+        "internet_available": {"type": ["boolean", "null"]}
+      }
+    }
+  }
+}

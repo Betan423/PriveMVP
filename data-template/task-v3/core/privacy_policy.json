@@ -1,0 +1,22 @@
+{
+  "version": "2.0",
+  "scope": "simulated purpose-bound local access and proposed cloud context; not Android permissions or completed PETs proof",
+  "required_data": {
+    "SHARE_PHOTO": ["voice_command", "recipient_binding", "selected_photo", "share_app_state"],
+    "CHECK_MESSAGE": ["voice_command", "selected_message"],
+    "RESCUE_PHONE": ["voice_command", "system_status", "network_state"]
+  },
+  "cloud_fact_keys": {
+    "SHARE_PHOTO": ["recipient_ready", "photo_ready", "share_app_ready", "ui_ready", "confirmation"],
+    "CHECK_MESSAGE": ["asks_transfer", "requests_otp", "urgency", "has_link", "impersonation", "context_sufficient"],
+    "RESCUE_PHONE": ["airplane_mode", "dnd_mode", "ringer_mode", "ring_volume_band", "network_connected", "confirmation"]
+  },
+  "cloud_release_grant": "cloud_features",
+  "direct_private_keys": ["user_id", "utterance", "recipient_name", "recipient_phone", "line_id", "photo_bytes", "photo_uri", "message_text", "sender_id", "latitude", "longitude", "android_id"],
+  "retention_design": {
+    "init_binding": "local encrypted until user unbinds",
+    "state_context": "on-demand memory, clear when no longer required",
+    "task_mapping": "task-scoped, clear on completion/cancel; no cloud stable ID",
+    "raw_voice_and_message": "not persisted by assistant by default; upstream ASR/service must be separately verified"
+  }
+}
