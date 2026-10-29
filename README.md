@@ -18,6 +18,23 @@ Android 9（API 28）以上的研究用本機資料蒐集器。compileSdk / targ
 
 GitHub 推送與遠端已有 commit 時的安全整合方式見 [docs/GITHUB_UPLOAD.md](docs/GITHUB_UPLOAD.md)。
 
+## 快速開始（Makefile）
+
+Linux／macOS 在專案根目錄執行 `make` 會列出所有指令。常用流程：
+
+```bash
+make setup                 # 建 gemini-proxy/.venv；再依 gemini-proxy/README.md 放入自己的 Cookie
+make test                  # Receiver、proxy、Android 全部測試
+make proxy                 # 終端機 A：Gemini proxy（127.0.0.1:8000）
+make receiver              # 終端機 B：Receiver（127.0.0.1:8080）
+make demo                  # 終端機 C：模擬手機送一則訊息；make demo MESSAGE="..."
+make demo-dataset ENV=1    # 送資料集第 1 個環境的 32 則訊息
+```
+
+真手機：`make install` 安裝 APK，改用 `make receiver-lan TOKEN=自訂存取碼` 啟動 Receiver，
+App 填它印出的位址與同一組存取碼。不接 AI 只用規則可用 `make receiver-rules`。
+Android 建置需要 JDK 17 與 Android SDK（`JAVA_HOME`、`ANDROID_HOME`）。
+
 ## 可疑訊息檢查 demo
 
 App 首頁最上方的「可疑訊息檢查」：
