@@ -5,10 +5,17 @@ import android.service.notification.StatusBarNotification
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 
+data class MessageCandidate(val appLabel: String, val title: String, val body: String)
+
 class ResearchNotificationListener : NotificationListenerService() {
     companion object {
         @Volatile private var service = WeakReference<ResearchNotificationListener>(null)
         fun connected() = service.get() != null
+        /** On-device list for the user to pick ONE message to check; nothing here is stored or sent. */
+        fun currentMessages(): List<MessageCandidate>? {
+            val instance = service.get() ?: return null
+            return instance.messageCandidates()
+        }
         fun snapshot(session: String): String {
             val instance = service.get() ?: return "listener_not_connected"
             return instance.snapshotCurrent(session)
@@ -72,6 +79,26 @@ class ResearchNotificationListener : NotificationListenerService() {
         CollectorRuntime.event(applicationContext, DataSource.NOTIFICATIONS, session) {
             ResearchLog.append(applicationContext, DataSource.NOTIFICATIONS, session, "notification_removed", p)
         }
+    }
+    private fun messageCandidates(): List<MessageCandidate> {
+        val exclusions = CollectionControl.exclusions(this)
+        return activeNotifications.orEmpty()
+            .filter { !PrivacyFilter.blocked(it.packageName, packageName, exclusions) }
+            .sortedByDescending { it.postTime }
+            .mapNotNull { sbn ->
+                val extras = sbn.notification.extras
+                // The title is usually the sender's name, so only the body is analysed.
+                val body = (extras?.getCharSequence("android.bigText") ?: extras?.getCharSequence("android.text"))
+                    ?.toString()?.trim()?.take(20_000)
+                if (body.isNullOrEmpty()) null else MessageCandidate(
+                    appLabel = try {
+                        packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
+                    } catch (_: Exception) { sbn.packageName },
+                    title = extras?.getCharSequence("android.title")?.toString().orEmpty().take(40),
+                    body = body
+                )
+            }
+            .take(30)
     }
     private fun snapshotCurrent(session: String): String {
         if (!CollectionControl.allowed(this, DataSource.NOTIFICATIONS, session)) return "disabled"

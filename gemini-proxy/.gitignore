@@ -1,0 +1,9 @@
+config.json
+cookies.txt
+.venv/
+__pycache__/
+*.pyc
+# Local scripts with hard-coded session cookies; never commit them.
+test.py
+chat.py
+history-chat.py

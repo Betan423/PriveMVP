@@ -3,15 +3,25 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import html
 import json
+import os
 import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 from urllib.parse import parse_qs, urlsplit
 
+from .assistant import (
+    DEFAULT_PLANNER_TIMEOUT,
+    DEFAULT_PLANNER_URL,
+    MAX_PACKET_BYTES,
+    MessageAssistant,
+    gemini_proxy_planner,
+    parse_packet,
+)
 from .contracts import (
     API_VERSION,
     DEFAULT_MAX_BODY_BYTES,
@@ -28,20 +38,31 @@ from .storage import ReceiverStorage
 
 TRANSMISSIONS_PATH = "/api/v1/transmissions"
 LATEST_CONTEXT_PATH = "/api/v1/context/latest"
+ASSIST_PATH = "/api/v1/assist/check-message"
+DEFAULT_PORT = 8080
 ITEM_PATTERN = re.compile(r"^/api/v1/transmissions/([^/]+)(?:/(records|download))?$")
 
 
 class ReceiverHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address: tuple[str, int], storage: ReceiverStorage) -> None:
+    def __init__(
+        self,
+        address: tuple[str, int],
+        storage: ReceiverStorage,
+        assistant: MessageAssistant,
+        api_token: str | None = None,
+    ) -> None:
         super().__init__(address, ReceiverRequestHandler)
         self.storage = storage
+        self.assistant = assistant
+        self.api_token = api_token
 
 
 class ReceiverRequestHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     server_version = "PrivAgentReceiver/1"
+    timeout = 60  # Per socket operation; a stalled client cannot hold a thread forever.
     sys_version = ""
 
     @property
@@ -205,6 +226,9 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_post(self) -> None:
         target = urlsplit(self.path)
+        if target.path == ASSIST_PATH:
+            self._handle_assist()
+            return
         if target.path != TRANSMISSIONS_PATH:
             raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
@@ -245,6 +269,29 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             response,
             headers={"Location": f"{TRANSMISSIONS_PATH}/{metadata['transferId']}"},
         )
+
+    def _handle_assist(self) -> None:
+        token = self.server.api_token  # type: ignore[attr-defined]
+        if token is not None and not hmac.compare_digest(
+            self.headers.get("X-Api-Token", "").encode("utf-8"), token.encode("utf-8")
+        ):
+            raise ReceiverError("UNAUTHORIZED", "X-Api-Token is missing or wrong.", status=401)
+        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            raise ReceiverError("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json.", status=415)
+        if self.headers.get("Transfer-Encoding"):
+            raise ReceiverError("LENGTH_REQUIRED", "Planner packets must use Content-Length.", status=411)
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            raise ReceiverError("LENGTH_REQUIRED", "Content-Length is required.", status=411) from None
+        if length < 0 or length > MAX_PACKET_BYTES:
+            raise ReceiverError("PACKET_TOO_LARGE", "Planner packet exceeds 16 KiB.", status=413)
+        body = self.rfile.read(length)
+        if len(body) != length:
+            raise ReceiverError("INCOMPLETE_BODY", "Connection ended before Content-Length bytes arrived.")
+        packet = parse_packet(body)
+        self._send_json(HTTPStatus.OK, self.server.assistant.assess(packet))  # type: ignore[attr-defined]
 
     def _request_body_chunks(self) -> Iterator[bytes]:
         transfer_encoding = self.headers.get("Transfer-Encoding", "").strip().lower()
@@ -361,35 +408,49 @@ code{{word-break:break-all}} a{{color:#0759a5}}
 
 def create_server(
     host: str = "127.0.0.1",
-    port: int = 8000,
+    port: int = DEFAULT_PORT,
     *,
     data_dir: str | Path | None = None,
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
     max_line_bytes: int = DEFAULT_MAX_LINE_BYTES,
+    planner: Callable[[str], str] | None = None,
+    api_token: str | None = None,
 ) -> ReceiverHTTPServer:
     root = Path(data_dir) if data_dir is not None else Path(__file__).resolve().parent / "data"
     storage = ReceiverStorage(root, max_body_bytes=max_body_bytes, max_line_bytes=max_line_bytes)
-    return ReceiverHTTPServer((host, port), storage)
+    assistant = MessageAssistant(storage.data_dir / "assist_audit.ndjson", planner)
+    return ReceiverHTTPServer((host, port), storage, assistant, api_token or None)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Receive PrivAgent Collector NDJSON transmissions.")
     parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8000, help="TCP port (default: 8000)")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"TCP port (default: {DEFAULT_PORT})")
     parser.add_argument("--data-dir", type=Path, default=Path(__file__).resolve().parent / "data")
     parser.add_argument("--max-body-bytes", type=int, default=DEFAULT_MAX_BODY_BYTES)
     parser.add_argument("--max-line-bytes", type=int, default=DEFAULT_MAX_LINE_BYTES)
+    parser.add_argument(
+        "--planner-url",
+        default=DEFAULT_PLANNER_URL,
+        help=f"Gemini proxy base URL, or 'off' to use local rules only (default: {DEFAULT_PLANNER_URL})",
+    )
+    parser.add_argument("--planner-timeout", type=float, default=DEFAULT_PLANNER_TIMEOUT)
     args = parser.parse_args()
+    planner = None if args.planner_url == "off" else gemini_proxy_planner(args.planner_url, args.planner_timeout)
     server = create_server(
         args.host,
         args.port,
         data_dir=args.data_dir,
         max_body_bytes=args.max_body_bytes,
         max_line_bytes=args.max_line_bytes,
+        planner=planner,
+        api_token=os.environ.get("PRIVAGENT_API_TOKEN"),
     )
     address, port = server.server_address[:2]
     print(f"PrivAgent Receiver API v{API_VERSION} listening on http://{address}:{port}", flush=True)
     print(f"Data directory: {server.storage.data_dir}", flush=True)
+    print(f"Planner: {'local rules only' if planner is None else args.planner_url}", flush=True)
+    print(f"Assist API token: {'required' if server.api_token else 'not set (development only)'}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

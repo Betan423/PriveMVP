@@ -7,7 +7,7 @@ object TransferConfig {
     private const val BASE_URL = "base_url"
     private const val PENDING_PAYLOAD_SHA256 = "pending_payload_sha256"
     private const val PENDING_TRANSFER_ID = "pending_transfer_id"
-    const val DEFAULT_BASE_URL = "http://10.0.2.2:8000"
+    const val DEFAULT_BASE_URL = "http://10.0.2.2:8080"
 
     fun baseUrl(context: Context): String = context
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)

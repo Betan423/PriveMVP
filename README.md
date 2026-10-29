@@ -1,12 +1,15 @@
 # PrivAgent Raw Collector MVP v0.4
 
 Android 9（API 28）以上的研究用本機資料蒐集器。compileSdk / targetSdk 36。
-此版本處理資料取得、權限、儲存、匯出、停止控制，以及手機到電腦的手動／即時傳遞。即時模式會先建立基線，再傳送定期狀態與通知／畫面事件；尚未連接 AI、任務規劃或隱私轉換服務。
+此版本處理資料取得、權限、儲存、匯出、停止控制，以及手機到電腦的手動／即時傳遞。即時模式會先建立基線，再傳送定期狀態與通知／畫面事件。
+
+另含「可疑訊息檢查」demo（核心情境 CHECK_MESSAGE）：手機端遮蔽與抽特徵，經電腦 Receiver 交給雲端 AI（Gemini proxy）判讀後回傳。照片分享與手機救援尚未串接。
 
 ## Repository 導覽
 
 - `app/`：Android Collector 與即時傳輸服務。
 - `receiver/`：Python 標準函式庫實作的電腦接收端。
+- `gemini-proxy/`：Gemini 網頁版 HTTP proxy（可疑訊息判讀的雲端 AI），Cookie 只放本機設定檔。
 - `docs/REALTIME_PIPELINE.md`：即時管線、契約與模組化分工基線。
 - `docs/competition/`：決賽與後續開發整合文件。
 - `dataset/`：競賽資料集、生成與驗證程式。
@@ -14,6 +17,26 @@ Android 9（API 28）以上的研究用本機資料蒐集器。compileSdk / targ
 - `.github/workflows/ci.yml`：Receiver、Android tests、Lint 與 APK 自動建置。
 
 GitHub 推送與遠端已有 commit 時的安全整合方式見 [docs/GITHUB_UPLOAD.md](docs/GITHUB_UPLOAD.md)。
+
+## 可疑訊息檢查 demo
+
+App 首頁最上方的「可疑訊息檢查」：
+
+1. 貼上訊息，或按「從目前的通知選一則」（需先開啟通知存取；銀行／驗證器等敏感 App 的通知不列出）。
+2. 手機本機遮蔽電話、帳號、驗證碼、網址、Email、身分證、稱呼前姓名與通訊錄姓名（已授權聯絡人權限時），並抽出風險特徵。
+3. 勾選「同意使用雲端 AI 判讀」時，先顯示「確認要傳送的內容」，按「傳送」才送到 Receiver；未勾選則只在手機本機判讀，不連網。
+4. 結果以三級顯示：高風險／需要核實／資訊不足，不會顯示「安全」。文字由 App 依 reason code 套固定措辭；雲端只能提高、不能降低本機判定的風險。
+
+電腦端（Linux 範例；Receiver 預設 8080，Gemini proxy 8000）：
+
+```bash
+cd ~/Documents/gemini-proxymeow && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port 8000
+cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
+```
+
+手機連線：USB 用 `adb reverse tcp:8080 tcp:8080` 並在 App 填 `http://127.0.0.1:8080`；同一 Wi-Fi 填 `http://<電腦區網 IP>:8080`。區網展示請先設定 `PRIVAGENT_API_TOKEN` 環境變數再啟動 Receiver，並在 App 填入相同存取碼。
+
+沒有手機時可用 `python3 -m receiver.phone_sim` 模擬手機端；契約、流程與限制見 [receiver/README.md](receiver/README.md)。
 
 ## 目前可以取得的資料
 
@@ -162,8 +185,8 @@ UI 顯示每類結果與事件佇列溢位數；沒有資料時不會誤報已�
 
 這是為端到端串接準備的最初原版功能，會傳送完整、未匿名化的 NDJSON。請只連線到由你控制的開發環境，不要用真人敏感資料測試。
 
-- 預設 Base URL 為 Android Emulator 可連到宿主機的 `http://10.0.2.2:8000`。
-- 實機請改填開發電腦的區網 IP，例如 `http://192.168.1.20:8000`；接收服務需監聽 `0.0.0.0`，Windows Firewall 也需允許該連接埠。
+- 預設 Base URL 為 Android Emulator 可連到宿主機的 `http://10.0.2.2:8080`。
+- 實機請改填開發電腦的區網 IP，例如 `http://192.168.1.20:8080`；接收服務需監聽 `0.0.0.0`，Windows Firewall 也需允許該連接埠。
 - `GET {baseUrl}/health` 用於連線測試。
 - `POST {baseUrl}/api/v1/transmissions` 使用 `application/x-ndjson` 與固定 Content-Length。
 - 請求標頭包含 `X-Transfer-Id`、`X-Record-Count`、`X-Payload-Sha256`、`X-Client-Version`、`X-Transmission-Mode` 與 `X-Client-Sent-At`。

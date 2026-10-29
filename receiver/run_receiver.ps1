@@ -1,9 +1,11 @@
 param(
     [string]$BindAddress = "127.0.0.1",
     [ValidateRange(1, 65535)]
-    [int]$Port = 8000,
+    [int]$Port = 8080,
     [string]$DataDirectory = "",
-    [string]$PythonExecutable = ""
+    [string]$PythonExecutable = "",
+    # Gemini proxy base URL, or "off" for local rules only.
+    [string]$PlannerUrl = "http://127.0.0.1:8000"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,7 +26,7 @@ if ([string]::IsNullOrWhiteSpace($PythonExecutable)) {
 
 Push-Location $ProjectRoot
 try {
-    & $PythonExecutable -m receiver.server --host $BindAddress --port $Port --data-dir $DataDirectory
+    & $PythonExecutable -m receiver.server --host $BindAddress --port $Port --data-dir $DataDirectory --planner-url $PlannerUrl
     if ($LASTEXITCODE -ne 0) {
         throw "Receiver failed, exit code: $LASTEXITCODE"
     }

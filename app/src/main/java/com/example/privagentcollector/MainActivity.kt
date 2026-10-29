@@ -71,6 +71,9 @@ class MainActivity : Activity() {
             this.text = text; setOnClickListener { action() }; root.addView(this)
         }
         label("PrivAgent 資料蒐集 MVP 0.4", 23f)
+        // The Receiver URL comes from the field further down; it is read only when a check is sent.
+        MessageCheckPanel(this, root, ::dp) { validatedEndpoint() }
+        label("研究資料蒐集", 21f)
         label("研究手機使用。可選擇手動蒐集，或啟動即時模式：先建立一次基礎快照，再定期更新裝置狀態，通知與畫面事件可在產生後送出。即時模式使用前景服務，必須從本頁手動啟動與停止。")
         label("聯絡人、位置、通知、畫面可能含你與他人的個人資料。請只在獲得授權的研究手機使用。畫面與通知會嘗試排除密碼、驗證碼及敏感 App，但無法保證識別所有敏感內容。")
         label("每檔最多約 5 MB、總量最多 25 MB；超過容量或 7 天保留期限會刪除最舊資料。匯出為未加密 NDJSON，由你選擇存放位置。")
@@ -144,7 +147,7 @@ class MainActivity : Activity() {
         label("原始資料傳遞（開發版）", 19f)
         label("此初版會把完整、未匿名化的 NDJSON 原始資料傳到你指定的開發接收端。請先停止蒐集；傳送成功後手機內原始資料仍會保留。HTTP 僅供可信任區網開發測試。")
         endpointInput = EditText(this).apply {
-            hint = "例如 http://10.0.2.2:8000"
+            hint = "例如 http://10.0.2.2:8080"
             setText(TransferConfig.baseUrl(this@MainActivity))
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             isSingleLine = true
