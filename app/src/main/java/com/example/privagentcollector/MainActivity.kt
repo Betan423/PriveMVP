@@ -73,8 +73,8 @@ class MainActivity : Activity() {
             this.text = text; setOnClickListener { action() }; root.addView(this)
         }
         // The Receiver URL comes from the field further down; it is read only when a request is sent.
-        assistantPanel = AssistantPanel(this, root, ::dp, { validatedEndpoint() }) { messagePanel?.pickNotification() }
-        messagePanel = MessageCheckPanel(this, root, ::dp) { validatedEndpoint() }
+        assistantPanel = AssistantPanel(this, root, ::dp, ::assistEndpoint) { messagePanel?.pickNotification() }
+        messagePanel = MessageCheckPanel(this, root, ::dp, ::assistEndpoint)
         label("PrivAgent 資料蒐集 MVP 0.4", 21f)
         label("研究資料蒐集", 21f)
         label("研究手機使用。可選擇手動蒐集，或啟動即時模式：先建立一次基礎快照，再定期更新裝置狀態，通知與畫面事件可在產生後送出。即時模式使用前景服務，必須從本頁手動啟動與停止。")
@@ -404,6 +404,8 @@ class MainActivity : Activity() {
         }
         if (!accepted) { busy = false; message("事件佇列忙碌，請稍後重試") }
     }
+    private fun assistEndpoint(): String? = if (AssistConfig.builtIn) AssistConfig.baseUrl(this) else validatedEndpoint()
+
     private fun validatedEndpoint(): String? = try {
         val value = TransferConfig.setBaseUrl(this, endpointInput.text.toString())
         endpointInput.setText(value)

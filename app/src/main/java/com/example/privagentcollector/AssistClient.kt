@@ -16,7 +16,13 @@ data class AssistOutcome(
 object AssistConfig {
     private const val PREFS = "assist_options"
     fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    fun token(context: Context): String = prefs(context).getString("token", "").orEmpty()
+    /** True when this APK was built with a public assist endpoint (`make public` + `make apk`). */
+    val builtIn: Boolean get() = BuildConfig.ASSIST_BASE_URL.isNotBlank()
+    /** Assist calls go to the built-in endpoint when there is one; otherwise to the Receiver URL on the main page. */
+    fun baseUrl(context: Context): String = if (builtIn) BuildConfig.ASSIST_BASE_URL else TransferConfig.baseUrl(context)
+    /** A token typed on the phone wins; otherwise the one baked into the APK. */
+    fun token(context: Context): String =
+        prefs(context).getString("token", "").orEmpty().ifBlank { BuildConfig.ASSIST_TOKEN }
     fun cloudConsent(context: Context) = prefs(context).getBoolean("cloud_consent", false)
     fun allowExcerpt(context: Context) = prefs(context).getBoolean("allow_excerpt", false)
     fun autoCheck(context: Context) = prefs(context).getBoolean("auto_check", false)

@@ -8,6 +8,8 @@ import html
 import json
 import os
 import re
+import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,6 +45,27 @@ LATEST_CONTEXT_PATH = "/api/v1/context/latest"
 ASSIST_PATH = "/api/v1/assist/check-message"
 PLAN_PATH = "/api/v1/assist/plan"
 DEFAULT_PORT = 8080
+DEFAULT_PUBLIC_RATE = 30
+
+
+class RateLimiter:
+    """Sliding one-minute window shared by all callers: behind a tunnel every client looks the same."""
+
+    def __init__(self, per_minute: int) -> None:
+        self.per_minute = per_minute
+        self._times: list[float] = []
+        self._lock = threading.Lock()
+
+    def allow(self) -> bool:
+        now = time.monotonic()
+        with self._lock:
+            self._times = [t for t in self._times if now - t < 60]
+            if len(self._times) >= self.per_minute:
+                return False
+            self._times.append(now)
+            return True
+
+
 ITEM_PATTERN = re.compile(r"^/api/v1/transmissions/([^/]+)(?:/(records|download))?$")
 
 
@@ -56,12 +79,19 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         assistant: MessageAssistant,
         replay_guard: RequestReplayGuard,
         api_token: str | None = None,
+        assist_only: bool = False,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
+        if assist_only and not api_token:
+            raise ValueError("Assist-only (public) mode requires an API token.")
         super().__init__(address, ReceiverRequestHandler)
         self.storage = storage
         self.assistant = assistant
         self.replay_guard = replay_guard
         self.api_token = api_token
+        # Public mode: only /health and the assist endpoints exist; collected data is never served.
+        self.assist_only = assist_only
+        self.rate_limiter = rate_limiter
 
 
 class ReceiverRequestHandler(BaseHTTPRequestHandler):
@@ -130,6 +160,11 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_get(self) -> None:
         target = urlsplit(self.path)
+        if self.server.assist_only:  # type: ignore[attr-defined]
+            if target.path != "/health":
+                raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
+            self._send_json(HTTPStatus.OK, {"status": "ok", "apiVersion": API_VERSION})
+            return
         if target.path == "/health":
             self._send_json(
                 HTTPStatus.OK,
@@ -234,7 +269,7 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
         if target.path in (ASSIST_PATH, PLAN_PATH):
             self._handle_assist(target.path)
             return
-        if target.path != TRANSMISSIONS_PATH:
+        if target.path != TRANSMISSIONS_PATH or self.server.assist_only:  # type: ignore[attr-defined]
             raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
         if content_type not in {"application/x-ndjson", "application/ndjson"}:
@@ -281,6 +316,9 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             self.headers.get("X-Api-Token", "").encode("utf-8"), token.encode("utf-8")
         ):
             raise ReceiverError("UNAUTHORIZED", "X-Api-Token is missing or wrong.", status=401)
+        limiter = self.server.rate_limiter  # type: ignore[attr-defined]
+        if limiter is not None and not limiter.allow():
+            raise ReceiverError("RATE_LIMITED", "Too many assist requests; try again in a minute.", status=429)
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
         if content_type != "application/json":
             raise ReceiverError("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json.", status=415)
@@ -425,11 +463,14 @@ def create_server(
     max_line_bytes: int = DEFAULT_MAX_LINE_BYTES,
     planner: Callable[[str], str] | None = None,
     api_token: str | None = None,
+    assist_only: bool = False,
+    rate_per_minute: int = 0,
 ) -> ReceiverHTTPServer:
     root = Path(data_dir) if data_dir is not None else Path(__file__).resolve().parent / "data"
     storage = ReceiverStorage(root, max_body_bytes=max_body_bytes, max_line_bytes=max_line_bytes)
     assistant = MessageAssistant(storage.data_dir / "assist_audit.ndjson", planner)
-    return ReceiverHTTPServer((host, port), storage, assistant, RequestReplayGuard(), api_token or None)
+    return ReceiverHTTPServer((host, port), storage, assistant, RequestReplayGuard(), api_token or None,
+                              assist_only, RateLimiter(rate_per_minute) if rate_per_minute > 0 else None)
 
 
 def main() -> None:
@@ -445,7 +486,22 @@ def main() -> None:
         help=f"Gemini proxy base URL, or 'off' to use local rules only (default: {DEFAULT_PLANNER_URL})",
     )
     parser.add_argument("--planner-timeout", type=float, default=DEFAULT_PLANNER_TIMEOUT)
+    parser.add_argument(
+        "--assist-only",
+        action="store_true",
+        help="Public mode for a tunnel: serve only /health and /api/v1/assist/*; PRIVAGENT_API_TOKEN is required",
+    )
+    parser.add_argument(
+        "--rate-limit",
+        type=int,
+        default=None,
+        help=f"Max assist requests per minute, all callers together (default: {DEFAULT_PUBLIC_RATE} in assist-only mode, off otherwise)",
+    )
     args = parser.parse_args()
+    token = os.environ.get("PRIVAGENT_API_TOKEN")
+    if args.assist_only and not token:
+        parser.error("--assist-only requires PRIVAGENT_API_TOKEN")
+    rate = args.rate_limit if args.rate_limit is not None else (DEFAULT_PUBLIC_RATE if args.assist_only else 0)
     planner = None if args.planner_url == "off" else gemini_proxy_planner(args.planner_url, args.planner_timeout)
     server = create_server(
         args.host,
@@ -454,13 +510,17 @@ def main() -> None:
         max_body_bytes=args.max_body_bytes,
         max_line_bytes=args.max_line_bytes,
         planner=planner,
-        api_token=os.environ.get("PRIVAGENT_API_TOKEN"),
+        api_token=token,
+        assist_only=args.assist_only,
+        rate_per_minute=rate,
     )
     address, port = server.server_address[:2]
     print(f"PrivAgent Receiver API v{API_VERSION} listening on http://{address}:{port}", flush=True)
     print(f"Data directory: {server.storage.data_dir}", flush=True)
     print(f"Planner: {'local rules only' if planner is None else args.planner_url}", flush=True)
     print(f"Assist API token: {'required' if server.api_token else 'not set (development only)'}", flush=True)
+    if args.assist_only:
+        print(f"Public mode: only /health and /api/v1/assist/* are served, at most {rate} requests/minute", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

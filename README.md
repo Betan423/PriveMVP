@@ -36,6 +36,23 @@ make message-eval          # 情境二的隱私、規則與紅隊評測（不呼
 App 填它印出的位址與同一組存取碼。不接 AI 只用規則可用 `make receiver-rules`。
 Android 建置需要 JDK 17 與 Android SDK（`JAVA_HOME`、`ANDROID_HOME`）。
 
+## 對網際網路開放 AI 端點（手機不必和電腦同網段）
+
+只開放 `/health` 和 `/api/v1/assist/*`，蒐集到的資料、儀表板都不會出去；必須帶存取碼，所有人合計每分鐘最多 30 次（`--rate-limit` 可調）。
+
+```bash
+make proxy                 # 終端機 1：Gemini proxy（只聽 127.0.0.1）
+make public                # 終端機 2：公開模式 Receiver（127.0.0.1:8081），第一次會產生存取碼
+make tunnel                # 終端機 3：Cloudflare Tunnel，印出 https://xxxx.trycloudflare.com
+make public-url URL=https://xxxx.trycloudflare.com
+make apk                   # 網址和存取碼包進 APK，手機不用再填
+```
+
+- 網址與存取碼存在 `local.properties`（已被 git 忽略），**不要提交**；也可用環境變數 `PRIVAGENT_ASSIST_URL` / `PRIVAGENT_ASSIST_TOKEN` 給。
+- `trycloudflare.com` 的臨時網址每次重開 `make tunnel` 都會變，要重新 `make public-url` + `make apk`。要固定網址請改用 Cloudflare 帳號的具名 tunnel。
+- 寫死在 APK 的存取碼可以被反編譯取出，只能擋路人，不能當成真正的身分驗證；外流時刪掉 `local.properties` 裡那行、`make public-token` 重產，再重新編 APK。
+- 手機上「存取碼」欄位有填時優先用手機填的。
+
 ## 核心三情境
 
 在「AI 金孫助理」用說的（🎤）或打字，也可直接按「分享照片」「手機救援」「檢查訊息」。

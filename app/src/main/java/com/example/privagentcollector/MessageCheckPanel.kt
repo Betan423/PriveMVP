@@ -110,7 +110,8 @@ class MessageCheckPanel(
             hint = "電腦接收端存取碼（沒有設定可留空）"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             isSingleLine = true
-            setText(AssistConfig.token(activity))
+            if (AssistConfig.builtIn) hint = "已內建雲端 AI 存取碼（留空即可）"
+            setText(AssistConfig.prefs(activity).getString("token", "").orEmpty())
             root.addView(this)
         }
         checkButton = Button(activity).apply {
@@ -214,7 +215,7 @@ class MessageCheckPanel(
         preparing = false
         sending = true
         publish(if (cloud) "已送出，等待判讀（約 5–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
-        val token = tokenInput.text.toString().trim()
+        val token = tokenInput.text.toString().trim().ifBlank { AssistConfig.token(activity) }
         Thread({
             val outcome = AssistClient.check(baseUrl, token, packet, cloud)
             val text = buildString {

@@ -226,5 +226,53 @@ class PlanHttpTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
 
 
+class PublicModeTests(unittest.TestCase):
+    """--assist-only: what a tunnel exposes to the internet."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent)
+        self.server = create_server("127.0.0.1", 0, data_dir=self.temp.name, api_token="s3cret",
+                                    assist_only=True, rate_per_minute=2,
+                                    planner=lambda p: '{"sop_id":"ASK_USER","reason_codes":[]}')
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=2)
+        self.temp.cleanup()
+
+    def request(self, method: str, path: str, token: str | None = None, body: bytes = b"") -> int:
+        host, port = self.server.server_address[:2]
+        connection = http.client.HTTPConnection(host, port, timeout=3)
+        headers = {"Content-Type": "application/json"}
+        if token is not None:
+            headers["X-Api-Token"] = token
+        connection.request(method, path, body=body if method == "POST" else None, headers=headers)
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        return response.status
+
+    def test_requires_token(self) -> None:
+        with self.assertRaises(ValueError):
+            create_server("127.0.0.1", 0, data_dir=self.temp.name, assist_only=True)
+
+    def test_only_health_and_assist_are_served(self) -> None:
+        self.assertEqual(self.request("GET", "/health"), 200)
+        for path in ("/", "/api/v1/transmissions", "/api/v1/context/latest"):
+            self.assertEqual(self.request("GET", path), 404, path)
+        self.assertEqual(self.request("POST", "/api/v1/transmissions", "s3cret"), 404)
+
+    def test_token_then_rate_limit(self) -> None:
+        body = json.dumps(build_share_packet(READY, "selected", random.Random())).encode()
+        self.assertEqual(self.request("POST", PLAN_PATH, None, body), 401)
+        self.assertEqual(self.request("POST", PLAN_PATH, "wrong", body), 401)
+        self.assertEqual(self.request("POST", PLAN_PATH, "s3cret", body), 200)
+        self.assertEqual(self.request("POST", PLAN_PATH, "s3cret", body), 200)
+        self.assertEqual(self.request("POST", PLAN_PATH, "s3cret", body), 429)
+
+
 if __name__ == "__main__":
     unittest.main()
