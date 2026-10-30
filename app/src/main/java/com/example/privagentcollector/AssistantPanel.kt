@@ -32,6 +32,10 @@ class AssistantPanel(
     root: LinearLayout,
     private val dp: (Int) -> Int,
     private val endpoint: () -> String?,
+    /** Every status line shown to the user, e.g. for reading it aloud in the quick assistant. */
+    private val onSay: (String) -> Unit = {},
+    /** Every task dialog right after it is shown, e.g. to enlarge its text. */
+    private val onDialog: (AlertDialog) -> Unit = {},
     private val onCheckMessage: () -> Unit
 ) {
     companion object {
@@ -76,12 +80,12 @@ class AssistantPanel(
         PhotoSanitizer.clear(activity)  // Leftover copies from an earlier session.
     }
 
-    private fun say(text: String, color: Int = Color.DKGRAY) { status.text = text; status.setTextColor(color) }
+    private fun say(text: String, color: Int = Color.DKGRAY) { status.text = text; status.setTextColor(color); onSay(text) }
     private fun ui(task: Int, action: () -> Unit) = activity.runOnUiThread {
         if (task == generation && !activity.isFinishing && !activity.isDestroyed) action()
     }
     private fun dialog() = AlertDialog.Builder(activity)
-    private fun AlertDialog.Builder.showForTask() { openDialog = show() }
+    private fun AlertDialog.Builder.showForTask() { openDialog = show().also(onDialog) }
 
     private fun newTask(): Int {
         generation++
@@ -108,7 +112,7 @@ class AssistantPanel(
         }
     }
 
-    private fun listen() {
+    fun listen() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
