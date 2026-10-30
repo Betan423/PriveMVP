@@ -105,6 +105,20 @@ def parse_packet(body: bytes) -> dict[str, Any]:
     return packet
 
 
+def parse_plan_packet(body: bytes) -> dict[str, Any]:
+    """Same envelope rules as parse_packet, for SHARE_PHOTO and RESCUE_PHONE packets."""
+    from .core_tasks import validate_plan_packet
+
+    if len(body) > MAX_PACKET_BYTES:
+        raise _packet_error("PACKET_TOO_LARGE", "Planner packet exceeds 16 KiB.", 413)
+    try:
+        packet = _loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError):
+        raise _packet_error("INVALID_PACKET_JSON", "Body must be one UTF-8 JSON object.", 400) from None
+    validate_plan_packet(packet)
+    return packet
+
+
 def validate_packet(packet: Any) -> None:
     """Rejects anything outside the exact v1 contract; never echoes packet values."""
 
@@ -302,6 +316,53 @@ class MessageAssistant:
             "rule": {"risk_level": rule_level, "reason_codes": rule_codes},
             "planner": {"kind": planner_kind, "fallback_reason": fallback, "risk_level": ai_level, "reason_codes": ai_codes},
             "final": {"risk_level": level, "reason_codes": codes, "sop_id": result["sop_id"]},
+            "packet_sha256": result["packet_sha256"],
+            "elapsed_ms": int((time.monotonic() - started) * 1000),
+        })
+        return result
+
+    def plan(self, packet: dict[str, Any]) -> dict[str, Any]:
+        """SHARE_PHOTO / RESCUE_PHONE: rule plan first, the model may only pick within the packet's whitelist."""
+        from .core_tasks import POLICY_VERSION as CORE_POLICY, build_plan_prompt, merge_plan, parse_plan_answer, rule_plan
+
+        started = time.monotonic()
+        rule = rule_plan(packet)
+        planner_kind, fallback, ai = "RULES", None, None
+        if self.planner is None:
+            fallback = "PLANNER_DISABLED"
+        else:
+            try:
+                ai = parse_plan_answer(self.planner(build_plan_prompt(packet)), packet)
+                planner_kind = "GEMINI_PROXY"
+            except PlannerUnavailable as error:
+                fallback = error.reason
+            except (ValueError, RecursionError):
+                fallback = "PLANNER_INVALID_RESPONSE"
+            except Exception:
+                fallback = "PLANNER_ERROR"
+        sop, codes = merge_plan(packet, rule, ai)
+        packet_bytes = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        result = {
+            "api_version": "1",
+            "task_id_alias": packet["task_id_alias"],
+            "intent": packet["intent"],
+            "decision": "ALLOW",
+            "sop_id": sop,
+            "reason_codes": codes,
+            "planner": {"kind": planner_kind, "fallback_reason": fallback},
+            "policy_version": CORE_POLICY,
+            "packet_sha256": hashlib.sha256(packet_bytes).hexdigest(),
+        }
+        self._audit({
+            "ts": int(time.time() * 1000),
+            "task_id_alias": packet["task_id_alias"],
+            "intent": packet["intent"],
+            "client_policy_version": packet["client_policy_version"],
+            "disclosed_fields": sorted(packet["facts"]) + [k for k in ("recipient_token", "photo_token") if k in packet],
+            "rule": {"sop_id": rule[0], "reason_codes": rule[1]},
+            "planner": {"kind": planner_kind, "fallback_reason": fallback,
+                        "sop_id": ai[0] if ai else None, "reason_codes": ai[1] if ai else []},
+            "final": {"sop_id": sop, "reason_codes": codes},
             "packet_sha256": result["packet_sha256"],
             "elapsed_ms": int((time.monotonic() - started) * 1000),
         })

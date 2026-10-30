@@ -21,6 +21,7 @@ from .assistant import (
     MessageAssistant,
     gemini_proxy_planner,
     parse_packet,
+    parse_plan_packet,
 )
 from .contracts import (
     API_VERSION,
@@ -39,6 +40,7 @@ from .storage import ReceiverStorage
 TRANSMISSIONS_PATH = "/api/v1/transmissions"
 LATEST_CONTEXT_PATH = "/api/v1/context/latest"
 ASSIST_PATH = "/api/v1/assist/check-message"
+PLAN_PATH = "/api/v1/assist/plan"
 DEFAULT_PORT = 8080
 ITEM_PATTERN = re.compile(r"^/api/v1/transmissions/([^/]+)(?:/(records|download))?$")
 
@@ -226,8 +228,8 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_post(self) -> None:
         target = urlsplit(self.path)
-        if target.path == ASSIST_PATH:
-            self._handle_assist()
+        if target.path in (ASSIST_PATH, PLAN_PATH):
+            self._handle_assist(target.path)
             return
         if target.path != TRANSMISSIONS_PATH:
             raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
@@ -270,7 +272,7 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             headers={"Location": f"{TRANSMISSIONS_PATH}/{metadata['transferId']}"},
         )
 
-    def _handle_assist(self) -> None:
+    def _handle_assist(self, path: str) -> None:
         token = self.server.api_token  # type: ignore[attr-defined]
         if token is not None and not hmac.compare_digest(
             self.headers.get("X-Api-Token", "").encode("utf-8"), token.encode("utf-8")
@@ -290,8 +292,11 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(length)
         if len(body) != length:
             raise ReceiverError("INCOMPLETE_BODY", "Connection ended before Content-Length bytes arrived.")
-        packet = parse_packet(body)
-        self._send_json(HTTPStatus.OK, self.server.assistant.assess(packet))  # type: ignore[attr-defined]
+        assistant = self.server.assistant  # type: ignore[attr-defined]
+        if path == ASSIST_PATH:
+            self._send_json(HTTPStatus.OK, assistant.assess(parse_packet(body)))
+        else:
+            self._send_json(HTTPStatus.OK, assistant.plan(parse_plan_packet(body)))
 
     def _request_body_chunks(self) -> Iterator[bytes]:
         transfer_encoding = self.headers.get("Transfer-Encoding", "").strip().lower()

@@ -42,6 +42,8 @@ class MainActivity : Activity() {
     private lateinit var baselineInput: EditText
     private lateinit var intervalInput: EditText
     private lateinit var immediateBox: CheckBox
+    private var messagePanel: MessageCheckPanel? = null
+    private var assistantPanel: AssistantPanel? = null
     private lateinit var realtimeButton: Button
     private lateinit var realtimeStatus: TextView
     private lateinit var clearButton: Button
@@ -70,9 +72,10 @@ class MainActivity : Activity() {
         fun button(text: String, action: () -> Unit): Button = Button(this).apply {
             this.text = text; setOnClickListener { action() }; root.addView(this)
         }
-        label("PrivAgent 資料蒐集 MVP 0.4", 23f)
-        // The Receiver URL comes from the field further down; it is read only when a check is sent.
-        MessageCheckPanel(this, root, ::dp) { validatedEndpoint() }
+        // The Receiver URL comes from the field further down; it is read only when a request is sent.
+        assistantPanel = AssistantPanel(this, root, ::dp, { validatedEndpoint() }) { messagePanel?.pickNotification() }
+        messagePanel = MessageCheckPanel(this, root, ::dp) { validatedEndpoint() }
+        label("PrivAgent 資料蒐集 MVP 0.4", 21f)
         label("研究資料蒐集", 21f)
         label("研究手機使用。可選擇手動蒐集，或啟動即時模式：先建立一次基礎快照，再定期更新裝置狀態，通知與畫面事件可在產生後送出。即時模式使用前景服務，必須從本頁手動啟動與停止。")
         label("聯絡人、位置、通知、畫面可能含你與他人的個人資料。請只在獲得授權的研究手機使用。畫面與通知會嘗試排除密碼、驗證碼及敏感 App，但無法保證識別所有敏感內容。")
@@ -224,6 +227,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        messagePanel?.renderAuto()
         handler.post(refreshTick)
         refreshStorage()
     }
@@ -507,6 +511,7 @@ class MainActivity : Activity() {
     @Deprecated("Uses framework Activity result API for this minimal app")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (assistantPanel?.onActivityResult(requestCode, resultCode, data) == true) return
         if (requestCode != REQ_EXPORT || resultCode != RESULT_OK) return
         val uri = data?.data ?: return
         busy = true

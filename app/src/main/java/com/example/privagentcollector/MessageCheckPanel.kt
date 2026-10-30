@@ -16,6 +16,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import java.lang.ref.WeakReference
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * CHECK_MESSAGE demo: the user picks or pastes ONE message, the phone redacts it and extracts
@@ -43,6 +46,10 @@ class MessageCheckPanel(
         }
     }
 
+    private val autoBox: CheckBox
+    private val autoStatus: TextView
+    // Held here so the watcher's weak reference lives exactly as long as this panel.
+    private val onAutoResult: () -> Unit = { ui { renderAuto() } }
     private val input: EditText
     private val pickButton: Button
     private val cloudBox: CheckBox
@@ -61,6 +68,14 @@ class MessageCheckPanel(
         }
         label("可疑訊息檢查", 21f)
         label("選一則通知或貼上訊息。手機會先遮蔽電話、帳號、驗證碼、網址與姓名，只把風險特徵交給電腦與雲端 AI；原文不會離開手機。")
+        autoBox = CheckBox(activity).apply {
+            text = "自動檢查新進來的通知（高風險時跳出提醒；只送特徵，不送摘錄）"
+            isChecked = AssistConfig.autoCheck(activity)
+            textSize = 16f
+            setOnCheckedChangeListener { _, checked -> setAuto(checked) }
+            root.addView(this)
+        }
+        autoStatus = label("", 14f)
         input = EditText(activity).apply {
             hint = "貼上要檢查的訊息"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -82,6 +97,8 @@ class MessageCheckPanel(
             text = "同意使用雲端 AI 判讀（只送遮蔽後的特徵）"
             isChecked = AssistConfig.cloudConsent(activity)
             textSize = 16f
+            // Background checks read the saved choice, so withdrawing consent takes effect at once.
+            setOnCheckedChangeListener { _, _ -> saveOptions() }
             root.addView(this)
         }
         excerptBox = CheckBox(activity).apply {
@@ -105,7 +122,36 @@ class MessageCheckPanel(
         result = label("", 20f)
         source = label("", 14f)
         current = WeakReference(this)
+        LiveMessageWatch.observe(onAutoResult)
         render()
+        renderAuto()
+    }
+
+    private fun saveOptions() =
+        AssistConfig.save(activity, tokenInput.text.toString(), cloudBox.isChecked, excerptBox.isChecked)
+
+    private fun setAuto(enabled: Boolean) {
+        if (enabled && cloudBox.isChecked && endpoint() == null) { autoBox.isChecked = false; return }
+        saveOptions()
+        AssistConfig.setAutoCheck(activity, enabled)
+        if (enabled && android.os.Build.VERSION.SDK_INT >= 33 &&
+            activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7301)
+        }
+        renderAuto()
+    }
+
+    fun renderAuto() {
+        val format = SimpleDateFormat("HH:mm", Locale.TAIWAN)
+        val levelText = mapOf(MessageGuard.Level.HIGH to "高風險", MessageGuard.Level.VERIFY to "需要核實",
+            MessageGuard.Level.INSUFFICIENT to "資訊不足")
+        autoStatus.text = when {
+            !autoBox.isChecked -> ""
+            !ResearchNotificationListener.connected() -> "請先在系統設定開啟本 App 的通知存取，才能自動檢查"
+            else -> LiveMessageWatch.recentResults().ifEmpty { null }?.joinToString("\n", prefix = "最近自動檢查：\n") {
+                "${format.format(Date(it.time))} ${it.appLabel}${if (it.sender.isEmpty()) "" else "「${it.sender}」"}：${levelText[it.level]}"
+            } ?: "最近自動檢查：還沒有新通知"
+        }
     }
 
     private fun render() {
@@ -124,7 +170,7 @@ class MessageCheckPanel(
         if (!activity.isFinishing && !activity.isDestroyed) action()
     }
 
-    private fun pickNotification() {
+    fun pickNotification() {
         val messages = ResearchNotificationListener.currentMessages()
         if (messages == null) { toast("請先在系統設定開啟本 App 的通知存取"); return }
         if (messages.isEmpty()) { toast("目前沒有可檢查的通知"); return }

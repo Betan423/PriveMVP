@@ -195,6 +195,28 @@ python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v
 - Gemini proxy 走網頁版帳號，不是正式 API；回應時間實測約 5–11 秒，可能因帳號狀態失效。失效時自動改用本機規則。
 - AI 可提高風險等級，因此可能比規則更保守（例如把只有物流連結的訊息判成高風險）。
 
+## 分享照片與手機救援（`POST /api/v1/assist/plan`）
+
+與可疑訊息相同的 `privagent.planner_packet.v1` 外框、存取碼與 16 KiB 上限；`intent` 決定欄位：
+
+- `SHARE_PHOTO`（`client_policy_version: phone-photo-1`）：`facts` 只有 `recipient_ready`、`photo_ready`、`share_app_ready`、`location_removed`、`private_background_review`、`selection`，另有 `recipient_token`（`CONTACT_[A-Z]{8}`）、`photo_token`（`PHOTO_[A-Z]{8}`）與 `confirmation: approved`。三個 ready 必須為 true：只有手機已解析完並經長輩確認的分享才會送來。`allowed_sops` 固定為 `SHARE_PHOTO_GUIDED`、`ASK_USER`、`STOP`，AI 只能讓結果更保守。
+- `RESCUE_PHONE`（`phone-rescue-1`）：`facts` 是症狀類別、細項，以及**只和該症狀有關**的狀態分級（網路類只送飛航／網路／傳輸方式；聲音類只送勿擾／響鈴模式／音量分級）。Receiver 會用同一套規則重算，若手機規則其實已找到原因就以 422 拒收：雲端只在本機找不到原因時參與，且只能在 `RESCUE_INTERNET_SETTINGS`、`RESCUE_SOUND_SETTINGS`、`RESCUE_ASK_DESCRIBE`、`ASK_USER` 中挑選。
+
+回應：`{"task_id_alias", "intent", "decision": "ALLOW", "sop_id", "reason_codes", "planner": {...}, "policy_version": "v5-core-1", "packet_sha256"}`；稽核同樣只記決策與雜湊，不記代號值。
+
+### 政策引擎與評測（`receiver/core_tasks.py`、`receiver/core_eval.py`）
+
+決策順序依藍圖：取消 → 缺用途授權（STOP）→ 缺資料授權（ASK）→ 收件人未設定或歧義、照片不存在、狀態過期（>300 秒）、未確認（ASK；分享被拒絕為 STOP）→ STRICT_LOCAL 或未同意雲端（LOCAL）→ 其餘 ALLOW 並建立封包。手機救援即使允許雲端，也只有本機規則找不到原因時才 ALLOW。
+
+```bash
+make core-eval   # = python3 -m receiver.core_eval --dataset <source_raw_v5.json> --out receiver/data/core_eval
+make golden      # 改了 core_tasks.py 後重新產生 app/src/test/resources 的 Kotlin 對照資料
+```
+
+目前結果（seed 20261107）：1,728 筆、92 個封包；直接識別值外洩、非必要揭露、授權違反、跨任務代號重用、封包契約不符皆為 0／92；任務解析與資料集作者參數不一致 0／1,728。任務解析與規則是對著這些模板寫的，這些數字代表一致性，不是對新說法的泛化能力。
+
+Android 端（`CoreTasks.kt`）以 `core_interpret_golden.tsv`（487 句）與 `core_rescue_golden.tsv`（4,074 組狀態）比對 Python 結果；`CORE_PACKETS_OUT=<檔案> make test-android` 會輸出 Kotlin 封包，供 `validate_plan_packet` 驗證。
+
 ## 資料契約與錯誤
 
 每行必須是 UTF-8 JSON object，必要欄位為：

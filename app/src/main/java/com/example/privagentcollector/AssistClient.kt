@@ -19,6 +19,8 @@ object AssistConfig {
     fun token(context: Context): String = prefs(context).getString("token", "").orEmpty()
     fun cloudConsent(context: Context) = prefs(context).getBoolean("cloud_consent", false)
     fun allowExcerpt(context: Context) = prefs(context).getBoolean("allow_excerpt", false)
+    fun autoCheck(context: Context) = prefs(context).getBoolean("auto_check", false)
+    fun setAutoCheck(context: Context, enabled: Boolean) { prefs(context).edit().putBoolean("auto_check", enabled).apply() }
     fun save(context: Context, token: String, cloudConsent: Boolean, allowExcerpt: Boolean) {
         prefs(context).edit().putString("token", token.trim()).putBoolean("cloud_consent", cloudConsent)
             .putBoolean("allow_excerpt", allowExcerpt).apply()
@@ -27,6 +29,7 @@ object AssistConfig {
 
 object AssistClient {
     private const val PATH = "/api/v1/assist/check-message"
+    private const val PLAN_PATH = "/api/v1/assist/plan"
     private const val CONNECT_TIMEOUT_MS = 5_000
     // The Gemini proxy takes 5–15 s; the Receiver itself gives up on it at 45 s.
     private const val READ_TIMEOUT_MS = 60_000
@@ -59,11 +62,45 @@ object AssistClient {
         }
     }
 
+    data class PlanOutcome(val sopId: String, val reasonCodes: List<String>, val source: String)
+
+    /**
+     * SHARE_PHOTO / RESCUE_PHONE: [local] is the phone's own plan and is returned on any failure.
+     * A share may only become more cautious; rescue only asks the cloud when the phone found no cause.
+     */
+    fun plan(baseUrl: String, token: String, packet: CoreTasks.PlanPacket, local: Pair<String, List<String>>): PlanOutcome {
+        return try {
+            val json = parseObject(post(baseUrl, PLAN_PATH, token, packet.json))
+            val sop = json.optString("sop_id")
+            if (json.optString("task_id_alias") != packet.alias || sop !in packet.allowedSops)
+                throw AssistRejected("電腦接收端回應不一致")
+            val codesJson = json.optJSONArray("reason_codes") ?: throw AssistRejected("電腦接收端回應格式錯誤")
+            val codes = (0 until codesJson.length()).map { codesJson.optString(it) }.filter { it in CoreTasks.reasonText }
+            val caution = listOf("SHARE_PHOTO_GUIDED", "ASK_USER", "STOP")
+            val finalSop = if (packet.intent == "SHARE_PHOTO" && caution.indexOf(sop) < caution.indexOf(local.first)) local.first
+                else if (sop == "ASK_USER" && packet.intent == "RESCUE_PHONE") "RESCUE_ASK_DESCRIBE" else sop
+            val planner = json.optJSONObject("planner")
+            val source = if (planner?.optString("kind") == "GEMINI_PROXY") "雲端 AI（Gemini），只收到代號與狀態分級"
+                else "電腦端規則（${fallbackText[planner?.optString("fallback_reason")] ?: "AI 暫時無法使用"}）"
+            PlanOutcome(finalSop, (local.second + codes).distinct(), source)
+        } catch (e: AssistRejected) {
+            PlanOutcome(local.first, local.second, "手機本機規則（${e.message}）")
+        } catch (_: IOException) {
+            PlanOutcome(local.first, local.second, "手機本機規則（連不到電腦接收端）")
+        } catch (_: Exception) {
+            PlanOutcome(local.first, local.second, "手機本機規則（傳送失敗）")
+        }
+    }
+
     private class AssistRejected(message: String) : Exception(message)
 
-    private fun post(baseUrl: String, token: String, packet: MessageGuard.Packet): AssistOutcome {
-        val body = packet.json.toByteArray(Charsets.UTF_8)
-        val connection = (URL(TransferProtocol.normalizeBaseUrl(baseUrl) + PATH).openConnection() as HttpURLConnection).apply {
+    private fun post(baseUrl: String, token: String, packet: MessageGuard.Packet): AssistOutcome =
+        parse(post(baseUrl, PATH, token, packet.json), packet.alias)
+
+    /** Posts one packet and returns the 200 body; anything else becomes [AssistRejected] or IOException. */
+    private fun post(baseUrl: String, path: String, token: String, json: String): String {
+        val body = json.toByteArray(Charsets.UTF_8)
+        val connection = (URL(TransferProtocol.normalizeBaseUrl(baseUrl) + path).openConnection() as HttpURLConnection).apply {
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             useCaches = false
@@ -85,7 +122,7 @@ object AssistClient {
             if (bytes.size > MAX_RESPONSE_BYTES) throw AssistRejected("電腦接收端回應過大")
             val text = bytes.toString(Charsets.UTF_8)
             if (code != 200) throw AssistRejected(rejection(code, text))
-            return parse(text, packet.alias)
+            return text
         } finally {
             watchdog.interrupt()
             connection.disconnect()
@@ -101,12 +138,14 @@ object AssistClient {
         }
     }
 
+    private fun parseObject(text: String): JSONObject = try {
+        org.json.JSONTokener(text).let { tokener ->
+            (tokener.nextValue() as JSONObject).also { if (tokener.nextClean() != 0.toChar()) error("trailing data") }
+        }
+    } catch (_: Exception) { throw AssistRejected("電腦接收端回應格式錯誤") }
+
     private fun parse(text: String, alias: String): AssistOutcome {
-        val json = try {
-            org.json.JSONTokener(text).let { tokener ->
-                (tokener.nextValue() as JSONObject).also { if (tokener.nextClean() != 0.toChar()) error("trailing data") }
-            }
-        } catch (_: Exception) { throw AssistRejected("電腦接收端回應格式錯誤") }
+        val json = parseObject(text)
         val level = MessageGuard.Level.fromWire(json.optString("risk_level"))
         if (level == null || json.optString("task_id_alias") != alias) throw AssistRejected("電腦接收端回應不一致")
         val codesJson = json.optJSONArray("reason_codes") ?: throw AssistRejected("電腦接收端回應格式錯誤")

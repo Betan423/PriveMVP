@@ -13,6 +13,7 @@ MESSAGE     ?= 我是家人，臨時換號碼，請轉帳到 SYN_ACCOUNT_PRIVATE
 ENV         ?= 1
 DATASET     := dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json
 APK         := app/build/outputs/apk/debug/app-debug.apk
+EVAL_OUT    ?= receiver/data/core_eval
 
 # 有本機離線工具鏈（JDK 17 + SDK + Gradle 快取）就用它；否則沿用系統的 JAVA_HOME / ANDROID_HOME。
 TOOLCHAIN   ?= $(HOME)/.cache/privagent-toolchain
@@ -29,7 +30,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules demo demo-dataset scan check-services ip
+        proxy receiver receiver-lan receiver-rules demo demo-dataset scan core-eval golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -96,6 +97,15 @@ demo-dataset: ## 送資料集某個環境的 32 則訊息：make demo-dataset EN
 
 scan: ## 檢查 6,144 則訊息遮蔽後是否仍含個資（不送出）
 	$(PYTHON) -m receiver.phone_sim --dataset "$(DATASET)" --scan-only
+
+# ---- 核心三情境 ----
+
+core-eval: ## 1,728 筆核心任務跑政策引擎並輸出證據檔（隱私指標任一不為 0 會失敗）
+	$(PYTHON) -m receiver.core_eval --dataset "$(DATASET)" --out $(EVAL_OUT)
+	@echo "證據檔：$(EVAL_OUT)/（summary.json、derived_tasks.csv、packets.jsonl、failures.json、manifest.json）"
+
+golden: ## 改了 receiver/core_tasks.py 後，重新產生 Android 的對照測試資料
+	$(PYTHON) -m receiver.gen_core_golden --dataset "$(DATASET)"
 
 # ---- 雜項 ----
 

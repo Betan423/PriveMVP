@@ -63,6 +63,8 @@ class ResearchNotificationListener : NotificationListenerService() {
         return p
     }
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // Independent of research collection: the message check has its own on/off switch.
+        LiveMessageWatch.onPosted(this, sbn)
         val session = CollectionControl.session() ?: return
         if (!CollectionControl.allowed(this, DataSource.NOTIFICATIONS, session)) return
         val p = payload(sbn, true) ?: return
