@@ -38,8 +38,13 @@ from .contracts import (
     validate_sha256,
     validate_transmission_mode,
 )
+from .demo_feed import DemoFeed, phone_steps
 from .storage import ReceiverStorage
 
+DEMO_PAGE = Path(__file__).resolve().parent / "demo_page.html"
+DEMO_EVENTS_PATH = "/api/v1/demo/events"
+DEMO_SANDBOX_PATH = "/api/v1/demo/sandbox"
+LOOPBACK = frozenset({"127.0.0.1", "::1", "::ffff:127.0.0.1"})
 TRANSMISSIONS_PATH = "/api/v1/transmissions"
 LATEST_CONTEXT_PATH = "/api/v1/context/latest"
 ASSIST_PATH = "/api/v1/assist/check-message"
@@ -81,9 +86,12 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         api_token: str | None = None,
         assist_only: bool = False,
         rate_limiter: RateLimiter | None = None,
+        demo_feed: DemoFeed | None = None,
     ) -> None:
         if assist_only and not api_token:
             raise ValueError("Assist-only (public) mode requires an API token.")
+        if assist_only and demo_feed is not None:
+            raise ValueError("The demo feed is never served in public mode.")
         super().__init__(address, ReceiverRequestHandler)
         self.storage = storage
         self.assistant = assistant
@@ -92,6 +100,8 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         # Public mode: only /health and the assist endpoints exist; collected data is never served.
         self.assist_only = assist_only
         self.rate_limiter = rate_limiter
+        self.demo_feed = demo_feed
+        assistant.feed = demo_feed
 
 
 class ReceiverRequestHandler(BaseHTTPRequestHandler):
@@ -177,6 +187,15 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             return
         if target.path == "/":
             self._send_dashboard()
+            return
+        if target.path in ("/demo", DEMO_EVENTS_PATH):
+            feed = self._demo_feed()
+            if target.path == "/demo":
+                self._send_bytes(HTTPStatus.OK, DEMO_PAGE.read_bytes(), "text/html; charset=utf-8")
+            else:
+                query = parse_qs(target.query, keep_blank_values=True)
+                after = self._query_integer(query, "after", default=0, minimum=0, maximum=2**53)
+                self._send_json(HTTPStatus.OK, {"events": feed.since(after)})
             return
         if target.path == TRANSMISSIONS_PATH:
             items = self.storage.list_metadata()
@@ -264,10 +283,56 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             )
         return value
 
+    def _demo_feed(self) -> DemoFeed:
+        """The stage demo exists only with --demo-feed and only for the presenting laptop itself."""
+        feed = self.server.demo_feed  # type: ignore[attr-defined]
+        if feed is None or self.client_address[0] not in LOOPBACK:
+            raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
+        return feed
+
+    def _handle_sandbox(self) -> None:
+        self._demo_feed()
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            raise ReceiverError("LENGTH_REQUIRED", "Content-Length is required.", status=411) from None
+        if not 0 < length <= MAX_PACKET_BYTES:
+            raise ReceiverError("PACKET_TOO_LARGE", "Sandbox input exceeds 16 KiB.", status=413)
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            text = body["text"].strip()
+            allow_excerpt = body.get("allow_excerpt") is True
+        except (UnicodeDecodeError, ValueError, KeyError, TypeError, AttributeError):
+            raise ReceiverError("INVALID_SANDBOX_INPUT", "Body must be {\"text\": string}.") from None
+        if not text:
+            raise ReceiverError("INVALID_SANDBOX_INPUT", "Text is empty.")
+        steps = phone_steps(text, allow_excerpt)
+        packet = steps["packet"]
+        # The simulated phone hands only the packet to the same gates a real phone goes through.
+        body = json.dumps(packet, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        parse_packet(body)
+        self.server.replay_guard.accept(packet)  # type: ignore[attr-defined]
+        wire = (f"POST {ASSIST_PATH} HTTP/1.1\r\nContent-Type: application/json\r\nContent-Length: {len(body)}"
+                "\r\nX-Simulated-Phone: demo sandbox\r\n\r\n" + body.decode("utf-8"))
+        steps["result"] = self.server.assistant.assess(packet, origin="sandbox", wire=wire)  # type: ignore[attr-defined]
+        self._send_json(HTTPStatus.OK, steps)
+
     def _handle_post(self) -> None:
         target = urlsplit(self.path)
+        if target.path == DEMO_SANDBOX_PATH:
+            self._handle_sandbox()
+            return
         if target.path in (ASSIST_PATH, PLAN_PATH):
-            self._handle_assist(target.path)
+            feed = self.server.demo_feed  # type: ignore[attr-defined]
+            try:
+                self._handle_assist(target.path)
+            except ReceiverError as error:
+                # Show only the gate that stopped it; a rejected packet may hold values that must not be displayed.
+                if feed is not None:
+                    feed.add({"kind": "rejected", "origin": "phone",
+                              "intent": "CHECK_MESSAGE" if target.path == ASSIST_PATH else "PLAN",
+                              "code": error.code, "status": error.status, "message": error.message})
+                raise
             return
         if target.path != TRANSMISSIONS_PATH or self.server.assist_only:  # type: ignore[attr-defined]
             raise ReceiverError("NOT_FOUND", "Route was not found.", status=404)
@@ -334,12 +399,21 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
         if len(body) != length:
             raise ReceiverError("INCOMPLETE_BODY", "Connection ended before Content-Length bytes arrived.")
         assistant = self.server.assistant  # type: ignore[attr-defined]
+        # The stage demo shows the request exactly as received, once it has passed every gate below.
+        wire = self._wire(body) if self.server.demo_feed is not None else None  # type: ignore[attr-defined]
         if path == ASSIST_PATH:
             packet = parse_packet(body)
             self.server.replay_guard.accept(packet)  # type: ignore[attr-defined]
-            self._send_json(HTTPStatus.OK, assistant.assess(packet))
+            self._send_json(HTTPStatus.OK, assistant.assess(packet, wire=wire))
         else:
-            self._send_json(HTTPStatus.OK, assistant.plan(parse_plan_packet(body)))
+            self._send_json(HTTPStatus.OK, assistant.plan(parse_plan_packet(body), wire=wire))
+
+    def _wire(self, body: bytes) -> str:
+        """Request line, headers and body as received; the access token is masked for the projector."""
+        lines = [self.requestline]
+        for name, value in self.headers.items():
+            lines.append(f"{name}: {'••••••••' if name.lower() == 'x-api-token' else value}")
+        return "\r\n".join(lines) + "\r\n\r\n" + body.decode("utf-8", "replace")
 
     def _request_body_chunks(self) -> Iterator[bytes]:
         transfer_encoding = self.headers.get("Transfer-Encoding", "").strip().lower()
@@ -465,12 +539,14 @@ def create_server(
     api_token: str | None = None,
     assist_only: bool = False,
     rate_per_minute: int = 0,
+    demo_feed: bool = False,
 ) -> ReceiverHTTPServer:
     root = Path(data_dir) if data_dir is not None else Path(__file__).resolve().parent / "data"
     storage = ReceiverStorage(root, max_body_bytes=max_body_bytes, max_line_bytes=max_line_bytes)
     assistant = MessageAssistant(storage.data_dir / "assist_audit.ndjson", planner)
     return ReceiverHTTPServer((host, port), storage, assistant, RequestReplayGuard(), api_token or None,
-                              assist_only, RateLimiter(rate_per_minute) if rate_per_minute > 0 else None)
+                              assist_only, RateLimiter(rate_per_minute) if rate_per_minute > 0 else None,
+                              DemoFeed() if demo_feed else None)
 
 
 def main() -> None:
@@ -497,10 +573,17 @@ def main() -> None:
         default=None,
         help=f"Max assist requests per minute, all callers together (default: {DEFAULT_PUBLIC_RATE} in assist-only mode, off otherwise)",
     )
+    parser.add_argument(
+        "--demo-feed",
+        action="store_true",
+        help="Stage demo page at /demo (in memory, served only to this machine; not allowed with --assist-only)",
+    )
     args = parser.parse_args()
     token = os.environ.get("PRIVAGENT_API_TOKEN")
     if args.assist_only and not token:
         parser.error("--assist-only requires PRIVAGENT_API_TOKEN")
+    if args.assist_only and args.demo_feed:
+        parser.error("--demo-feed cannot be used with --assist-only")
     rate = args.rate_limit if args.rate_limit is not None else (DEFAULT_PUBLIC_RATE if args.assist_only else 0)
     planner = None if args.planner_url == "off" else gemini_proxy_planner(args.planner_url, args.planner_timeout)
     server = create_server(
@@ -513,6 +596,7 @@ def main() -> None:
         api_token=token,
         assist_only=args.assist_only,
         rate_per_minute=rate,
+        demo_feed=args.demo_feed,
     )
     address, port = server.server_address[:2]
     print(f"PrivAgent Receiver API v{API_VERSION} listening on http://{address}:{port}", flush=True)
@@ -521,6 +605,8 @@ def main() -> None:
     print(f"Assist API token: {'required' if server.api_token else 'not set (development only)'}", flush=True)
     if args.assist_only:
         print(f"Public mode: only /health and /api/v1/assist/* are served, at most {rate} requests/minute", flush=True)
+    if args.demo_feed:
+        print(f"Stage demo: http://127.0.0.1:{port}/demo (this machine only, kept in memory)", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
