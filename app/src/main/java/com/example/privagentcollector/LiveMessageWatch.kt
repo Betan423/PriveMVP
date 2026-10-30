@@ -88,7 +88,11 @@ object LiveMessageWatch {
             while (recent.size > MAX_RECENT) recent.removeLast()
         }
         observer.get()?.invoke()
-        if (shouldAlert(outcome.level) && AssistConfig.autoCheck(context)) alert(context, key, appLabel, sender, outcome)
+        if (shouldAlert(outcome.level) && AssistConfig.autoCheck(context)) {
+            alert(context, key, appLabel, sender, outcome)
+            // With the floating button on, the overlay permission also lets the warning take the whole screen.
+            if (FloatingAssistant.canPopup(context)) runCatching { ScamAlertActivity.show(context, appLabel, sender, outcome) }
+        }
     }
 
     private fun alert(context: Context, key: String, appLabel: String, sender: String, outcome: AssistOutcome) {
