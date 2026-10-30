@@ -7,8 +7,10 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.provider.ContactsContract
 import android.text.Editable
+import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
+import android.util.Log
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -32,6 +34,8 @@ class MessageCheckPanel(
     private val endpoint: () -> String?
 ) {
     companion object {
+        private const val TAG = "MessageCheckPanel"
+        private const val MAX_MESSAGE_CHARS = 20_000
         // A request outlives the Activity (e.g. recreation); its state and result live here.
         @Volatile private var sending = false
         @Volatile private var resultText: CharSequence = ""
@@ -79,6 +83,7 @@ class MessageCheckPanel(
         input = EditText(activity).apply {
             hint = "貼上要檢查的訊息"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            filters = arrayOf(InputFilter.LengthFilter(MAX_MESSAGE_CHARS))
             minLines = 3
             textSize = 18f
             addTextChangedListener(object : TextWatcher {
@@ -186,7 +191,13 @@ class MessageCheckPanel(
             .setNegativeButton("取消", null).show()
     }
 
-    private fun begin() {
+    private fun begin() = try {
+        beginSafely()
+    } catch (error: Exception) {
+        fail("start", error)
+    }
+
+    private fun beginSafely() {
         if (sending || preparing) return
         val text = input.text.toString().trim()
         if (text.isEmpty()) { toast("請先貼上或選一則訊息"); return }
@@ -198,15 +209,29 @@ class MessageCheckPanel(
         val sourceKind = if (fromNotification) "notification" else "pasted"
         val allowExcerpt = excerptBox.isChecked
         Thread({
-            val packet = MessageGuard.buildPacket(text, sourceKind, allowExcerpt, contactNames())
-            ui {
-                if (!cloud) { send("", packet, false); return@ui }
-                AlertDialog.Builder(activity).setTitle("確認要傳送的內容")
-                    .setMessage("只會把下列內容傳到 $baseUrl，再交給雲端 AI：\n\n${MessageGuard.describe(packet)}")
-                    .setPositiveButton("傳送") { _, _ -> send(baseUrl, packet, true) }
-                    .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false) }
-                    .setOnCancelListener { preparing = false; publish("已取消，沒有傳送任何資料", Color.DKGRAY, "", done = true) }
-                    .show()
+            try {
+                // Contact names are useful only when an excerpt can actually be included. Avoid a
+                // large, unnecessary contacts query for the default feature-only packet.
+                val names = if (allowExcerpt) contactNames() else emptyList()
+                val packet = MessageGuard.buildPacket(text, sourceKind, allowExcerpt, names)
+                ui {
+                    try {
+                        if (!cloud) { send("", packet, false); return@ui }
+                        AlertDialog.Builder(activity).setTitle("確認要傳送的內容")
+                            .setMessage("只會把下列內容傳到 $baseUrl，再交給雲端 AI：\n\n${MessageGuard.describe(packet)}")
+                            .setPositiveButton("傳送") { _, _ -> send(baseUrl, packet, true) }
+                            .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false) }
+                            .setOnCancelListener {
+                                preparing = false
+                                publish("已取消，沒有傳送任何資料", Color.DKGRAY, "", done = true)
+                            }
+                            .show()
+                    } catch (error: Exception) {
+                        fail("confirmation", error)
+                    }
+                }
+            } catch (error: Throwable) {
+                recoverOrRethrow("preprocess", error)
             }
         }, "message-check").start()
     }
@@ -217,18 +242,44 @@ class MessageCheckPanel(
         publish(if (cloud) "已送出，等待判讀（約 5–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
         val token = tokenInput.text.toString().trim().ifBlank { AssistConfig.token(activity) }
         Thread({
-            val outcome = AssistClient.check(baseUrl, token, packet, cloud)
-            val text = buildString {
-                append(MessageGuard.advice.getValue(outcome.level))
-                for (code in outcome.reasonCodes) MessageGuard.reasonText[code]?.let { append("\n・").append(it) }
+            try {
+                val outcome = AssistClient.check(baseUrl, token, packet, cloud)
+                val text = buildString {
+                    append(MessageGuard.advice.getValue(outcome.level))
+                    for (code in outcome.reasonCodes) MessageGuard.reasonText[code]?.let { append("\n・").append(it) }
+                }
+                val color = when (outcome.level) {
+                    MessageGuard.Level.HIGH -> Color.rgb(183, 28, 28)
+                    MessageGuard.Level.VERIFY -> Color.rgb(230, 81, 0)
+                    MessageGuard.Level.INSUFFICIENT -> Color.DKGRAY
+                }
+                publish(text, color, "判讀來源：${outcome.source}", done = true)
+            } catch (error: Throwable) {
+                // AssistClient already turns transport/proxy failures into a local result. This is
+                // the final UI boundary so an unexpected rendering/configuration failure cannot
+                // terminate the Android process either.
+                recoverOrRethrow("result", error)
             }
-            val color = when (outcome.level) {
-                MessageGuard.Level.HIGH -> Color.rgb(183, 28, 28)
-                MessageGuard.Level.VERIFY -> Color.rgb(230, 81, 0)
-                MessageGuard.Level.INSUFFICIENT -> Color.DKGRAY
-            }
-            publish(text, color, "判讀來源：${outcome.source}", done = true)
         }, "message-check").start()
+    }
+
+    private fun recoverOrRethrow(stage: String, error: Throwable) {
+        // Initialization/linkage errors are recoverable configuration defects. VM exhaustion and
+        // forced thread termination are not safe to mask.
+        if (error is VirtualMachineError || error is ThreadDeath) throw error
+        fail(stage, error)
+    }
+
+    /** Never logs the source message or packet. A failed check also never leaves the UI locked. */
+    private fun fail(stage: String, error: Throwable) {
+        Log.e(TAG, "CHECK_MESSAGE failed at $stage", error)
+        preparing = false
+        publish(
+            "這次檢查無法完成，App 已安全停止傳送。請再試一次；若仍失敗，請重新開啟 App。",
+            Color.rgb(183, 28, 28),
+            "判讀來源：未送出或已回退",
+            done = true
+        )
     }
 
     /** Contact names are read only to redact them on the phone; requires READ_CONTACTS already granted. */

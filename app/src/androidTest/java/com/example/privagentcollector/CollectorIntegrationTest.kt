@@ -11,6 +11,17 @@ import java.io.ByteArrayOutputStream
 /** Run only on a disposable emulator: these tests clear the target app's test data. */
 @RunWith(AndroidJUnit4::class)
 class CollectorIntegrationTest {
+    @Test fun messageGuardPatternsInitializeOnAndroid() {
+        // Android uses ICU's regex engine, which does not accept every flag supported by the
+        // desktop JVM. Exercising the real packet path here prevents click-time initializer crashes.
+        val raw = "王小明您好，請立即轉-帳並回撥 0912-345-678，網址 https://example.invalid"
+        val packet = MessageGuard.buildPacket(raw, "pasted", allowExcerpt = true)
+        assertEquals(MessageGuard.Level.HIGH, MessageGuard.assess(packet.facts).level)
+        assertFalse(packet.json.contains("王小明"))
+        assertFalse(packet.json.contains("0912"))
+        assertFalse(packet.json.contains("example.invalid"))
+    }
+
     @Test fun encryptedStorageAndStopStartAreIsolated() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         ResearchLog.clear(context)

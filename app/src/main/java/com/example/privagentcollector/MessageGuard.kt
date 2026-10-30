@@ -48,18 +48,20 @@ object MessageGuard {
     )
     private const val SEP = """[\s\-./()]"""
     // Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised.
+    // Do not use Java's inline (?U) flag here: Android's ICU regex engine rejects it. Character
+    // classes are explicit where Unicode letters/numbers matter so these patterns behave on both.
     private val redactions: List<Pair<Regex, (MatchResult) -> String>> = listOf(
-        Regex("""(?U)SYN_(?:V5_)?([A-Z]+)_PRIVATE_[A-Z0-9_]+""") to { m -> syntheticKinds[m.groupValues[1]] ?: "[SECRET]" },
-        Regex("""(?U)SYN_[A-Z0-9_]+""") to { _ -> "[SECRET]" },
-        Regex("""(?U)[\w.+-]+@[\w-]+\.[\w.]+""") to { _ -> "[EMAIL]" },
-        Regex("""(?iU)(?:https?://|www\.)[^\s，。、「」！？]+""") to { _ -> "[LINK]" },
-        Regex("""(?iU)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?""") to { _ -> "[LINK]" },
-        Regex("""(?U)\b[A-Z][12][0-9]{8}\b""") to { _ -> "[ID]" },
-        Regex("""(?iU)((?:驗證碼|認證碼|OTP|密碼|控制碼|代碼)[^\[\]A-Za-z0-9]{0,6}?)(?=[A-Za-z]*[0-9])[A-Za-z0-9]{4,10}\b""") to
+        Regex("""SYN_(?:V5_)?([A-Z]+)_PRIVATE_[A-Z0-9_]+""") to { m -> syntheticKinds[m.groupValues[1]] ?: "[SECRET]" },
+        Regex("""SYN_[A-Z0-9_]+""") to { _ -> "[SECRET]" },
+        Regex("""[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_-]+\.[\p{L}\p{N}_.-]+""") to { _ -> "[EMAIL]" },
+        Regex("""(?i)(?:https?://|www\.)[^\s，。、「」！？]+""") to { _ -> "[LINK]" },
+        Regex("""(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?""") to { _ -> "[LINK]" },
+        Regex("""\b[A-Z][12][0-9]{8}\b""") to { _ -> "[ID]" },
+        Regex("""(?i)((?:驗證碼|認證碼|OTP|密碼|控制碼|代碼)[^\[\]A-Za-z0-9]{0,6}?)(?=[A-Za-z]*[0-9])[A-Za-z0-9]{4,10}\b""") to
             { m -> m.groupValues[1] + "[OTP]" },
-        Regex("""(?U)(?<![0-9])(?:\+?886$SEP*|0)9(?:$SEP*[0-9]){8}(?![0-9])""") to { _ -> "[PHONE]" },
-        Regex("""(?U)(?<![0-9])(?:\+?886$SEP*|0)[2-8](?:$SEP*[0-9]){6,8}(?![0-9])""") to { _ -> "[PHONE]" },
-        Regex("""(?U)(?<![0-9])[0-9](?:$SEP{0,2}[0-9]){3,}""") to { _ -> "[NUMBER]" }
+        Regex("""(?<![0-9])(?:\+?886$SEP*|0)9(?:$SEP*[0-9]){8}(?![0-9])""") to { _ -> "[PHONE]" },
+        Regex("""(?<![0-9])(?:\+?886$SEP*|0)[2-8](?:$SEP*[0-9]){6,8}(?![0-9])""") to { _ -> "[PHONE]" },
+        Regex("""(?<![0-9])[0-9](?:$SEP{0,2}[0-9]){3,}""") to { _ -> "[NUMBER]" }
     )
     // Regexes cannot recognise arbitrary names: catch salutations and the contact names the phone knows.
     private val salutation = Regex("""[\x{4e00}-\x{9fff}]{2,4}(?=(您好|你好|先生|小姐|女士|阿姨|伯伯|奶奶|爺爺|阿公|阿嬤))""")
@@ -72,8 +74,8 @@ object MessageGuard {
     )
     private val secretWords = Regex("(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)")
     private val requestVerbs = Regex("(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
-    // (?d): only \n ends a line for `.`, matching Python, so "\r" cannot hide a phishing phrase.
-    private val credentialPhishing = Regex("(?d)(帳戶|帳號|會員).{0,12}(驗證|登入|解鎖).{0,20}(輸入|填寫).{0,6}(資料|個資)")
+    // Explicit [^\n] matches Python's dot behaviour and avoids another platform-specific flag.
+    private val credentialPhishing = Regex("(帳戶|帳號|會員)[^\n]{0,12}(驗證|登入|解鎖)[^\n]{0,20}(輸入|填寫)[^\n]{0,6}(資料|個資)")
     private val asksTransfer = Regex("(轉帳|匯款|先匯|匯到|付款|支付|繳費|繳納|ATM|轉入|儲值)")
     private val urgency = Regex("(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|停權|凍結|處分|逾期|最後機會)")
     private val offersReward = Regex("(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)")
@@ -84,7 +86,7 @@ object MessageGuard {
         "support" to Regex("(我是(客服|銀行|專員|電信)|客服人員)")
     )
     private val vague = Regex("(細節還沒|還沒有說明|稍後說明|之後再說|晚點再說)")
-    private val filler = Regex("""(?U)^(這是虛構訊息。|虛構測試內容：|虛構\w*通知：)""")
+    private val filler = Regex("""^(這是虛構訊息。|虛構測試內容：|虛構[\p{L}\p{N}_]*通知：)""")
     private val random = SecureRandom()
     // Python's \s also covers U+001C..U+001F, Java's does not; both implementations map them to spaces.
     private val separatorControls = Regex("[\u001c-\u001f]")

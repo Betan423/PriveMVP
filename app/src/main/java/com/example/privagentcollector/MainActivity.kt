@@ -404,7 +404,15 @@ class MainActivity : Activity() {
         }
         if (!accepted) { busy = false; message("事件佇列忙碌，請稍後重試") }
     }
-    private fun assistEndpoint(): String? = if (AssistConfig.builtIn) AssistConfig.baseUrl(this) else validatedEndpoint()
+    private fun assistEndpoint(): String? {
+        if (!AssistConfig.builtIn) return validatedEndpoint()
+        return try {
+            TransferProtocol.normalizeBaseUrl(AssistConfig.baseUrl(this))
+        } catch (e: IllegalArgumentException) {
+            message("APK 內建的 AI 端點格式錯誤，請重新產生 APK")
+            null
+        }
+    }
 
     private fun validatedEndpoint(): String? = try {
         val value = TransferConfig.setBaseUrl(this, endpointInput.text.toString())
