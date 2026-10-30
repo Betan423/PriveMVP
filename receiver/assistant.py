@@ -21,27 +21,22 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .contracts import ReceiverError
+from .privacy_policy import POLICY as PRIVACY_POLICY, POLICY_SHA256
 
 PACKET_SCHEMA = "privagent.planner_packet.v1"
-POLICY_VERSION = "server-msg-1"
+MESSAGE_PACKET_SCHEMA = str(PRIVACY_POLICY["packet_schema"])
+POLICY_VERSION = "server-msg-2"
 MAX_PACKET_BYTES = 16 * 1024
-MAX_EXCERPT_CHARS = 300
+MAX_EXCERPT_CHARS = int(PRIVACY_POLICY["redacted_excerpt"]["max_chars"])
 DEFAULT_PLANNER_URL = "http://127.0.0.1:8000"
 DEFAULT_PLANNER_TIMEOUT = 45.0
 
 TASK_ALIAS_PATTERN = re.compile(r"^TASK_[A-Z]{8}$")
-CLIENT_POLICY_VERSIONS = ("phone-msg-1",)
-BOOLEAN_FACTS = (
-    "asks_transfer",
-    "requests_secret",
-    "urgency",
-    "has_link",
-    "offers_reward",
-    "requests_remote_control",
-    "context_sufficient",
-)
-IMPERSONATION_KINDS = ("none", "family", "official", "support")
-SOURCE_KINDS = ("notification", "pasted")
+REQUEST_NONCE_PATTERN = re.compile(r"^REQ_[A-Z]{20}$")
+CLIENT_POLICY_VERSIONS = tuple(PRIVACY_POLICY["client_policy_versions"])
+BOOLEAN_FACTS = tuple(name for name, spec in PRIVACY_POLICY["facts"].items() if spec["type"] == "boolean")
+IMPERSONATION_KINDS = tuple(PRIVACY_POLICY["facts"]["impersonation"]["values"])
+SOURCE_KINDS = tuple(PRIVACY_POLICY["facts"]["source_kind"]["values"])
 MESSAGE_SOPS = ("MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER")
 RISK_LEVELS = ("insufficient", "verify", "high")  # Ordered from least to most cautious.
 SOP_FOR_LEVEL = {"high": "MESSAGE_CAUTION", "verify": "MESSAGE_VERIFY", "insufficient": "MESSAGE_INSUFFICIENT"}
@@ -59,6 +54,7 @@ REASON_CODES = (
     "NO_STRONG_SIGNAL",
 )
 PLACEHOLDERS = ("[LINK]", "[PHONE]", "[OTP]", "[ACCOUNT]", "[EMAIL]", "[ID]", "[NAME]", "[ADDRESS]", "[RECORD]", "[SECRET]", "[NUMBER]")
+INVISIBLE_FORMAT_CONTROLS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
 
 # Values that must never appear anywhere in a packet. The phone replaces them with
 # the placeholders above; a hit here means the phone-side redaction failed.
@@ -126,14 +122,14 @@ def validate_packet(packet: Any) -> None:
         if not condition:
             raise _packet_error("PACKET_CONTRACT_VIOLATION", f"Field {field} violates the planner packet contract.")
 
-    expected = {
-        "schema", "task_id_alias", "intent", "locale", "cloud_consent", "facts",
-        "redacted_excerpt", "allowed_sops", "client_policy_version",
-    }
+    expected = set(PRIVACY_POLICY["allowed_top_level_fields"])
     require(type(packet) is dict and set(packet) == expected, "$")
-    require(packet["schema"] == PACKET_SCHEMA, "schema")
+    require(packet["schema"] == MESSAGE_PACKET_SCHEMA, "schema")
     require(type(packet["task_id_alias"]) is str and TASK_ALIAS_PATTERN.fullmatch(packet["task_id_alias"]) is not None,
             "task_id_alias")
+    require(type(packet["request_nonce"]) is str and
+            REQUEST_NONCE_PATTERN.fullmatch(packet["request_nonce"]) is not None, "request_nonce")
+    require(type(packet["issued_at_ms"]) is int and 0 < packet["issued_at_ms"] < 2 ** 63, "issued_at_ms")
     require(packet["intent"] == "CHECK_MESSAGE", "intent")
     require(packet["locale"] == "zh-TW", "locale")
     require(packet["client_policy_version"] in CLIENT_POLICY_VERSIONS, "client_policy_version")
@@ -147,6 +143,8 @@ def validate_packet(packet: Any) -> None:
     require(facts["source_kind"] in SOURCE_KINDS, "facts.source_kind")
     excerpt = packet["redacted_excerpt"]
     require(excerpt is None or (type(excerpt) is str and 0 < len(excerpt) <= MAX_EXCERPT_CHARS), "redacted_excerpt")
+    if excerpt is not None and rule_assessment(facts)[0] == PRIVACY_POLICY["redacted_excerpt"]["forbidden_when_local_risk"]:
+        raise _packet_error("PRIVACY_BUDGET_EXCEEDED", "High-risk messages may disclose features only.")
     sops = packet["allowed_sops"]
     require(type(sops) is list and all(type(sop) is str for sop in sops) and
             len(sops) == len(set(sops)) and set(sops) == set(MESSAGE_SOPS), "allowed_sops")
@@ -154,7 +152,7 @@ def validate_packet(packet: Any) -> None:
         json.dumps(packet, ensure_ascii=False).encode("utf-8")
     except UnicodeEncodeError:
         require(False, "redacted_excerpt")
-    hits = forbidden_hits(packet)
+    hits = packet_forbidden_hits(packet)
     if hits:
         raise _packet_error("FORBIDDEN_VALUE_IN_PACKET", "Packet contains values that must stay on the phone: " +
                             ",".join(hits) + ".")
@@ -162,7 +160,44 @@ def validate_packet(packet: Any) -> None:
 
 def forbidden_hits(value: Any) -> list[str]:
     text = unicodedata.normalize("NFKC", json.dumps(value, ensure_ascii=False))
+    # A malicious/non-reference client must not be able to split an identifier with
+    # zero-width or bidi controls to evade the receiver-side privacy gate.
+    text = INVISIBLE_FORMAT_CONTROLS.sub("", text)
     return sorted(name for name, pattern in FORBIDDEN_PATTERNS.items() if pattern.search(text))
+
+
+def packet_forbidden_hits(packet: dict[str, Any]) -> list[str]:
+    """Scan only user-derived packet values; timestamps intentionally contain long digits."""
+    return forbidden_hits({"facts": packet.get("facts"), "redacted_excerpt": packet.get("redacted_excerpt")})
+
+
+class RequestReplayGuard:
+    """One-time nonce and wall-clock freshness gate for cloud-bound message packets."""
+
+    def __init__(self, clock_ms: Callable[[], int] | None = None) -> None:
+        self.clock_ms = clock_ms or (lambda: int(time.time() * 1000))
+        self.max_age_ms = int(PRIVACY_POLICY["freshness"]["max_age_ms"])
+        self.max_future_skew_ms = int(PRIVACY_POLICY["freshness"]["max_future_skew_ms"])
+        self.max_entries = int(PRIVACY_POLICY["freshness"]["nonce_cache_entries"])
+        self._seen: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def accept(self, packet: dict[str, Any]) -> None:
+        now = self.clock_ms()
+        issued = packet["issued_at_ms"]
+        if issued < now - self.max_age_ms:
+            raise _packet_error("PACKET_EXPIRED", "Planner packet is too old.")
+        if issued > now + self.max_future_skew_ms:
+            raise _packet_error("PACKET_FROM_FUTURE", "Planner packet clock is too far ahead.")
+        nonce = packet["request_nonce"]
+        with self._lock:
+            self._seen = {key: expiry for key, expiry in self._seen.items() if expiry > now}
+            if nonce in self._seen:
+                raise _packet_error("PACKET_REPLAYED", "Planner packet nonce was already used.", 409)
+            if len(self._seen) >= self.max_entries:
+                oldest = min(self._seen, key=self._seen.get)
+                del self._seen[oldest]
+            self._seen[nonce] = now + self.max_age_ms
 
 
 def rule_assessment(facts: dict[str, Any]) -> tuple[str, list[str]]:
@@ -305,6 +340,8 @@ class MessageAssistant:
             "sop_id": SOP_FOR_LEVEL[level],
             "planner": {"kind": planner_kind, "fallback_reason": fallback},
             "policy_version": POLICY_VERSION,
+            "privacy_policy_version": PRIVACY_POLICY["policy_version"],
+            "privacy_policy_sha256": POLICY_SHA256,
             "packet_sha256": hashlib.sha256(packet_bytes).hexdigest(),
         }
         self._audit({
@@ -312,6 +349,8 @@ class MessageAssistant:
             "task_id_alias": packet["task_id_alias"],
             "intent": packet["intent"],
             "client_policy_version": packet["client_policy_version"],
+            "privacy_policy_version": PRIVACY_POLICY["policy_version"],
+            "privacy_policy_sha256": POLICY_SHA256,
             "disclosed_fields": sorted(packet["facts"]) + (["redacted_excerpt"] if packet["redacted_excerpt"] else []),
             "rule": {"risk_level": rule_level, "reason_codes": rule_codes},
             "planner": {"kind": planner_kind, "fallback_reason": fallback, "risk_level": ai_level, "reason_codes": ai_codes},

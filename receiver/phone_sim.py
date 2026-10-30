@@ -19,15 +19,22 @@ import re
 import secrets
 import string
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .assistant import MAX_EXCERPT_CHARS, MESSAGE_SOPS, PACKET_SCHEMA, forbidden_hits, rule_assessment
+from .assistant import MAX_EXCERPT_CHARS, MESSAGE_PACKET_SCHEMA, MESSAGE_SOPS, packet_forbidden_hits, rule_assessment
 
-CLIENT_POLICY_VERSION = "phone-msg-1"
+CLIENT_POLICY_VERSION = "phone-msg-2"
+
+# Red teams can insert zero-width or bidi formatting controls inside a phone number,
+# URL or scam keyword. They have no semantic value for this task, so remove them
+# before both redaction and feature extraction. Keep this range in sync with
+# MessageGuard.kt and receiver/assistant.py.
+INVISIBLE_FORMAT_CONTROLS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
 
 SYNTHETIC_KINDS = {
     "ACCOUNT": "[ACCOUNT]", "OTP": "[OTP]", "NAME": "[NAME]", "PHONE": "[PHONE]", "ADDRESS": "[ADDRESS]",
@@ -76,6 +83,11 @@ IMPERSONATION = (
 )
 VAGUE = re.compile(r"(細節還沒|還沒有說明|稍後說明|之後再說|晚點再說)")
 FILLER = re.compile(r"^(這是虛構訊息。|虛構測試內容：|虛構\w*通知：)")
+# Remove short punctuation/symbol gaps only when they sit inside a Han phrase. Sentence delimiters
+# remain boundaries, while attacks such as 轉-帳、驗💸證💸碼 and 客／服 become detectable.
+HAN_GAP = re.compile(
+    r"(?<=[\u3400-\u9fff])(?:[^\w\u3400-\u9fff\[\]，。！？,!?;；:：]|_){1,3}(?=[\u3400-\u9fff])"
+)
 
 ADVICE = {
     "high": "高風險：這則訊息有常見的詐騙特徵。不要匯款、不要提供驗證碼或密碼、不要點連結。"
@@ -95,8 +107,10 @@ REASON_TEXT = {
 def redact(text: str, known_names: tuple[str, ...] = ()) -> str:
     # U+001C..U+001F count as whitespace in Python but not Java; map them to spaces on both sides.
     text = re.sub(r"[\x1c-\x1f]", " ", unicodedata.normalize("NFKC", text))
+    text = INVISIBLE_FORMAT_CONTROLS.sub("", text)
     for name in sorted((n for n in known_names if n), key=len, reverse=True):
-        text = text.replace(unicodedata.normalize("NFKC", name), "[NAME]")
+        normalized_name = INVISIBLE_FORMAT_CONTROLS.sub("", unicodedata.normalize("NFKC", name))
+        text = text.replace(normalized_name, "[NAME]")
     for pattern, replacement in REDACTIONS:
         text = pattern.sub(replacement, text)
     return SALUTATION.sub("[NAME]", text)
@@ -104,14 +118,17 @@ def redact(text: str, known_names: tuple[str, ...] = ()) -> str:
 
 def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     redacted = redact(original)
-    without_negation = NEGATED_ACTION.sub("", redacted)
+    # Detection uses a compact view so harmless spacing cannot hide phrases such as
+    # "匯 款" or "驗 證 碼". The optional excerpt remains readable and unchanged.
+    detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", redacted))
+    without_negation = NEGATED_ACTION.sub("", detection_text)
     facts: dict[str, Any] = {key: bool(pattern.search(without_negation)) for key, pattern in PATTERNS.items()}
     facts["requests_secret"] = bool(
         (SECRET_WORDS.search(without_negation) and REQUEST_VERBS.search(without_negation))
-        or CREDENTIAL_PHISHING.search(redacted)
+        or CREDENTIAL_PHISHING.search(detection_text)
     )
     facts["has_link"] = "[LINK]" in redacted
-    facts["impersonation"] = next((kind for kind, pattern in IMPERSONATION if pattern.search(redacted)), "none")
+    facts["impersonation"] = next((kind for kind, pattern in IMPERSONATION if pattern.search(detection_text)), "none")
     core = FILLER.sub("", redacted).strip()
     facts["context_sufficient"] = not VAGUE.search(core) and len(core) >= 8
     facts["source_kind"] = source_kind
@@ -124,6 +141,8 @@ def build_packet(
     *,
     allow_excerpt: bool = False,
     known_names: tuple[str, ...] = (),
+    issued_at_ms: int | None = None,
+    request_nonce: str | None = None,
 ) -> dict[str, Any]:
     facts = extract_facts(original, source_kind)
     local_level, _ = rule_assessment(facts)
@@ -133,9 +152,12 @@ def build_packet(
     if allow_excerpt and local_level != "high":
         excerpt = redact(original, known_names)[:MAX_EXCERPT_CHARS] or None
     alias = "TASK_" + "".join(secrets.choice(string.ascii_uppercase) for _ in range(8))
+    nonce = request_nonce or "REQ_" + "".join(secrets.choice(string.ascii_uppercase) for _ in range(20))
     return {
-        "schema": PACKET_SCHEMA,
+        "schema": MESSAGE_PACKET_SCHEMA,
         "task_id_alias": alias,
+        "request_nonce": nonce,
+        "issued_at_ms": issued_at_ms if issued_at_ms is not None else int(time.time() * 1000),
         "intent": "CHECK_MESSAGE",
         "locale": "zh-TW",
         "cloud_consent": True,
@@ -201,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         items = dataset_messages(args.dataset, args.environment)
 
     if args.scan_only:
-        leaks = [(m.get("template_id"), forbidden_hits(build_packet(m["text"], allow_excerpt=True))) for m in items]
+        leaks = [(m.get("template_id"), packet_forbidden_hits(build_packet(m["text"], allow_excerpt=True))) for m in items]
         leaks = [leak for leak in leaks if leak[1]]
         print(json.dumps({"messages": len(items), "packets_with_forbidden_values": len(leaks),
                           "examples": leaks[:10]}, ensure_ascii=False, indent=2))

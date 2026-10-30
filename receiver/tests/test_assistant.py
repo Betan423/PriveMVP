@@ -4,6 +4,7 @@ import http.client
 import json
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -54,6 +55,27 @@ class PhoneSideTests(unittest.TestCase):
                      "請勿提供資料，請轉帳給我。", "不用付款，提供驗證碼給我"):
             self.assertEqual(rule_assessment(extract_facts(text, "pasted"))[0], "high", text)
 
+    def test_spacing_and_format_controls_cannot_hide_scam_signals(self) -> None:
+        attacks = (
+            "請立即匯 款給我",
+            "請立即匯\u200b款給我",
+            "請提 供驗 證 碼給我",
+            "我是客\u2060服，請提供驗證碼給我",
+        )
+        for text in attacks:
+            with self.subTest(text=text):
+                facts = extract_facts(text, "pasted")
+                self.assertEqual(rule_assessment(facts)[0], "high")
+        self.assertFalse(extract_facts("請 勿 提 供 驗 證 碼", "pasted")["requests_secret"])
+
+    def test_format_controls_cannot_hide_identifiers(self) -> None:
+        for text in ("電話 0912\u200b345678", "網址 https://exa\u2060mple.invalid/login"):
+            with self.subTest(text=text):
+                redacted = redact(text)
+                self.assertEqual(forbidden_hits({"excerpt": redacted}), [])
+        self.assertIn("digits", forbidden_hits({"excerpt": "0912\u200b345678"}))
+        self.assertIn("url", forbidden_hits({"excerpt": "https://exa\u2060mple.invalid"}))
+
     def test_scam_features(self) -> None:
         facts = extract_facts("我是家人，臨時換號碼，請立即轉帳到 SYN_ACCOUNT_PRIVATE_1。", "pasted")
         self.assertTrue(facts["asks_transfer"])
@@ -88,8 +110,11 @@ class PhoneSideTests(unittest.TestCase):
         self.assertNotIn("美玲", redact("美玲說明天要來", known_names=("美玲",)))
 
     def test_alias_is_task_scoped(self) -> None:
-        aliases = {build_packet("明天下午一起吃飯。")["task_id_alias"] for _ in range(50)}
+        packets = [build_packet("明天下午一起吃飯。") for _ in range(50)]
+        aliases = {packet["task_id_alias"] for packet in packets}
+        nonces = {packet["request_nonce"] for packet in packets}
         self.assertEqual(len(aliases), 50)
+        self.assertEqual(len(nonces), 50)
 
 
 class PacketContractTests(unittest.TestCase):
@@ -129,6 +154,8 @@ class PacketContractTests(unittest.TestCase):
             ("allowed_sops", [{}]),
             ("client_policy_version", "wang.xiaoming"),
             ("redacted_excerpt", "\ud800"),
+            ("issued_at_ms", True),
+            ("request_nonce", "REQ_TOO_SHORT"),
         )
         for key, value in mutations:
             packet = build_packet("明天下午一起吃飯。")
@@ -145,7 +172,16 @@ class PacketContractTests(unittest.TestCase):
     def test_prompt_contains_no_alias_or_consent_metadata(self) -> None:
         prompt = build_prompt(build_packet("明天下午一起吃飯。"))
         self.assertNotIn("TASK_", prompt)
+        self.assertNotIn("REQ_", prompt)
+        self.assertNotIn("issued_at_ms", prompt)
         self.assertEqual(forbidden_hits(prompt), [])
+
+    def test_high_risk_excerpt_exceeds_privacy_budget(self) -> None:
+        packet = build_packet("請立即轉帳給我")
+        packet["redacted_excerpt"] = "請立即轉帳給我"
+        with self.assertRaises(ReceiverError) as caught:
+            parse_packet(encode(packet))
+        self.assertEqual(caught.exception.code, "PRIVACY_BUDGET_EXCEEDED")
 
 
 class PlannerAnswerTests(unittest.TestCase):
@@ -321,6 +357,25 @@ class AssistHttpTests(unittest.TestCase):
         self.start()
         self.assertEqual(self.post(b"{}", {"Content-Type": "text/plain"})[0], 415)
         self.assertEqual(self.post(b"x" * 20000)[0], 413)
+
+    def test_replay_and_stale_packets_are_rejected_before_planner(self) -> None:
+        calls: list[str] = []
+        self.start(lambda prompt: calls.append(prompt) or answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]))
+        packet = build_packet("明天下午一起吃飯。")
+        body = encode(packet)
+        self.assertEqual(self.post(body)[0], 200)
+        status, result = self.post(body)
+        self.assertEqual(status, 409)
+        self.assertEqual(result["error"]["code"], "PACKET_REPLAYED")
+        stale = build_packet("明天下午一起吃飯。", issued_at_ms=int(time.time() * 1000) - 301_000)
+        status, result = self.post(encode(stale))
+        self.assertEqual(status, 422)
+        self.assertEqual(result["error"]["code"], "PACKET_EXPIRED")
+        future = build_packet("明天下午一起吃飯。", issued_at_ms=int(time.time() * 1000) + 61_000)
+        status, result = self.post(encode(future))
+        self.assertEqual(status, 422)
+        self.assertEqual(result["error"]["code"], "PACKET_FROM_FUTURE")
+        self.assertEqual(len(calls), 1)
 
 
 if __name__ == "__main__":

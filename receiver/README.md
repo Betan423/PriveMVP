@@ -150,16 +150,20 @@ python -m receiver.phone_sim --message "王小明您好，明天下午三點集�
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --environment 1
 # 遮蔽檢查：全部 6,144 則訊息組成的 packet 是否仍含禁用值（不送出）
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --scan-only
+# 完整情境二證據：6,144 則合成訊息、10 個紅隊案例、3 個 Agent 邊界攻擊
+make message-eval
 ```
 
 設定環境變數 `PRIVAGENT_API_TOKEN` 後，Receiver 會要求 `X-Api-Token` 標頭（phone_sim 也讀同一變數）。區網展示時建議設定。
 
-### Packet 契約（`privagent.planner_packet.v1`）
+### Packet 契約（`privagent.check_message_packet.v2`）
 
 ```json
 {
-  "schema": "privagent.planner_packet.v1",
+  "schema": "privagent.check_message_packet.v2",
   "task_id_alias": "TASK_CZFVITYL",
+  "request_nonce": "REQ_QWERTYUIOPASDFGHJKLZ",
+  "issued_at_ms": 1793320000000,
   "intent": "CHECK_MESSAGE",
   "locale": "zh-TW",
   "cloud_consent": true,
@@ -170,7 +174,7 @@ python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v
   },
   "redacted_excerpt": null,
   "allowed_sops": ["MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER"],
-  "client_policy_version": "phone-msg-1"
+  "client_policy_version": "phone-msg-2"
 }
 ```
 
@@ -182,11 +186,14 @@ python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v
   "risk_level": "high", "reason_codes": ["ASKS_TRANSFER", "IMPERSONATION_FAMILY"],
   "sop_id": "MESSAGE_CAUTION",
   "planner": {"kind": "GEMINI_PROXY", "fallback_reason": null},
-  "policy_version": "server-msg-1", "packet_sha256": "..."
+  "policy_version": "server-msg-2", "privacy_policy_version": "check-message-privacy-2",
+  "privacy_policy_sha256": "...", "packet_sha256": "..."
 }
 ```
 
 `planner.kind` 為 `RULES` 時，`fallback_reason` 說明原因：`PLANNER_DISABLED`、`PLANNER_UNREACHABLE`、`PLANNER_TIMEOUT`、`PLANNER_HTTP_<code>`、`PLANNER_BAD_ENVELOPE`、`PLANNER_INVALID_RESPONSE`。
+
+`request_nonce` 每個任務只可使用一次；`issued_at_ms` 超過五分鐘、快於 Receiver 時鐘超過一分鐘，或 nonce 已使用時，Receiver 會在呼叫 AI 前拒絕。可執行隱私預算位於 `receiver/policies/check_message_privacy_policy.json`；允許欄位、事實用途、摘錄上限、保存規則與新鮮度限制由該檔案載入，而不是只寫在說明文件中。高風險訊息即使是惡意客戶端也不得附摘錄。
 
 ### 限制
 
@@ -195,9 +202,25 @@ python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v
 - Gemini proxy 走網頁版帳號，不是正式 API；回應時間實測約 5–11 秒，可能因帳號狀態失效。失效時自動改用本機規則。
 - AI 可提高風險等級，因此可能比規則更保守（例如把只有物流連結的訊息判成高風險）。
 
+### 情境二評測證據
+
+`make message-eval` 不呼叫雲端，會產生 `receiver/data/message_eval/`：
+
+- `summary.json`：每項指標的失敗數、分母、失敗率與失敗 ID；同時列出 32 個模板家族結果。
+- `message_results.csv`：6,144 則訊息的模板、預期／實際風險與 reason codes，不含訊息文字。
+- `attack_results.csv`：拆字、零寬字元、否定詞、提示注入等紅隊案例結果，不含攻擊文字。
+- `mutation_results.csv`：由 10 個種子、14 種分隔／符號手法產生的 140 個變形攻擊結果，不含變形後文字。
+- `failures.json`：非零失敗清單；全部通過時是空物件。
+- `manifest.json`：三個輸入、評測程式與輸出檔的 SHA-256，以及重跑指令。
+
+目前基線：去識別洩漏 0/6,144、高風險漏判 0/2,112（11 個高風險模板家族皆通過）、
+安全或不確定訊息誤判高風險 0/4,032、高風險非必要摘錄 0/2,112、紅隊案例失敗 0/10、
+變形攻擊失敗 0/140、Agent 邊界攻擊失敗 0/3。
+這些數字只證明規則對有限合成模板與明列攻擊的覆蓋，不能宣稱真實世界準確率。
+
 ## 分享照片與手機救援（`POST /api/v1/assist/plan`）
 
-與可疑訊息相同的 `privagent.planner_packet.v1` 外框、存取碼與 16 KiB 上限；`intent` 決定欄位：
+分享照片與手機救援仍使用 `privagent.planner_packet.v1` 外框、存取碼與 16 KiB 上限；`intent` 決定欄位：
 
 - `SHARE_PHOTO`（`client_policy_version: phone-photo-1`）：`facts` 只有 `recipient_ready`、`photo_ready`、`share_app_ready`、`location_removed`、`private_background_review`、`selection`，另有 `recipient_token`（`CONTACT_[A-Z]{8}`）、`photo_token`（`PHOTO_[A-Z]{8}`）與 `confirmation: approved`。三個 ready 必須為 true：只有手機已解析完並經長輩確認的分享才會送來。`allowed_sops` 固定為 `SHARE_PHOTO_GUIDED`、`ASK_USER`、`STOP`，AI 只能讓結果更保守。
 - `RESCUE_PHONE`（`phone-rescue-1`）：`facts` 是症狀類別、細項，以及**只和該症狀有關**的狀態分級（網路類只送飛航／網路／傳輸方式；聲音類只送勿擾／響鈴模式／音量分級）。Receiver 會用同一套規則重算，若手機規則其實已找到原因就以 422 拒收：雲端只在本機找不到原因時參與，且只能在 `RESCUE_INTERNET_SETTINGS`、`RESCUE_SOUND_SETTINGS`、`RESCUE_ASK_DESCRIBE`、`ASK_USER` 中挑選。

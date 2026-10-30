@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "seeds": [
+    {
+      "id": "transfer",
+      "text": "請立即轉帳給我，否則停權。",
+      "target": "轉帳",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true}
+    },
+    {
+      "id": "remittance",
+      "text": "請立刻匯款到指定帳戶。",
+      "target": "匯款",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true}
+    },
+    {
+      "id": "otp",
+      "text": "請提供驗證碼給我。",
+      "target": "驗證碼",
+      "expected_level": "high",
+      "expected_facts": {"requests_secret": true}
+    },
+    {
+      "id": "request_verb",
+      "text": "請提供一次性驗證碼給我。",
+      "target": "提供",
+      "expected_level": "high",
+      "expected_facts": {"requests_secret": true}
+    },
+    {
+      "id": "remote_control",
+      "text": "我是客服，請安裝遠端控制軟體。",
+      "target": "遠端控制",
+      "expected_level": "high",
+      "expected_facts": {"requests_remote_control": true}
+    },
+    {
+      "id": "reward",
+      "text": "保證獲利，今天內匯款即可加入。",
+      "target": "保證獲利",
+      "expected_level": "high",
+      "expected_facts": {"offers_reward": true}
+    },
+    {
+      "id": "family_impersonation",
+      "text": "我是你兒子，換新手機號碼了，今天內匯款給我。",
+      "target": "換新手機號碼",
+      "expected_level": "high",
+      "expected_facts": {"impersonation": "family"}
+    },
+    {
+      "id": "support_impersonation",
+      "text": "我是客服，請提供驗證碼給我。",
+      "target": "客服",
+      "expected_level": "high",
+      "expected_facts": {"impersonation": "support"}
+    },
+    {
+      "id": "official_impersonation",
+      "text": "我是警察，馬上提供驗證碼。",
+      "target": "警察",
+      "expected_level": "high",
+      "expected_facts": {"impersonation": "official"}
+    },
+    {
+      "id": "urgency",
+      "text": "請立即轉帳給我。",
+      "target": "立即",
+      "expected_level": "high",
+      "expected_facts": {"urgency": true}
+    }
+  ]
+}

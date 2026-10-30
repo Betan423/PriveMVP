@@ -19,6 +19,7 @@ from .assistant import (
     DEFAULT_PLANNER_URL,
     MAX_PACKET_BYTES,
     MessageAssistant,
+    RequestReplayGuard,
     gemini_proxy_planner,
     parse_packet,
     parse_plan_packet,
@@ -53,11 +54,13 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         address: tuple[str, int],
         storage: ReceiverStorage,
         assistant: MessageAssistant,
+        replay_guard: RequestReplayGuard,
         api_token: str | None = None,
     ) -> None:
         super().__init__(address, ReceiverRequestHandler)
         self.storage = storage
         self.assistant = assistant
+        self.replay_guard = replay_guard
         self.api_token = api_token
 
 
@@ -294,7 +297,9 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
             raise ReceiverError("INCOMPLETE_BODY", "Connection ended before Content-Length bytes arrived.")
         assistant = self.server.assistant  # type: ignore[attr-defined]
         if path == ASSIST_PATH:
-            self._send_json(HTTPStatus.OK, assistant.assess(parse_packet(body)))
+            packet = parse_packet(body)
+            self.server.replay_guard.accept(packet)  # type: ignore[attr-defined]
+            self._send_json(HTTPStatus.OK, assistant.assess(packet))
         else:
             self._send_json(HTTPStatus.OK, assistant.plan(parse_plan_packet(body)))
 
@@ -424,7 +429,7 @@ def create_server(
     root = Path(data_dir) if data_dir is not None else Path(__file__).resolve().parent / "data"
     storage = ReceiverStorage(root, max_body_bytes=max_body_bytes, max_line_bytes=max_line_bytes)
     assistant = MessageAssistant(storage.data_dir / "assist_audit.ndjson", planner)
-    return ReceiverHTTPServer((host, port), storage, assistant, api_token or None)
+    return ReceiverHTTPServer((host, port), storage, assistant, RequestReplayGuard(), api_token or None)
 
 
 def main() -> None:

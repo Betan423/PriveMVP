@@ -1,0 +1,66 @@
+{
+  "policy_version": "check-message-privacy-2",
+  "packet_schema": "privagent.check_message_packet.v2",
+  "client_policy_versions": ["phone-msg-2"],
+  "allowed_top_level_fields": [
+    "schema",
+    "task_id_alias",
+    "request_nonce",
+    "issued_at_ms",
+    "intent",
+    "locale",
+    "cloud_consent",
+    "facts",
+    "redacted_excerpt",
+    "allowed_sops",
+    "client_policy_version"
+  ],
+  "facts": {
+    "asks_transfer": {"type": "boolean", "purpose": "detect payment pressure"},
+    "requests_secret": {"type": "boolean", "purpose": "detect credential or OTP requests"},
+    "urgency": {"type": "boolean", "purpose": "detect urgency pressure"},
+    "has_link": {"type": "boolean", "purpose": "select link verification guidance"},
+    "offers_reward": {"type": "boolean", "purpose": "detect reward or investment pressure"},
+    "requests_remote_control": {"type": "boolean", "purpose": "detect remote-control requests"},
+    "context_sufficient": {"type": "boolean", "purpose": "avoid guessing from incomplete content"},
+    "impersonation": {
+      "type": "enum",
+      "values": ["none", "family", "official", "support"],
+      "purpose": "select a trusted out-of-band verification path"
+    },
+    "source_kind": {
+      "type": "enum",
+      "values": ["notification", "pasted"],
+      "purpose": "explain whether the user pasted or selected the message"
+    }
+  },
+  "redacted_excerpt": {
+    "default": null,
+    "max_chars": 300,
+    "requires_separate_opt_in": true,
+    "forbidden_when_local_risk": "high",
+    "retention": "never_store"
+  },
+  "freshness": {
+    "max_age_ms": 300000,
+    "max_future_skew_ms": 60000,
+    "nonce_cache_entries": 10000
+  },
+  "retention": {
+    "raw_message": "device_memory_only",
+    "redacted_excerpt": "not_in_audit",
+    "request_nonce": "replay_cache_only",
+    "task_alias": "audit_allowed",
+    "facts": "audit_field_names_only"
+  },
+  "forbidden_cloud_values": [
+    "phone_number",
+    "email",
+    "url",
+    "national_id",
+    "otp_or_password",
+    "account_number",
+    "known_contact_name",
+    "persistent_device_or_user_id"
+  ]
+}

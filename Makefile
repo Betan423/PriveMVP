@@ -12,8 +12,12 @@ TOKEN       ?= $(PRIVAGENT_API_TOKEN)
 MESSAGE     ?= 我是家人，臨時換號碼，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18
 ENV         ?= 1
 DATASET     := dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json
+CATALOG     := dataset/AI金孫_合成原始資料集_v5_廣度擴充/template_catalog.json
+MESSAGE_ATTACKS := receiver/eval/check_message_attacks.json
+MESSAGE_MUTATION_SEEDS := receiver/eval/check_message_mutation_seeds.json
 APK         := app/build/outputs/apk/debug/app-debug.apk
 EVAL_OUT    ?= receiver/data/core_eval
+MESSAGE_EVAL_OUT ?= receiver/data/message_eval
 
 # 有本機離線工具鏈（JDK 17 + SDK + Gradle 快取）就用它；否則沿用系統的 JAVA_HOME / ANDROID_HOME。
 TOOLCHAIN   ?= $(HOME)/.cache/privagent-toolchain
@@ -30,7 +34,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules demo demo-dataset scan core-eval golden check-services ip
+        proxy receiver receiver-lan receiver-rules demo demo-dataset scan message-eval core-eval golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -97,6 +101,11 @@ demo-dataset: ## 送資料集某個環境的 32 則訊息：make demo-dataset EN
 
 scan: ## 檢查 6,144 則訊息遮蔽後是否仍含個資（不送出）
 	$(PYTHON) -m receiver.phone_sim --dataset "$(DATASET)" --scan-only
+
+message-eval: ## 情境二：6,144 則訊息 + 紅隊案例的隱私、召回、誤報與 Agent 邊界評測
+	$(PYTHON) -m receiver.message_eval --dataset "$(DATASET)" --catalog "$(CATALOG)" \
+		--attacks "$(MESSAGE_ATTACKS)" --mutation-seeds "$(MESSAGE_MUTATION_SEEDS)" --out "$(MESSAGE_EVAL_OUT)"
+	@echo "證據檔：$(MESSAGE_EVAL_OUT)/（summary.json、message_results.csv、attack_results.csv、mutation_results.csv、failures.json、manifest.json）"
 
 # ---- 核心三情境 ----
 

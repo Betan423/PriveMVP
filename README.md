@@ -29,6 +29,7 @@ make proxy                 # 終端機 A：Gemini proxy（127.0.0.1:8000）
 make receiver              # 終端機 B：Receiver（127.0.0.1:8080）
 make demo                  # 終端機 C：模擬手機送一則訊息；make demo MESSAGE="..."
 make demo-dataset ENV=1    # 送資料集第 1 個環境的 32 則訊息
+make message-eval          # 情境二的隱私、規則與紅隊評測（不呼叫雲端）
 ```
 
 真手機：`make install` 安裝 APK，改用 `make receiver-lan TOKEN=自訂存取碼` 啟動 Receiver，
@@ -58,6 +59,8 @@ App 首頁最上方的「可疑訊息檢查」：
 3. 勾選「同意使用雲端 AI 判讀」時，先顯示「確認要傳送的內容」，按「傳送」才送到 Receiver；未勾選則只在手機本機判讀，不連網。
 4. 結果以三級顯示：高風險／需要核實／資訊不足，不會顯示「安全」。文字由 App 依 reason code 套固定措辭；雲端只能提高、不能降低本機判定的風險。
 
+雲端封包使用情境二 v2 契約：每次產生一次性 nonce 與簽發時間，Receiver 會阻擋過期、時鐘異常與重播；可揭露欄位與摘錄限制由 `receiver/policies/check_message_privacy_policy.json` 的可執行隱私預算控制。
+
 勾選「自動檢查新進來的通知」後，每則新通知會在背景自動檢查（需通知存取權）：
 
 - 略過常駐／進度／來電通知、群組摘要、敏感 App 與排除清單內的 App；同一則訊息被聊天 App 重新發布只檢查一次。
@@ -74,6 +77,8 @@ cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
 手機連線：USB 用 `adb reverse tcp:8080 tcp:8080` 並在 App 填 `http://127.0.0.1:8080`；同一 Wi-Fi 填 `http://<電腦區網 IP>:8080`。區網展示請先設定 `PRIVAGENT_API_TOKEN` 環境變數再啟動 Receiver，並在 App 填入相同存取碼。
 
 沒有手機時可用 `python3 -m receiver.phone_sim` 模擬手機端；契約、流程與限制見 [receiver/README.md](receiver/README.md)。
+
+情境二的威脅模型、技術取捨與評估方法見 [docs/CHECK_MESSAGE_PRIVACY.md](docs/CHECK_MESSAGE_PRIVACY.md)。
 
 ## 目前可以取得的資料
 

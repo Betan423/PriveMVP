@@ -36,9 +36,11 @@ class MessageGuardTest {
         for (leak in listOf("王小明", "0912", "482913", "example", "https")) {
             assertFalse(leak, packet.json.contains(leak))
         }
-        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.planner_packet.v1\""))
+        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.check_message_packet.v2\""))
         assertTrue(packet.json.contains("\"source_kind\":\"notification\""))
         assertTrue(Regex("^TASK_[A-Z]{8}$").matches(packet.alias))
+        assertTrue(Regex("^REQ_[A-Z]{20}$").matches(packet.requestNonce))
+        assertTrue(packet.issuedAtMs > 0)
     }
 
     @Test fun excerptIsCutByCodePointsAndStaysValidUtf16() {
@@ -54,12 +56,43 @@ class MessageGuardTest {
     }
 
     @Test fun aliasIsFreshPerTask() {
-        val aliases = (1..50).map { MessageGuard.buildPacket("明天見", "pasted", false).alias }.toSet()
+        val packets = (1..50).map { MessageGuard.buildPacket("明天見", "pasted", false) }
+        val aliases = packets.map { it.alias }.toSet()
+        val nonces = packets.map { it.requestNonce }.toSet()
         assertEquals(50, aliases.size)
+        assertEquals(50, nonces.size)
     }
 
     @Test fun quoteEscapesJsonSpecials() {
         assertEquals("\"a\\\"b\\\\c\\u000a\"", MessageGuard.quote("a\"b\\c\n"))
         assertEquals("\"\\ud800\"", MessageGuard.quote("\ud800"))
+    }
+
+    @Test fun spacingAndFormatControlsCannotHideScamSignals() {
+        val attacks = listOf(
+            "請立即匯 款給我",
+            "請立即匯\u200b款給我",
+            "請提 供驗 證 碼給我",
+            "我是客\u2060服，請提供驗證碼給我"
+        )
+        for (text in attacks) {
+            assertEquals(text, MessageGuard.Level.HIGH, MessageGuard.assess(MessageGuard.extractFacts(text, "pasted")).level)
+        }
+        assertFalse(MessageGuard.extractFacts("請 勿 提 供 驗 證 碼", "pasted").requestsSecret)
+    }
+
+    @Test fun punctuationAndSymbolsCannotHideScamSignals() {
+        for (text in listOf("請立即轉-帳給我", "請立即匯💸款給我", "請提／供驗·證·碼給我")) {
+            assertEquals(text, MessageGuard.Level.HIGH, MessageGuard.assess(MessageGuard.extractFacts(text, "pasted")).level)
+        }
+    }
+
+    @Test fun formatControlsCannotHideIdentifiers() {
+        val phone = MessageGuard.redact("電話 0912\u200b345678")
+        val url = MessageGuard.redact("網址 https://exa\u2060mple.invalid/login")
+        assertFalse(phone.contains("0912"))
+        assertTrue(phone.contains("[PHONE]"))
+        assertFalse(url.contains("example"))
+        assertTrue(url.contains("[LINK]"))
     }
 }

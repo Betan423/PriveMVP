@@ -9,8 +9,8 @@ import java.text.Normalizer
  * The original text never leaves this object: only [Packet.json] is sent.
  */
 object MessageGuard {
-    const val PACKET_SCHEMA = "privagent.planner_packet.v1"
-    const val CLIENT_POLICY_VERSION = "phone-msg-1"
+    const val PACKET_SCHEMA = "privagent.check_message_packet.v2"
+    const val CLIENT_POLICY_VERSION = "phone-msg-2"
     const val MAX_EXCERPT_CHARS = 300
     val ALLOWED_SOPS = listOf("MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER")
 
@@ -32,7 +32,14 @@ object MessageGuard {
 
     data class Assessment(val level: Level, val reasonCodes: List<String>)
 
-    data class Packet(val alias: String, val facts: Facts, val excerpt: String?, val json: String)
+    data class Packet(
+        val alias: String,
+        val requestNonce: String,
+        val issuedAtMs: Long,
+        val facts: Facts,
+        val excerpt: String?,
+        val json: String
+    )
 
     private val syntheticKinds = mapOf(
         "ACCOUNT" to "[ACCOUNT]", "OTP" to "[OTP]", "NAME" to "[NAME]", "PHONE" to "[PHONE]",
@@ -81,6 +88,14 @@ object MessageGuard {
     private val random = SecureRandom()
     // Python's \s also covers U+001C..U+001F, Java's does not; both implementations map them to spaces.
     private val separatorControls = Regex("[\u001c-\u001f]")
+    // Formatting controls can be inserted inside identifiers or scam keywords to evade matching.
+    // They carry no meaning for CHECK_MESSAGE; keep this range in sync with receiver/phone_sim.py.
+    private val invisibleFormatControls = Regex("[\u200b-\u200f\u202a-\u202e\u2060-\u206f\uFEFF]")
+    private val detectionWhitespace = Regex("\\s+")
+    private val hanGap = Regex(
+        "(?<=[\\x{3400}-\\x{9fff}])(?:[^\\w\\x{3400}-\\x{9fff}\\[\\]，。！？,!?;；:：]|_){1,3}" +
+            "(?=[\\x{3400}-\\x{9fff}])"
+    )
 
     private fun normalize(text: String): String {
         // Unpaired surrogates cannot be encoded as UTF-8; replace them before anything else.
@@ -94,7 +109,8 @@ object MessageGuard {
                 append(if (c.isSurrogate()) '\uFFFD' else c); i++
             }
         }
-        return separatorControls.replace(Normalizer.normalize(clean, Normalizer.Form.NFKC), " ")
+        val normalized = separatorControls.replace(Normalizer.normalize(clean, Normalizer.Form.NFKC), " ")
+        return invisibleFormatControls.replace(normalized, "")
     }
 
     private fun codePoints(text: String) = text.codePointCount(0, text.length)
@@ -105,7 +121,7 @@ object MessageGuard {
     fun redact(text: String, knownNames: Collection<String> = emptyList()): String {
         var result = normalize(text)
         for (name in knownNames.filter { it.isNotBlank() }.sortedByDescending { it.length }) {
-            result = result.replace(Normalizer.normalize(name, Normalizer.Form.NFKC), "[NAME]")
+            result = result.replace(normalize(name), "[NAME]")
         }
         for ((pattern, replacement) in redactions) result = pattern.replace(result, replacement)
         return salutation.replace(result, "[NAME]")
@@ -113,18 +129,21 @@ object MessageGuard {
 
     fun extractFacts(original: String, sourceKind: String): Facts {
         val redacted = redact(original)
-        val withoutNegation = negatedAction.replace(redacted, "")
+        // Feature matching uses a compact view so spacing cannot hide "匯 款" or "驗 證 碼".
+        // The redacted excerpt keeps its original readable spacing.
+        val detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        val withoutNegation = negatedAction.replace(detectionText, "")
         val core = filler.replace(redacted, "").trim()
         return Facts(
             asksTransfer = asksTransfer.containsMatchIn(withoutNegation),
             requestsSecret = (secretWords.containsMatchIn(withoutNegation) && requestVerbs.containsMatchIn(withoutNegation)) ||
-                credentialPhishing.containsMatchIn(redacted),
+                credentialPhishing.containsMatchIn(detectionText),
             urgency = urgency.containsMatchIn(withoutNegation),
             hasLink = "[LINK]" in redacted,
             offersReward = offersReward.containsMatchIn(withoutNegation),
             requestsRemoteControl = remoteControl.containsMatchIn(withoutNegation),
             contextSufficient = !vague.containsMatchIn(core) && codePoints(core) >= 8,
-            impersonation = impersonation.firstOrNull { it.second.containsMatchIn(redacted) }?.first ?: "none",
+            impersonation = impersonation.firstOrNull { it.second.containsMatchIn(detectionText) }?.first ?: "none",
             sourceKind = sourceKind
         )
     }
@@ -158,9 +177,13 @@ object MessageGuard {
         val excerpt = if (allowExcerpt && assess(facts).level != Level.HIGH)
             takeCodePoints(redact(original, knownNames), MAX_EXCERPT_CHARS).ifEmpty { null } else null
         val alias = "TASK_" + String(CharArray(8) { ('A' + random.nextInt(26)) })
+        val nonce = "REQ_" + String(CharArray(20) { ('A' + random.nextInt(26)) })
+        val issuedAtMs = System.currentTimeMillis()
         val json = buildString {
             append("{\"schema\":").append(quote(PACKET_SCHEMA))
             append(",\"task_id_alias\":").append(quote(alias))
+            append(",\"request_nonce\":").append(quote(nonce))
+            append(",\"issued_at_ms\":").append(issuedAtMs)
             append(",\"intent\":\"CHECK_MESSAGE\",\"locale\":\"zh-TW\",\"cloud_consent\":true")
             append(",\"facts\":{")
             append("\"asks_transfer\":").append(facts.asksTransfer)
@@ -176,7 +199,7 @@ object MessageGuard {
             append(",\"allowed_sops\":[").append(ALLOWED_SOPS.joinToString(",", transform = ::quote)).append("]")
             append(",\"client_policy_version\":").append(quote(CLIENT_POLICY_VERSION)).append("}")
         }
-        return Packet(alias, facts, excerpt, json)
+        return Packet(alias, nonce, issuedAtMs, facts, excerpt, json)
     }
 
     internal fun quote(value: String): String = buildString {
