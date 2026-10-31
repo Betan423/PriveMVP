@@ -303,17 +303,22 @@ class MessageAssistant:
     def __init__(self, audit_path: Path, planner: Callable[[str], str] | None) -> None:
         self.audit_path = audit_path
         self.planner = planner
+        # Stage demo only (receiver.demo_feed.DemoFeed); in memory, never persisted.
+        self.feed: Any = None
         self._lock = threading.Lock()
 
-    def assess(self, packet: dict[str, Any]) -> dict[str, Any]:
+    def assess(self, packet: dict[str, Any], *, origin: str = "phone", wire: str | None = None) -> dict[str, Any]:
         started = time.monotonic()
         rule_level, rule_codes = rule_assessment(packet["facts"])
         planner_kind, fallback, ai_level, ai_codes = "RULES", None, None, []
+        prompt, raw_answer = None, None
         if self.planner is None:
             fallback = "PLANNER_DISABLED"
         else:
             try:
-                _sop, ai_level, ai_codes = parse_planner_answer(self.planner(build_prompt(packet)), packet["allowed_sops"])
+                prompt = build_prompt(packet)
+                raw_answer = self.planner(prompt)
+                _sop, ai_level, ai_codes = parse_planner_answer(raw_answer, packet["allowed_sops"])
                 planner_kind = "GEMINI_PROXY"
             except PlannerUnavailable as error:
                 fallback = error.reason
@@ -358,20 +363,34 @@ class MessageAssistant:
             "packet_sha256": result["packet_sha256"],
             "elapsed_ms": int((time.monotonic() - started) * 1000),
         })
+        if self.feed is not None:
+            self.feed.add({
+                "kind": "assessed", "origin": origin, "intent": packet["intent"],
+                "packet": packet, "packet_bytes": len(packet_bytes), "wire": wire,
+                "packet_age_ms": int(time.time() * 1000) - packet["issued_at_ms"],
+                "rule": {"risk_level": rule_level, "reason_codes": rule_codes},
+                "planner": {"kind": planner_kind, "fallback_reason": fallback, "risk_level": ai_level,
+                            "reason_codes": ai_codes, "prompt": prompt, "raw_answer": raw_answer},
+                "final": {"risk_level": level, "reason_codes": codes, "sop_id": result["sop_id"]},
+                "elapsed_ms": int((time.monotonic() - started) * 1000),
+            })
         return result
 
-    def plan(self, packet: dict[str, Any]) -> dict[str, Any]:
+    def plan(self, packet: dict[str, Any], *, wire: str | None = None) -> dict[str, Any]:
         """SHARE_PHOTO / RESCUE_PHONE: rule plan first, the model may only pick within the packet's whitelist."""
         from .core_tasks import POLICY_VERSION as CORE_POLICY, build_plan_prompt, merge_plan, parse_plan_answer, rule_plan
 
         started = time.monotonic()
         rule = rule_plan(packet)
         planner_kind, fallback, ai = "RULES", None, None
+        prompt, raw_answer = None, None
         if self.planner is None:
             fallback = "PLANNER_DISABLED"
         else:
             try:
-                ai = parse_plan_answer(self.planner(build_plan_prompt(packet)), packet)
+                prompt = build_plan_prompt(packet)
+                raw_answer = self.planner(prompt)
+                ai = parse_plan_answer(raw_answer, packet)
                 planner_kind = "GEMINI_PROXY"
             except PlannerUnavailable as error:
                 fallback = error.reason
@@ -405,6 +424,17 @@ class MessageAssistant:
             "packet_sha256": result["packet_sha256"],
             "elapsed_ms": int((time.monotonic() - started) * 1000),
         })
+        if self.feed is not None:
+            self.feed.add({
+                "kind": "planned", "origin": "phone", "intent": packet["intent"],
+                "packet": packet, "packet_bytes": len(packet_bytes), "wire": wire,
+                "rule": {"sop_id": rule[0], "reason_codes": rule[1]},
+                "planner": {"kind": planner_kind, "fallback_reason": fallback,
+                            "sop_id": ai[0] if ai else None, "reason_codes": ai[1] if ai else [],
+                            "prompt": prompt, "raw_answer": raw_answer},
+                "final": {"sop_id": sop, "reason_codes": codes},
+                "elapsed_ms": int((time.monotonic() - started) * 1000),
+            })
         return result
 
     def _audit(self, record: dict[str, Any]) -> None:

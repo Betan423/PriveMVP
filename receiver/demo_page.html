@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>金孫接收端</title>
+<style>
+:root {
+  --bg: #f4f1ec; --card: #ffffff; --ink: #1d1b19; --muted: #6b655e; --line: #e2ddd5;
+  --brand: #e65100; --high: #b71c1c; --high-bg: #fdecea; --verify: #9a6700; --verify-bg: #fff4d6;
+  --insufficient: #4a4a4a; --insufficient-bg: #ececec; --ok: #1b5e20; --ok-bg: #e7f4e8;
+  --mask: #ffe0b2; --mask-ink: #8a3b00; --code: #faf8f5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 18px; line-height: 1.5; }
+header { position: sticky; top: 0; z-index: 2; background: var(--ink); color: #fff;
+  display: flex; align-items: center; gap: 16px; padding: 12px 20px; }
+header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+header .dot { width: 12px; height: 12px; border-radius: 50%; background: #66bb6a; box-shadow: 0 0 0 4px rgba(102,187,106,.25); }
+header .dot.off { background: #ef5350; box-shadow: 0 0 0 4px rgba(239,83,80,.25); }
+nav { margin-left: auto; display: flex; gap: 8px; }
+nav button { font: inherit; font-size: 17px; padding: 8px 16px; border-radius: 999px; border: 1px solid #555;
+  background: transparent; color: #ddd; cursor: pointer; }
+nav button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+main { padding: 16px 20px 40px; max-width: 1100px; margin: 0 auto; }
+.hint { color: var(--muted); font-size: 16px; margin: 4px 0 16px; }
+.empty { text-align: center; color: var(--muted); padding: 60px 20px; border: 2px dashed var(--line); border-radius: 16px; }
+.card { background: var(--card); border-radius: 16px; padding: 18px 20px; margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); border-left: 8px solid var(--line); }
+.card.fresh { animation: pop .9s ease-out; }
+@keyframes pop { from { transform: translateY(-8px); box-shadow: 0 0 0 4px var(--brand); } to { transform: none; } }
+.card.high { border-left-color: var(--high); } .card.verify { border-left-color: var(--verify); }
+.card.insufficient { border-left-color: var(--insufficient); } .card.rejected { border-left-color: var(--high); background: #fff7f6; }
+.card.plan { border-left-color: var(--ok); }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.head .intent { font-size: 20px; font-weight: 700; }
+.head .meta { color: var(--muted); font-size: 15px; }
+.tag { display: inline-block; font-size: 14px; padding: 2px 10px; border-radius: 999px; background: var(--insufficient-bg); color: var(--muted); }
+.tag.sandbox { background: #e3f2fd; color: #0d47a1; }
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.step h3 { margin: 0 0 6px; font-size: 18px; }
+.step h3 small { font-weight: 400; color: var(--muted); font-size: 15px; margin-left: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 16px; padding: 4px 12px; border-radius: 8px; background: #f2efea; color: var(--muted); border: 1px solid transparent; }
+.chip.on { background: var(--high-bg); color: var(--high); border-color: #f5b5ad; font-weight: 700; }
+.chip.token { background: #ede7f6; color: #4527a0; font-family: Consolas, monospace; }
+.chip.ok { background: var(--ok-bg); color: var(--ok); }
+.level { display: inline-block; font-weight: 700; padding: 3px 12px; border-radius: 8px; }
+.level.high { background: var(--high-bg); color: var(--high); } .level.verify { background: var(--verify-bg); color: var(--verify); }
+.level.insufficient { background: var(--insufficient-bg); color: var(--insufficient); }
+.final { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.final .level { font-size: 26px; padding: 6px 18px; }
+.note { font-size: 16px; color: var(--muted); }
+.note.strong { color: var(--brand); font-weight: 700; }
+.never { margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: var(--ok-bg); color: var(--ok); font-size: 16px; }
+.never b { margin-right: 6px; }
+details { margin-top: 6px; } summary { cursor: pointer; color: var(--muted); font-size: 15px; }
+pre { margin: 6px 0 0; padding: 10px 12px; background: var(--code); border: 1px solid var(--line); border-radius: 8px;
+  font: 14px/1.45 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow: auto; }
+.masked { font-size: 19px; line-height: 1.8; }
+.masked mark { background: var(--mask); color: var(--mask-ink); font-weight: 700; padding: 1px 4px; border-radius: 4px; }
+.sandbox-input textarea { width: 100%; min-height: 110px; font: inherit; font-size: 19px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.btn { font: inherit; font-size: 17px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
+.btn:disabled { opacity: .5; cursor: wait; }
+.phone-only { display: inline-block; font-size: 14px; padding: 2px 10px; border-radius: 999px; background: #263238; color: #fff; margin-left: 6px; }
+.arrow { text-align: center; color: var(--muted); font-size: 15px; margin: 4px 0 10px; }
+.error { color: var(--high); font-weight: 700; }
+.wire { margin-top: 10px; border: 1px solid #3a3632; border-radius: 10px; overflow: hidden; }
+.wire-bar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: #2b2825; color: #f1ece4; }
+.wire-title { font-size: 15px; font-weight: 700; flex: 1; }
+.btn.small { font-size: 14px; padding: 4px 10px; border-radius: 6px; }
+pre.wire-body { margin: 0; border: 0; border-radius: 0; background: #1d1b19; color: #f5f0e8; max-height: none;
+  font-size: 15px; line-height: 1.5; }
+.wire-head { color: #9fb7c9; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot" title="連線狀態"></span>
+  <h1>金孫接收端｜電腦收到了什麼</h1>
+  <nav>
+    <button id="tab-live" class="on">① 即時接收</button>
+    <button id="tab-sandbox">② 原理示範</button>
+  </nav>
+</header>
+<main>
+  <section id="live">
+    <p class="hint">左邊手機每送出一次，這裡就出現一張卡片。電腦只收得到手機處理好的封包，<b>收不到訊息原文</b>。</p>
+    <div class="row"><button class="btn" id="clear">清除畫面</button></div>
+    <div id="feed"><div class="empty">等待手機送出第一個封包…</div></div>
+  </section>
+  <section id="sandbox" hidden>
+    <p class="hint">在這台電腦上模擬手機端，逐步看一則訊息怎麼變成封包。使用的是與 Android App 同一套規則的參考實作（有對照測試保證一致）。</p>
+    <div class="sandbox-input">
+      <textarea id="text" placeholder="貼上一則要檢查的訊息"></textarea>
+      <div class="row" id="presets"></div>
+      <div class="row">
+        <label><input type="checkbox" id="excerpt"> 也附上遮蔽後的摘錄（高風險時一律不送）</label>
+        <button class="btn primary" id="run">開始處理</button>
+      </div>
+    </div>
+    <div id="steps"></div>
+  </section>
+</main>
+<script>
+"use strict";
+const FACT = {
+  asks_transfer: "要求轉帳", requests_secret: "索取驗證碼／密碼", urgency: "催促馬上處理", has_link: "含有連結",
+  offers_reward: "中獎／保證獲利", requests_remote_control: "要求遠端控制", context_sufficient: "內容足夠判斷",
+  impersonation: "冒充身分", source_kind: "訊息來源",
+  recipient_ready: "收件人已確認", photo_ready: "照片已準備", share_app_ready: "分享 App 可用",
+  location_removed: "已移除拍攝地點", private_background_review: "背景需人工檢查", selection: "照片選取方式",
+};
+const VALUE = { none: "無", family: "家人", official: "警察／政府", support: "客服／銀行", notification: "通知", pasted: "貼上" };
+const REASON = {
+  ASKS_TRANSFER: "要求轉帳或付款", REQUESTS_SECRET: "索取驗證碼、密碼或個人資料", URGENCY: "催促你馬上處理",
+  HAS_LINK: "含有連結", IMPERSONATION_FAMILY: "自稱家人或換了號碼", IMPERSONATION_OFFICIAL: "自稱警察或政府機關",
+  IMPERSONATION_SUPPORT: "自稱客服或銀行", OFFERS_REWARD: "提到中獎或保證獲利", REMOTE_CONTROL: "要求遠端控制手機",
+  CONTEXT_INSUFFICIENT: "內容太少，無法判斷", NO_STRONG_SIGNAL: "沒有發現明顯詐騙特徵",
+};
+const LEVEL = { high: "高風險", verify: "需要核實", insufficient: "資訊不足" };
+const ORDER = ["insufficient", "verify", "high"];
+const INTENT = { CHECK_MESSAGE: "可疑訊息檢查", SHARE_PHOTO: "分享照片", RESCUE_PHONE: "手機救援", PLAN: "分享照片／手機救援" };
+const REJECT = {
+  PACKET_REPLAYED: "重播攻擊：同一個封包被送了第二次", FORBIDDEN_VALUE_IN_PACKET: "封包裡夾帶了電話、網址或驗證碼等個資",
+  PACKET_CONTRACT_VIOLATION: "封包欄位不符合隱私政策", PACKET_EXPIRED: "封包已過期（超過 5 分鐘）",
+  PACKET_FROM_FUTURE: "封包時間異常", UNAUTHORIZED: "存取碼錯誤", CLOUD_CONSENT_MISSING: "使用者沒有同意雲端判讀",
+  PRIVACY_BUDGET_EXCEEDED: "高風險訊息不得附上摘錄", RATE_LIMITED: "請求太頻繁", PACKET_TOO_LARGE: "封包過大",
+};
+const NEVER = {
+  CHECK_MESSAGE: "訊息原文、寄件人、姓名、電話、帳號、驗證碼、網址",
+  SHARE_PHOTO: "照片本身、檔名、拍攝地點、收件人姓名與電話",
+  RESCUE_PHONE: "手機型號、識別碼、Wi-Fi 名稱、實際音量數值",
+};
+const PRESETS = [
+  ["假冒客服", "王小明您好，我是銀行客服，您的帳戶異常，請立即提供簡訊驗證碼 482913，並到 https://bank-verify.example/login 驗證，電話 0912-345-678"],
+  ["假冒家人", "媽，我換新號碼了，現在急需用錢，先幫我匯款兩萬到 0123456789，晚點還你"],
+  ["中獎連結", "恭喜您抽中 iPhone！限時今天內點 bit.ly/abc123 免費領取"],
+  ["一般訊息", "明天中午一起吃飯，記得帶傘"],
+];
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function time(ms) { return new Date(ms).toLocaleTimeString("zh-TW", { hour12: false }); }
+function step(n, title, sub) {
+  const s = el("div", "step"); s.append(el("div", "n", String(n)));
+  const body = el("div"); const h = el("h3", null, title); if (sub) h.append(el("small", null, sub));
+  body.append(h); s.append(body); return [s, body];
+}
+function level(l) { return el("span", "level " + l, LEVEL[l] || l); }
+function reasons(codes) { const c = el("div", "chips"); (codes || []).forEach(k => c.append(el("span", "chip", REASON[k] || k))); return c; }
+function masked(text) {
+  const p = el("div", "masked");
+  text.split(/(\[[A-Z]+\])/).forEach(part => p.append(/^\[[A-Z]+\]$/.test(part) ? el("mark", null, part) : document.createTextNode(part)));
+  return p;
+}
+function factChips(facts, triggers) {
+  const c = el("div", "chips");
+  Object.entries(facts).forEach(([k, v]) => {
+    let label = FACT[k] || k, on = false;
+    if (typeof v === "boolean") { on = k === "context_sufficient" ? false : v; label += v ? " ✓" : " ✗"; }
+    else { label += "：" + (VALUE[v] || v); on = k === "impersonation" && v !== "none"; }
+    const chip = el("span", "chip" + (on ? " on" : ""), label);
+    if (triggers && triggers[k]) chip.title = "觸發字詞：" + triggers[k].join("、");
+    c.append(chip);
+  });
+  return c;
+}
+
+// The request exactly as the phone sent it: request line and headers, then the untouched body.
+function wireView(wire, packet, simulated) {
+  const box = el("div", "wire");
+  const bar = el("div", "wire-bar");
+  bar.append(el("span", "wire-title", simulated ? "原始封包（模擬手機送出的 HTTP 請求）" : "原始封包（手機實際送來的 HTTP 請求）"));
+  const toggle = el("button", "btn small", "排版 JSON"); bar.append(toggle); box.append(bar);
+  const pre = el("pre", "wire-body"); box.append(pre);
+  const split = wire ? wire.indexOf("\r\n\r\n") : -1;
+  const head = split >= 0 ? wire.slice(0, split) : "";
+  const body = split >= 0 ? wire.slice(split + 4) : JSON.stringify(packet);
+  let pretty = false;
+  function render() {
+    pre.replaceChildren();
+    if (head) pre.append(el("span", "wire-head", head + "\n\n"));
+    let text = body;
+    if (pretty) { try { text = JSON.stringify(JSON.parse(body), null, 2); } catch { /* keep as received */ } }
+    pre.append(document.createTextNode(text));
+    toggle.textContent = pretty ? "顯示原樣" : "排版 JSON";
+  }
+  toggle.onclick = () => { pretty = !pretty; render(); };
+  render();
+  return box;
+}
+
+function liveCard(e) {
+  if (e.kind === "rejected") {
+    const card = el("div", "card rejected");
+    const head = el("div", "head"); head.append(el("span", "intent", "⛔ 已擋下：" + (INTENT[e.intent] || e.intent)), el("span", "meta", time(e.ts)));
+    card.append(head);
+    const [s, b] = step("!", "接收端在送進 AI 之前就拒收"); b.append(el("div", "error", REJECT[e.code] || e.code), el("div", "note", e.code + "（HTTP " + e.status + "）"));
+    card.append(s, el("div", "never", "被拒收的封包內容不會顯示，也不會交給 Gemini。"));
+    return card;
+  }
+  const p = e.packet, isMsg = e.kind === "assessed";
+  const card = el("div", "card " + (isMsg ? e.final.risk_level : "plan"));
+  const head = el("div", "head");
+  head.append(el("span", "intent", INTENT[e.intent] || e.intent), el("span", "meta", time(e.ts) + "　" + p.task_id_alias));
+  if (e.origin === "sandbox") head.append(el("span", "tag sandbox", "原理示範"));
+  card.append(head);
+
+  let [s, b] = step(1, "收到的封包", e.packet_bytes + " bytes" + (isMsg ? "・" + Math.max(0, Math.round(e.packet_age_ms / 1000)) + " 秒前在手機產生" : ""));
+  b.append(factChips(p.facts));
+  if (p.recipient_token || p.photo_token) {
+    const t = el("div", "chips"); t.style.marginTop = "6px";
+    if (p.recipient_token) t.append(el("span", "chip token", "收件人 → " + p.recipient_token));
+    if (p.photo_token) t.append(el("span", "chip token", "照片 → " + p.photo_token));
+    b.append(t, el("div", "note", "只是這次任務的一次性代號，雲端不知道是誰、哪張照片。"));
+  }
+  if (isMsg) b.append(p.redacted_excerpt ? masked("摘錄：" + p.redacted_excerpt) : el("div", "note", "沒有附摘錄（只送特徵）"));
+  b.append(wireView(e.wire, p, e.origin === "sandbox"));
+  card.append(s);
+
+  [s, b] = step(2, "接收端檢查", "全部通過才會往下");
+  const checks = el("div", "chips");
+  ["欄位完全符合隱私政策", "個資掃描 0 命中", "已同意雲端判讀"].concat(isMsg ? ["一次性 nonce・未過期"] : ["SOP 白名單"])
+    .forEach(t => checks.append(el("span", "chip ok", "✓ " + t)));
+  b.append(checks); card.append(s);
+
+  [s, b] = step(3, "手機規則先判一次", "這是不能被降低的底線");
+  if (isMsg) { b.append(level(e.rule.risk_level)); b.append(reasons(e.rule.reason_codes)); }
+  else { b.append(el("span", "chip", e.rule.sop_id)); b.append(reasons(e.rule.reason_codes)); }
+  card.append(s);
+
+  const pl = e.planner;
+  [s, b] = step(4, "Gemini 判讀", pl.kind === "GEMINI_PROXY" ? "只能從固定選項裡選" : "");
+  if (pl.kind === "GEMINI_PROXY") {
+    if (isMsg) { b.append(level(pl.risk_level)); b.append(reasons(pl.reason_codes)); }
+    else { b.append(el("span", "chip", pl.sop_id)); b.append(reasons(pl.reason_codes)); }
+  } else {
+    b.append(el("div", "note strong", pl.fallback_reason === "PLANNER_DISABLED" ? "未啟用雲端 AI，只用手機規則" : "Gemini 沒有回應或回答格式不合，自動改用手機規則（" + pl.fallback_reason + "）"));
+  }
+  if (pl.prompt) {
+    const d = el("details"); d.append(el("summary", null, "看 Gemini 收到的提示與原始回答"),
+      el("pre", null, pl.prompt), el("pre", null, pl.raw_answer == null ? "（沒有回答）" : pl.raw_answer)); b.append(d);
+  }
+  card.append(s);
+
+  [s, b] = step(5, "最終結果");
+  const fin = el("div", "final");
+  if (isMsg) {
+    fin.append(level(e.final.risk_level));
+    const r = ORDER.indexOf(e.rule.risk_level), a = pl.risk_level ? ORDER.indexOf(pl.risk_level) : -1;
+    fin.append(el("span", "note" + (a !== -1 && a !== r ? " strong" : ""),
+      a === -1 ? "採用手機規則" : a > r ? "Gemini 提高了警戒，採用 Gemini" : a < r ? "Gemini 想降低風險 → 拒絕，維持手機規則" : "Gemini 與手機規則一致"));
+  } else { fin.append(el("span", "level verify", e.final.sop_id)); }
+  fin.append(el("span", "note", "共 " + e.elapsed_ms + " ms"));
+  b.append(fin); card.append(s);
+  card.append(Object.assign(el("div", "never"), { innerHTML: "<b>🔒 從未離開手機：</b>" }));
+  card.lastChild.append(document.createTextNode(NEVER[e.intent] || NEVER.CHECK_MESSAGE));
+  return card;
+}
+
+// ---- live feed
+let lastSeq = 0, cleared = 0;
+async function poll() {
+  try {
+    const r = await fetch("/api/v1/demo/events?after=" + lastSeq, { cache: "no-store" });
+    const data = await r.json(); $("dot").classList.remove("off");
+    for (const e of data.events) {
+      lastSeq = Math.max(lastSeq, e.seq);
+      if (e.seq <= cleared) continue;
+      const feed = $("feed"); const empty = feed.querySelector(".empty"); if (empty) empty.remove();
+      const card = liveCard(e); card.classList.add("fresh"); feed.prepend(card);
+      while (feed.children.length > 30) feed.lastChild.remove();
+    }
+  } catch { $("dot").classList.add("off"); }
+  setTimeout(poll, 1000);
+}
+$("clear").onclick = () => { cleared = lastSeq; $("feed").replaceChildren(el("div", "empty", "等待手機送出下一個封包…")); };
+
+// ---- tabs
+function tab(name) {
+  $("live").hidden = name !== "live"; $("sandbox").hidden = name !== "sandbox";
+  $("tab-live").classList.toggle("on", name === "live"); $("tab-sandbox").classList.toggle("on", name === "sandbox");
+}
+$("tab-live").onclick = () => tab("live"); $("tab-sandbox").onclick = () => tab("sandbox");
+
+// ---- sandbox
+PRESETS.forEach(([label, text]) => { const b = el("button", "btn", label); b.onclick = () => { $("text").value = text; }; $("presets").append(b); });
+$("run").onclick = async () => {
+  const text = $("text").value.trim(); if (!text) return;
+  $("run").disabled = true; const out = $("steps"); out.replaceChildren(el("div", "note", "處理中…（會呼叫 Gemini，約 3 秒）"));
+  try {
+    const r = await fetch("/api/v1/demo/sandbox", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, allow_excerpt: $("excerpt").checked }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error((d.error && d.error.message) || r.status);
+    out.replaceChildren();
+    const phone = el("div", "card");
+    const head = el("div", "head"); head.append(el("span", "intent", "📱 手機端處理")); head.append(el("span", "phone-only", "以下 ①–③ 只在手機上執行")); phone.append(head);
+    let [s, b] = step(1, "原始訊息", d.original_chars + " 個字"); b.append(el("div", "masked", text)); phone.append(s);
+    [s, b] = step(2, "遮蔽個資", d.placeholders.length ? "換掉 " + d.placeholders.length + " 處" : "沒有找到要遮蔽的值");
+    b.append(masked(d.redacted)); phone.append(s);
+    [s, b] = step(3, "抽出風險特徵", "滑鼠移到紅色項目可看觸發字詞");
+    b.append(factChips(d.facts, d.triggers));
+    const trig = Object.entries(d.triggers).map(([k, v]) => (FACT[k] || k) + "：" + v.join("、"));
+    if (trig.length) b.append(el("div", "note", "觸發字詞　" + trig.join("　｜　")));
+    b.append(el("div", "note", "手機規則判定："), level(d.local.risk_level));
+    phone.append(s);
+    [s, b] = step(4, "打包送出", "這是唯一離開手機的東西");
+    b.append(el("pre", null, JSON.stringify(d.packet, null, 2)));
+    b.append(el("div", "note strong", "原文 " + d.original_chars + " 個字 → 封包只有 " + Object.keys(d.packet.facts).length + " 個特徵" + (d.packet.redacted_excerpt ? "＋遮蔽後摘錄" : "，沒有任何原文")));
+    phone.append(s); out.append(phone);
+    out.append(el("div", "arrow", "▼ 送到電腦接收端（與真手機走同一套關卡）"));
+    // The same assessment also lands in the live feed; show that card here too.
+    const ev = await (await fetch("/api/v1/demo/events?after=0", { cache: "no-store" })).json();
+    const mine = ev.events.reverse().find(e => e.packet && e.packet.task_id_alias === d.packet.task_id_alias);
+    if (mine) out.append(liveCard(mine));
+  } catch (err) { out.replaceChildren(el("div", "error", "處理失敗：" + err.message)); }
+  finally { $("run").disabled = false; }
+};
+// Rehearsal shortcuts: /demo#sandbox opens the explainer, /demo#try=0 also runs the first preset.
+const tryPreset = /^#try=(\d+)$/.exec(location.hash);
+if (location.hash === "#sandbox" || tryPreset) tab("sandbox");
+if (tryPreset && PRESETS[+tryPreset[1]]) { $("text").value = PRESETS[+tryPreset[1]][1]; $("run").click(); }
+poll();
+</script>
+</body>
+</html>
