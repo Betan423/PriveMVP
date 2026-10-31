@@ -9,8 +9,8 @@ import java.text.Normalizer
  * The original text never leaves this object: only [Packet.json] is sent.
  */
 object MessageGuard {
-    const val PACKET_SCHEMA = "privagent.check_message_packet.v2"
-    const val CLIENT_POLICY_VERSION = "phone-msg-2"
+    const val PACKET_SCHEMA = "privagent.check_message_packet.v3"
+    const val CLIENT_POLICY_VERSION = "phone-msg-3"
     const val MAX_EXCERPT_CHARS = 300
     val ALLOWED_SOPS = listOf("MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER")
 
@@ -23,6 +23,8 @@ object MessageGuard {
         val requestsSecret: Boolean,
         val urgency: Boolean,
         val hasLink: Boolean,
+        /** On-device domain grade of the riskiest link; the URL itself never leaves the phone. */
+        val linkKind: String,
         val offersReward: Boolean,
         val requestsRemoteControl: Boolean,
         val contextSufficient: Boolean,
@@ -47,6 +49,31 @@ object MessageGuard {
         "LOCATION" to "[ADDRESS]"
     )
     private const val SEP = """[\s\-./()]"""
+    private val urlPattern = Regex("""(?i)(?:https?://|www\.)[^\s，。、「」！？]+""")
+    private val bareDomainPattern = Regex("""(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?""")
+
+    // The URL never leaves the phone ([LINK] in the excerpt, has_link in the facts). To tell a
+    // phishing link from an official notification without disclosing the URL, each link is graded
+    // locally and only the category is sent. Keep lists and order in sync with receiver/phone_sim.py.
+    private val linkKinds = listOf("none", "known_official", "unknown", "shortener", "suspicious")
+    // Registrable domains treated as official: whole gov.tw plus the retail banks elders actually use.
+    private val officialDomains = listOf(
+        "gov.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw", "hncb.com.tw",
+        "chb.com.tw", "megabank.com.tw", "ctbcbank.com", "cathaybk.com.tw", "esunbank.com.tw",
+        "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com"
+    )
+    // A URL shortener hides the destination, so it can never count as official.
+    private val shortenerDomains = listOf(
+        "bit.ly", "tinyurl.com", "goo.gl", "t.co", "is.gd", "t.ly", "reurl.cc", "ppt.cc", "pse.is",
+        "lihi.cc", "lihi1.com", "lihi2.net", "lin.ee"
+    )
+    // TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
+    private val highRiskTlds = setOf("tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click")
+    // Distinctive official tokens appearing inside a NON-official host mean a lookalike domain.
+    private val lookalikeTokens = listOf(
+        "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank", "hncb",
+        "sinopac", "firstbank", "tcbbank", "scsb", "fubon"
+    )
     // Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised.
     // Do not use Java's inline (?U) flag here: Android's ICU regex engine rejects it. Character
     // classes are explicit where Unicode letters/numbers matter so these patterns behave on both.
@@ -54,8 +81,8 @@ object MessageGuard {
         Regex("""SYN_(?:V5_)?([A-Z]+)_PRIVATE_[A-Z0-9_]+""") to { m -> syntheticKinds[m.groupValues[1]] ?: "[SECRET]" },
         Regex("""SYN_[A-Z0-9_]+""") to { _ -> "[SECRET]" },
         Regex("""[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_-]+\.[\p{L}\p{N}_.-]+""") to { _ -> "[EMAIL]" },
-        Regex("""(?i)(?:https?://|www\.)[^\s，。、「」！？]+""") to { _ -> "[LINK]" },
-        Regex("""(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?""") to { _ -> "[LINK]" },
+        urlPattern to { _ -> "[LINK]" },
+        bareDomainPattern to { _ -> "[LINK]" },
         Regex("""\b[A-Z][12][0-9]{8}\b""") to { _ -> "[ID]" },
         Regex("""(?i)((?:驗證碼|認證碼|OTP|密碼|控制碼|代碼)[^\[\]A-Za-z0-9]{0,6}?)(?=[A-Za-z]*[0-9])[A-Za-z0-9]{4,10}\b""") to
             { m -> m.groupValues[1] + "[OTP]" },
@@ -120,17 +147,52 @@ object MessageGuard {
     private fun takeCodePoints(text: String, limit: Int): String =
         if (codePoints(text) <= limit) text else text.substring(0, text.offsetByCodePoints(0, limit))
 
-    fun redact(text: String, knownNames: Collection<String> = emptyList()): String {
+    /** Redacts like [redact] and also returns what the two link patterns matched, so link
+     *  classification sees exactly the links that became [LINK] (never an email already redacted). */
+    private fun redactCollectingLinks(text: String, knownNames: Collection<String> = emptyList()): Pair<String, List<String>> {
         var result = normalize(text)
         for (name in knownNames.filter { it.isNotBlank() }.sortedByDescending { it.length }) {
             result = result.replace(normalize(name), "[NAME]")
         }
-        for ((pattern, replacement) in redactions) result = pattern.replace(result, replacement)
-        return salutation.replace(result, "[NAME]")
+        val links = mutableListOf<String>()
+        for ((pattern, replacement) in redactions) {
+            result = if (pattern === urlPattern || pattern === bareDomainPattern) {
+                pattern.replace(result) { m -> links += m.value; "[LINK]" }
+            } else {
+                pattern.replace(result, replacement)
+            }
+        }
+        return salutation.replace(result, "[NAME]") to links
     }
 
+    fun redact(text: String, knownNames: Collection<String> = emptyList()): String =
+        redactCollectingLinks(text, knownNames).first
+
+    /** Grades one matched link; only the category ever leaves the phone, never the URL. */
+    internal fun classifyLink(link: String): String {
+        val stripped = link.trim().lowercase().replaceFirst(Regex("^https?://"), "")
+        var host = stripped.split('/', '?', '#').first()
+        if (host.startsWith("[")) return "suspicious" // Raw IPv6 literal.
+        host = host.substringBefore(':').trim { it.code < 128 && !it.isLetterOrDigit() }
+        if (host.isEmpty()) return "unknown"
+        if (host.any { it.code > 127 }) return "suspicious" // Non-ASCII host: IDN/homoglyph risk.
+        val labels = host.split('.').filter { it.isNotEmpty() }
+        if (labels.isNotEmpty() && labels.all { label -> label.all { it.isDigit() } }) return "suspicious" // IPv4.
+        if (officialDomains.any { host == it || host.endsWith(".$it") }) return "known_official"
+        if (labels.any { it.startsWith("xn--") }) return "suspicious" // Punycode outside the whitelist.
+        val compact = host.replace(".", "").replace("-", "")
+        if (lookalikeTokens.any { compact.contains(it) }) return "suspicious" // Lookalike of an official domain.
+        if (labels.isNotEmpty() && labels.last() in highRiskTlds) return "suspicious"
+        if (shortenerDomains.any { host == it || host.endsWith(".$it") }) return "shortener"
+        return "unknown"
+    }
+
+    /** The packet carries one category: the most severe among all links in the message. */
+    internal fun classifyLinks(links: List<String>): String =
+        links.map(::classifyLink).maxByOrNull { linkKinds.indexOf(it) } ?: "none"
+
     fun extractFacts(original: String, sourceKind: String): Facts {
-        val redacted = redact(original)
+        val (redacted, links) = redactCollectingLinks(original)
         // Feature matching uses a compact view so spacing cannot hide "匯 款" or "驗 證 碼".
         // The redacted excerpt keeps its original readable spacing.
         val detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
@@ -141,7 +203,10 @@ object MessageGuard {
             requestsSecret = (secretWords.containsMatchIn(withoutNegation) && requestVerbs.containsMatchIn(withoutNegation)) ||
                 credentialPhishing.containsMatchIn(detectionText),
             urgency = urgency.containsMatchIn(withoutNegation),
-            hasLink = "[LINK]" in redacted,
+            // Both come from the same matches, so they can never disagree (a literal
+            // "[LINK]" typed by the sender is not a link).
+            hasLink = links.isNotEmpty(),
+            linkKind = classifyLinks(links),
             offersReward = offersReward.containsMatchIn(withoutNegation),
             requestsRemoteControl = remoteControl.containsMatchIn(withoutNegation),
             contextSufficient = !vague.containsMatchIn(core) && codePoints(core) >= 8,
@@ -157,12 +222,18 @@ object MessageGuard {
         if (f.requestsSecret) codes += "REQUESTS_SECRET"
         if (f.urgency) codes += "URGENCY"
         if (f.hasLink) codes += "HAS_LINK"
+        if (f.linkKind == "suspicious") codes += "LINK_SUSPICIOUS"
+        if (f.linkKind == "shortener") codes += "LINK_SHORTENER"
         if (f.offersReward) codes += "OFFERS_REWARD"
         if (f.requestsRemoteControl) codes += "REMOTE_CONTROL"
         val impersonating = f.impersonation != "none"
         if (impersonating) codes += "IMPERSONATION_" + f.impersonation.uppercase()
+        // A link to a whitelisted official domain no longer escalates on its own; a suspicious domain
+        // (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message.
+        val riskyLink = f.hasLink && f.linkKind != "known_official"
         if (f.asksTransfer || f.requestsSecret || f.requestsRemoteControl ||
-            (f.hasLink && (f.urgency || f.offersReward || impersonating)) ||
+            f.linkKind == "suspicious" ||
+            (riskyLink && (f.urgency || f.offersReward || impersonating)) ||
             (impersonating && f.urgency) || (f.offersReward && f.urgency)) return Assessment(Level.HIGH, codes)
         if (!f.contextSufficient) return Assessment(Level.INSUFFICIENT, codes + "CONTEXT_INSUFFICIENT")
         return Assessment(Level.VERIFY, codes.ifEmpty { listOf("NO_STRONG_SIGNAL") })
@@ -192,6 +263,7 @@ object MessageGuard {
             append(",\"requests_secret\":").append(facts.requestsSecret)
             append(",\"urgency\":").append(facts.urgency)
             append(",\"has_link\":").append(facts.hasLink)
+            append(",\"link_kind\":").append(quote(facts.linkKind))
             append(",\"offers_reward\":").append(facts.offersReward)
             append(",\"requests_remote_control\":").append(facts.requestsRemoteControl)
             append(",\"context_sufficient\":").append(facts.contextSufficient)
@@ -224,7 +296,10 @@ object MessageGuard {
     )
     val reasonText = mapOf(
         "ASKS_TRANSFER" to "要求轉帳或付款", "REQUESTS_SECRET" to "索取驗證碼、密碼或個人資料",
-        "URGENCY" to "催促你馬上處理", "HAS_LINK" to "含有連結", "IMPERSONATION_FAMILY" to "自稱家人或換了號碼",
+        "URGENCY" to "催促你馬上處理", "HAS_LINK" to "含有連結",
+        "LINK_SUSPICIOUS" to "連結疑似假冒官方、IP 直連或高風險網域",
+        "LINK_SHORTENER" to "使用短網址，看不出真正的網站",
+        "IMPERSONATION_FAMILY" to "自稱家人或換了號碼",
         "IMPERSONATION_OFFICIAL" to "自稱警察或政府機關", "IMPERSONATION_SUPPORT" to "自稱客服或銀行",
         "OFFERS_REWARD" to "提到中獎或保證獲利", "REMOTE_CONTROL" to "要求遠端控制手機",
         "CONTEXT_INSUFFICIENT" to "內容太少，無法判斷", "NO_STRONG_SIGNAL" to "沒有發現明顯詐騙特徵"
@@ -242,6 +317,8 @@ object MessageGuard {
         append("偵測到的特徵：").append(if (found.isEmpty()) "無" else found.joinToString("、"))
         append("\n冒充身分：").append(mapOf("none" to "無", "family" to "家人", "official" to "政府或警察",
             "support" to "客服或銀行")[f.impersonation])
+        append("\n連結網域分級：").append(mapOf("none" to "無連結", "known_official" to "政府或銀行官方網域",
+            "unknown" to "無法辨識的網域", "shortener" to "短網址", "suspicious" to "可疑網域")[f.linkKind])
         append("\n內容是否足夠判斷：").append(if (f.contextSufficient) "是" else "否")
         append("\n遮蔽後摘錄：").append(packet.excerpt ?: "（不傳送）")
     }

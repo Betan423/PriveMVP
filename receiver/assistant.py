@@ -25,7 +25,7 @@ from .privacy_policy import POLICY as PRIVACY_POLICY, POLICY_SHA256
 
 PACKET_SCHEMA = "privagent.planner_packet.v1"
 MESSAGE_PACKET_SCHEMA = str(PRIVACY_POLICY["packet_schema"])
-POLICY_VERSION = "server-msg-2"
+POLICY_VERSION = "server-msg-3"
 MAX_PACKET_BYTES = 16 * 1024
 MAX_EXCERPT_CHARS = int(PRIVACY_POLICY["redacted_excerpt"]["max_chars"])
 DEFAULT_PLANNER_URL = "http://127.0.0.1:8000"
@@ -35,8 +35,10 @@ TASK_ALIAS_PATTERN = re.compile(r"^TASK_[A-Z]{8}$")
 REQUEST_NONCE_PATTERN = re.compile(r"^REQ_[A-Z]{20}$")
 CLIENT_POLICY_VERSIONS = tuple(PRIVACY_POLICY["client_policy_versions"])
 BOOLEAN_FACTS = tuple(name for name, spec in PRIVACY_POLICY["facts"].items() if spec["type"] == "boolean")
-IMPERSONATION_KINDS = tuple(PRIVACY_POLICY["facts"]["impersonation"]["values"])
-SOURCE_KINDS = tuple(PRIVACY_POLICY["facts"]["source_kind"]["values"])
+ENUM_FACTS = {name: tuple(spec["values"]) for name, spec in PRIVACY_POLICY["facts"].items() if spec["type"] == "enum"}
+IMPERSONATION_KINDS = ENUM_FACTS["impersonation"]
+SOURCE_KINDS = ENUM_FACTS["source_kind"]
+LINK_KINDS = ENUM_FACTS["link_kind"]
 MESSAGE_SOPS = ("MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER")
 RISK_LEVELS = ("insufficient", "verify", "high")  # Ordered from least to most cautious.
 SOP_FOR_LEVEL = {"high": "MESSAGE_CAUTION", "verify": "MESSAGE_VERIFY", "insufficient": "MESSAGE_INSUFFICIENT"}
@@ -45,6 +47,8 @@ REASON_CODES = (
     "REQUESTS_SECRET",
     "URGENCY",
     "HAS_LINK",
+    "LINK_SUSPICIOUS",
+    "LINK_SHORTENER",
     "IMPERSONATION_FAMILY",
     "IMPERSONATION_OFFICIAL",
     "IMPERSONATION_SUPPORT",
@@ -136,11 +140,13 @@ def validate_packet(packet: Any) -> None:
     if packet["cloud_consent"] is not True:
         raise _packet_error("CLOUD_CONSENT_MISSING", "Cloud planning requires explicit cloud consent.", 403)
     facts = packet["facts"]
-    require(type(facts) is dict and set(facts) == set(BOOLEAN_FACTS) | {"impersonation", "source_kind"}, "facts")
+    require(type(facts) is dict and set(facts) == set(BOOLEAN_FACTS) | set(ENUM_FACTS), "facts")
     for key in BOOLEAN_FACTS:
         require(type(facts[key]) is bool, "facts." + key)
-    require(facts["impersonation"] in IMPERSONATION_KINDS, "facts.impersonation")
-    require(facts["source_kind"] in SOURCE_KINDS, "facts.source_kind")
+    for key, values in ENUM_FACTS.items():
+        require(facts[key] in values, "facts." + key)
+    # link_kind grades the link that has_link reports; one without the other is a broken client.
+    require((facts["link_kind"] == "none") == (facts["has_link"] is False), "facts.link_kind")
     excerpt = packet["redacted_excerpt"]
     require(excerpt is None or (type(excerpt) is str and 0 < len(excerpt) <= MAX_EXCERPT_CHARS), "redacted_excerpt")
     if excerpt is not None and rule_assessment(facts)[0] == PRIVACY_POLICY["redacted_excerpt"]["forbidden_when_local_risk"]:
@@ -207,11 +213,20 @@ def rule_assessment(facts: dict[str, Any]) -> tuple[str, list[str]]:
                        ("requests_remote_control", "REMOTE_CONTROL")):
         if facts[fact]:
             codes.append(code)
+    link_kind = facts.get("link_kind", "unknown" if facts["has_link"] else "none")
+    if link_kind == "suspicious":
+        codes.insert(codes.index("HAS_LINK") + 1, "LINK_SUSPICIOUS")
+    elif link_kind == "shortener":
+        codes.insert(codes.index("HAS_LINK") + 1, "LINK_SHORTENER")
     if facts["impersonation"] != "none":
         codes.append("IMPERSONATION_" + facts["impersonation"].upper())
     impersonating = facts["impersonation"] != "none"
+    # A link to a whitelisted official domain no longer escalates on its own; a suspicious domain
+    # (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message.
+    risky_link = facts["has_link"] and link_kind != "known_official"
     if (facts["asks_transfer"] or facts["requests_secret"] or facts["requests_remote_control"] or
-            (facts["has_link"] and (facts["urgency"] or facts["offers_reward"] or impersonating)) or
+            link_kind == "suspicious" or
+            (risky_link and (facts["urgency"] or facts["offers_reward"] or impersonating)) or
             (impersonating and facts["urgency"]) or (facts["offers_reward"] and facts["urgency"])):
         return "high", codes
     if not facts["context_sufficient"]:
@@ -231,6 +246,8 @@ def build_prompt(packet: dict[str, Any]) -> str:
         "- sop_id：high 用 MESSAGE_CAUTION，verify 用 MESSAGE_VERIFY，insufficient 用 MESSAGE_INSUFFICIENT 或 ASK_USER。\n"
         "- reason_codes 只能從以下選 1 到 6 個：" + ", ".join(REASON_CODES) + "。\n"
         "- 要求匯款、索取驗證碼或密碼、遠端控制，一律 high。\n"
+        "- facts.link_kind 是手機端的連結網域分級，你拿不到網址本身：suspicious（假冒、IP 或高風險網域）一律 high；"
+        "known_official 表示政府或銀行官方網域；shortener 表示短網址。\n"
         "PACKET:\n" + json.dumps(data, ensure_ascii=False, sort_keys=True)
     )
 

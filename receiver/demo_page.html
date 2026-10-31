@@ -111,15 +111,18 @@ pre.wire-body { margin: 0; border: 0; border-radius: 0; background: #1d1b19; col
 "use strict";
 const FACT = {
   asks_transfer: "要求轉帳", requests_secret: "索取驗證碼／密碼", urgency: "催促馬上處理", has_link: "含有連結",
+  link_kind: "連結網域分級",
   offers_reward: "中獎／保證獲利", requests_remote_control: "要求遠端控制", context_sufficient: "內容足夠判斷",
   impersonation: "冒充身分", source_kind: "訊息來源",
   recipient_ready: "收件人已確認", photo_ready: "照片已準備", share_app_ready: "分享 App 可用",
   location_removed: "已移除拍攝地點", private_background_review: "背景需人工檢查", selection: "照片選取方式",
 };
-const VALUE = { none: "無", family: "家人", official: "警察／政府", support: "客服／銀行", notification: "通知", pasted: "貼上" };
+const VALUE = { none: "無", family: "家人", official: "警察／政府", support: "客服／銀行", notification: "通知", pasted: "貼上",
+  known_official: "政府／銀行官方", unknown: "無法辨識", shortener: "短網址", suspicious: "可疑網域" };
 const REASON = {
   ASKS_TRANSFER: "要求轉帳或付款", REQUESTS_SECRET: "索取驗證碼、密碼或個人資料", URGENCY: "催促你馬上處理",
-  HAS_LINK: "含有連結", IMPERSONATION_FAMILY: "自稱家人或換了號碼", IMPERSONATION_OFFICIAL: "自稱警察或政府機關",
+  HAS_LINK: "含有連結", LINK_SUSPICIOUS: "連結疑似假冒官方、IP 直連或高風險網域", LINK_SHORTENER: "使用短網址，看不出真正的網站",
+  IMPERSONATION_FAMILY: "自稱家人或換了號碼", IMPERSONATION_OFFICIAL: "自稱警察或政府機關",
   IMPERSONATION_SUPPORT: "自稱客服或銀行", OFFERS_REWARD: "提到中獎或保證獲利", REMOTE_CONTROL: "要求遠端控制手機",
   CONTEXT_INSUFFICIENT: "內容太少，無法判斷", NO_STRONG_SIGNAL: "沒有發現明顯詐騙特徵",
 };

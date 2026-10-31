@@ -28,7 +28,7 @@ from typing import Any
 
 from .assistant import MAX_EXCERPT_CHARS, MESSAGE_PACKET_SCHEMA, MESSAGE_SOPS, packet_forbidden_hits, rule_assessment
 
-CLIENT_POLICY_VERSION = "phone-msg-2"
+CLIENT_POLICY_VERSION = "phone-msg-3"
 
 # Red teams can insert zero-width or bidi formatting controls inside a phone number,
 # URL or scam keyword. They have no semantic value for this task, so remove them
@@ -47,8 +47,9 @@ REDACTIONS = (
     (re.compile(r"SYN_(?:V5_)?([A-Z]+)_PRIVATE_[A-Z0-9_]+"), lambda m: SYNTHETIC_KINDS.get(m.group(1), "[SECRET]")),
     (re.compile(r"SYN_[A-Z0-9_]+"), lambda m: "[SECRET]"),
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"), lambda m: "[EMAIL]"),
-    (re.compile(r"(?i)(?:https?://|www\.)[^\s，。、「」！？]+"), lambda m: "[LINK]"),
-    (re.compile(r"(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?"), lambda m: "[LINK]"),
+    (URL_PATTERN := re.compile(r"(?i)(?:https?://|www\.)[^\s，。、「」！？]+"), lambda m: "[LINK]"),
+    (BARE_DOMAIN_PATTERN := re.compile(r"(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?"),
+     lambda m: "[LINK]"),
     (re.compile(r"\b[A-Z][12][0-9]{8}\b"), lambda m: "[ID]"),
     (re.compile(r"((?:驗證碼|認證碼|OTP|密碼|控制碼|代碼)[^\[\]A-Za-z0-9]{0,6}?)(?=[A-Za-z]*[0-9])[A-Za-z0-9]{4,10}\b", re.I),
      lambda m: m.group(1) + "[OTP]"),
@@ -59,6 +60,68 @@ REDACTIONS = (
 # Regexes cannot recognise arbitrary names; catch salutations, and on a real phone also the
 # contact names the device already knows (see build_packet known_names).
 SALUTATION = re.compile(r"[一-鿿]{2,4}(?=(您好|你好|先生|小姐|女士|阿姨|伯伯|奶奶|爺爺|阿公|阿嬤))")
+
+# The URL itself never leaves the phone ([LINK] in the excerpt, has_link in the facts). To tell a
+# phishing link from an official notification without disclosing the URL, the phone classifies each
+# link locally and only the category below is sent. Keep lists and order in sync with MessageGuard.kt.
+LINK_KINDS = ("none", "known_official", "unknown", "shortener", "suspicious")
+_LINK_SEVERITY = {kind: rank for rank, kind in enumerate(LINK_KINDS)}
+# Registrable domains treated as official: whole gov.tw plus the retail banks elders actually use.
+OFFICIAL_DOMAINS = (
+    "gov.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw", "hncb.com.tw",
+    "chb.com.tw", "megabank.com.tw", "ctbcbank.com", "cathaybk.com.tw", "esunbank.com.tw",
+    "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
+)
+# A URL shortener hides the destination, so it can never count as official.
+SHORTENER_DOMAINS = (
+    "bit.ly", "tinyurl.com", "goo.gl", "t.co", "is.gd", "t.ly", "reurl.cc", "ppt.cc", "pse.is",
+    "lihi.cc", "lihi1.com", "lihi2.net", "lin.ee",
+)
+# TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
+HIGH_RISK_TLDS = frozenset({"tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click"})
+# Distinctive official tokens appearing inside a NON-official host mean a lookalike domain.
+LOOKALIKE_TOKENS = (
+    "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank", "hncb",
+    "sinopac", "firstbank", "tcbbank", "scsb", "fubon",
+)
+
+
+def classify_link(link: str) -> str:
+    """Grade one matched link; only the category ever leaves the phone, never the URL."""
+    stripped = re.sub(r"(?i)^https?://", "", link.strip().lower())
+    host = re.split(r"[/?#]", stripped, 1)[0]
+    if host.startswith("["):
+        return "suspicious"  # Raw IPv6 literal: no legitimate zh-TW notification uses one.
+    host = host.split(":")[0]
+    host = re.sub(r"^[^a-z0-9\u0080-\U0010ffff]+|[^a-z0-9\u0080-\U0010ffff]+$", "", host)
+    if not host:
+        return "unknown"
+    if any(ord(c) > 127 for c in host):
+        return "suspicious"  # Non-ASCII host: IDN/homoglyph risk the user cannot read reliably.
+    labels = [label for label in host.split(".") if label]
+    if labels and all(label.isdigit() for label in labels):
+        return "suspicious"  # Raw IPv4 literal.
+    for official in OFFICIAL_DOMAINS:
+        if host == official or host.endswith("." + official):
+            return "known_official"
+    if any(label.startswith("xn--") for label in labels):
+        return "suspicious"  # Punycode outside the whitelist.
+    compact = host.replace(".", "").replace("-", "")
+    if any(token in compact for token in LOOKALIKE_TOKENS):
+        return "suspicious"  # Official brand token inside a non-official host.
+    if labels and labels[-1] in HIGH_RISK_TLDS:
+        return "suspicious"
+    for shortener in SHORTENER_DOMAINS:
+        if host == shortener or host.endswith("." + shortener):
+            return "shortener"
+    return "unknown"
+
+
+def classify_links(links: list[str]) -> str:
+    """The packet carries one category: the most severe among all links in the message."""
+    if not links:
+        return "none"
+    return max((classify_link(link) for link in links), key=_LINK_SEVERITY.__getitem__)
 
 # "不需要付款", "請勿告訴任何人" describe what NOT to do. Negation covers only the action right
 # after it (plus "或／和" chains) and never crosses 請 or punctuation, so "不要猶豫請轉帳" stays risky.
@@ -98,26 +161,41 @@ ADVICE = {
 }
 REASON_TEXT = {
     "ASKS_TRANSFER": "要求轉帳或付款", "REQUESTS_SECRET": "索取驗證碼、密碼或個人資料", "URGENCY": "催促你馬上處理",
-    "HAS_LINK": "含有連結", "IMPERSONATION_FAMILY": "自稱家人或換了號碼", "IMPERSONATION_OFFICIAL": "自稱警察或政府機關",
+    "HAS_LINK": "含有連結", "LINK_SUSPICIOUS": "連結疑似假冒官方、IP 直連或高風險網域",
+    "LINK_SHORTENER": "使用短網址，看不出真正的網站",
+    "IMPERSONATION_FAMILY": "自稱家人或換了號碼", "IMPERSONATION_OFFICIAL": "自稱警察或政府機關",
     "IMPERSONATION_SUPPORT": "自稱客服或銀行", "OFFERS_REWARD": "提到中獎或保證獲利", "REMOTE_CONTROL": "要求遠端控制手機",
     "CONTEXT_INSUFFICIENT": "內容太少，無法判斷", "NO_STRONG_SIGNAL": "沒有發現明顯詐騙特徵",
 }
 
 
-def redact(text: str, known_names: tuple[str, ...] = ()) -> str:
+def _redact_collecting_links(text: str, known_names: tuple[str, ...] = ()) -> tuple[str, list[str]]:
+    """Redacts like redact() and also returns what the two link patterns matched, so link
+    classification sees exactly the links that became [LINK] (never an email already redacted)."""
     # U+001C..U+001F count as whitespace in Python but not Java; map them to spaces on both sides.
     text = re.sub(r"[\x1c-\x1f]", " ", unicodedata.normalize("NFKC", text))
     text = INVISIBLE_FORMAT_CONTROLS.sub("", text)
     for name in sorted((n for n in known_names if n), key=len, reverse=True):
         normalized_name = INVISIBLE_FORMAT_CONTROLS.sub("", unicodedata.normalize("NFKC", name))
         text = text.replace(normalized_name, "[NAME]")
+    links: list[str] = []
     for pattern, replacement in REDACTIONS:
-        text = pattern.sub(replacement, text)
-    return SALUTATION.sub("[NAME]", text)
+        if pattern is URL_PATTERN or pattern is BARE_DOMAIN_PATTERN:
+            def collect(match: re.Match[str]) -> str:
+                links.append(match.group(0))
+                return "[LINK]"
+            text = pattern.sub(collect, text)
+        else:
+            text = pattern.sub(replacement, text)
+    return SALUTATION.sub("[NAME]", text), links
+
+
+def redact(text: str, known_names: tuple[str, ...] = ()) -> str:
+    return _redact_collecting_links(text, known_names)[0]
 
 
 def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
-    redacted = redact(original)
+    redacted, links = _redact_collecting_links(original)
     # Detection uses a compact view so harmless spacing cannot hide phrases such as
     # "匯 款" or "驗 證 碼". The optional excerpt remains readable and unchanged.
     detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", redacted))
@@ -127,7 +205,10 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
         (SECRET_WORDS.search(without_negation) and REQUEST_VERBS.search(without_negation))
         or CREDENTIAL_PHISHING.search(detection_text)
     )
-    facts["has_link"] = "[LINK]" in redacted
+    # has_link and link_kind both come from the same matches, so they can never disagree
+    # (a literal "[LINK]" typed by the sender is not a link).
+    facts["has_link"] = bool(links)
+    facts["link_kind"] = classify_links(links)
     facts["impersonation"] = next((kind for kind, pattern in IMPERSONATION if pattern.search(detection_text)), "none")
     core = FILLER.sub("", redacted).strip()
     facts["context_sufficient"] = not VAGUE.search(core) and len(core) >= 8

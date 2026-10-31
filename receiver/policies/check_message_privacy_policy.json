@@ -1,7 +1,7 @@
 {
-  "policy_version": "check-message-privacy-2",
-  "packet_schema": "privagent.check_message_packet.v2",
-  "client_policy_versions": ["phone-msg-2"],
+  "policy_version": "check-message-privacy-3",
+  "packet_schema": "privagent.check_message_packet.v3",
+  "client_policy_versions": ["phone-msg-3"],
   "allowed_top_level_fields": [
     "schema",
     "task_id_alias",
@@ -20,6 +20,11 @@
     "requests_secret": {"type": "boolean", "purpose": "detect credential or OTP requests"},
     "urgency": {"type": "boolean", "purpose": "detect urgency pressure"},
     "has_link": {"type": "boolean", "purpose": "select link verification guidance"},
+    "link_kind": {
+      "type": "enum",
+      "values": ["none", "known_official", "unknown", "shortener", "suspicious"],
+      "purpose": "grade link risk from on-device domain classification without disclosing the URL"
+    },
     "offers_reward": {"type": "boolean", "purpose": "detect reward or investment pressure"},
     "requests_remote_control": {"type": "boolean", "purpose": "detect remote-control requests"},
     "context_sufficient": {"type": "boolean", "purpose": "avoid guessing from incomplete content"},
