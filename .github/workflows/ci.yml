@@ -28,12 +28,20 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      # The ubuntu-latest image ships the Android SDK with ANDROID_HOME set and licenses
-      # accepted; android-actions/setup-android@v3 is EOL and failed on every run.
+      # The ubuntu-latest image ships the Android SDK with ANDROID_HOME set;
+      # android-actions/setup-android@v3 is EOL and failed on every run. sdkmanager is not
+      # always on PATH, so resolve it from the SDK itself.
       - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            ls "$ANDROID_HOME/cmdline-tools" 2>/dev/null || true
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -name sdkmanager -type f 2>/dev/null | head -1)"
+          fi
+          echo "using sdkmanager at: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Test receiver
         run: python -m unittest discover -s receiver/tests -v
