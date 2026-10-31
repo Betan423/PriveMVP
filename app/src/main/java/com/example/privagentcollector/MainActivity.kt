@@ -72,6 +72,19 @@ class MainActivity : Activity() {
         fun button(text: String, action: () -> Unit): Button = Button(this).apply {
             this.text = text; setOnClickListener { action() }; root.addView(this)
         }
+        root.addView(CheckBox(this).apply {
+            text = "在畫面上顯示「金孫」浮動按鈕（在任何畫面點一下就能找我；詐騙訊息會跳出大警告）"
+            textSize = 17f
+            isChecked = FloatingAssistant.enabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                FloatingAssistant.setEnabled(this@MainActivity, checked)
+                if (checked && !FloatingAssistant.canDrawOverlays(this@MainActivity)) {
+                    message("請在下一頁允許「顯示在其他應用程式上層」，再回到這裡")
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:$packageName")))
+                } else FloatingAssistant.sync(this@MainActivity)
+            }
+        })
         // The Receiver URL comes from the field further down; it is read only when a request is sent.
         assistantPanel = AssistantPanel(this, root, ::dp, ::assistEndpoint) { messagePanel?.pickNotification() }
         messagePanel = MessageCheckPanel(this, root, ::dp, ::assistEndpoint)
@@ -227,6 +240,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // Also picks up the overlay permission granted in Settings while this screen was away.
+        FloatingAssistant.sync(this)
         messagePanel?.renderAuto()
         handler.post(refreshTick)
         refreshStorage()
