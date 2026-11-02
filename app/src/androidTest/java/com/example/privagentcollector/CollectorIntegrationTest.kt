@@ -24,7 +24,11 @@ class CollectorIntegrationTest {
             RelationBindings.add(context, "daughter", "測試女兒")
             RelationBindings.add(context, "daughter", "測試女兒")
             assertEquals(listOf("測試女兒"), RelationBindings.names(context, "daughter"))
+            assertNull(RelationBindings.lineName(context, "daughter", "測試女兒"))
+            RelationBindings.setLineName(context, "daughter", "測試女兒", "LINE 小美")
+            assertEquals("LINE 小美", RelationBindings.lineName(context, "daughter", "測試女兒"))
         } finally { RelationBindings.clear(context, "daughter") }
+        assertNull(RelationBindings.lineName(context, "daughter", "測試女兒"))
     }
 
     @Test fun photoSanitizerRemovesGpsAndDeviceExif() {
@@ -66,6 +70,25 @@ class CollectorIntegrationTest {
         assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
         assertNotEquals(0, intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
         assertNull(LineShare.imageIntent(uri, directToLine = false).`package`)
+    }
+
+    @Test fun lineAutomationSessionIsOneShotAndOrdered() {
+        LineAutomationSession.abort()
+        val id = LineAutomationSession.start("LINE 小美")
+        try {
+            assertEquals(LineAutomationSession.Phase.FIND_RECIPIENT, LineAutomationSession.snapshot()!!.phase)
+            assertTrue(LineAutomationSession.markSearched(id))
+            assertFalse(LineAutomationSession.markSearched(id))
+            assertTrue(LineAutomationSession.beginRecipientClick(id))
+            assertFalse(LineAutomationSession.beginRecipientClick(id))
+            assertTrue(LineAutomationSession.beginVoiceConfirmation(id))
+            assertFalse(LineAutomationSession.beginSendClick(id))
+            assertTrue(LineAutomationSession.confirm(id))
+            assertTrue(LineAutomationSession.beginSendClick(id))
+            assertFalse(LineAutomationSession.beginSendClick(id))
+            assertTrue(LineAutomationSession.complete(id))
+            assertNull(LineAutomationSession.snapshot())
+        } finally { LineAutomationSession.abort() }
     }
 
     @Test fun messageGuardPatternsInitializeOnAndroid() {

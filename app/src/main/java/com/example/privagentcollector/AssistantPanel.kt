@@ -50,6 +50,7 @@ class AssistantPanel(
     private var generation = 0
     // Task-scoped mapping (relation -> real name, photo); cleared when the task ends.
     private var recipientName: String? = null
+    private var lineRecipientName: String? = null
     private var relation: String? = null
     private var selection = "selected"
     private var bindingRelation: String? = null
@@ -76,6 +77,7 @@ class AssistantPanel(
         row("🎤 用說的" to ::listen, "好，開始" to { run(input.text.toString()) })
         row("傳照片到 LINE" to { run("把照片傳給") }, "手機救援" to { run("手機好像壞掉了") }, "檢查訊息" to { run("這則訊息可信嗎") })
         row("設定家人" to ::editBindings, "取消" to { cancel("已取消，沒有傳送任何東西") })
+        row("LINE 免觸控設定" to ::configureLineAutomation)
         status = label("", 19f)
         PhotoSanitizer.clear(activity)  // Leftover copies from an earlier session.
     }
@@ -89,7 +91,9 @@ class AssistantPanel(
 
     private fun newTask(): Int {
         generation++
-        recipientName = null; relation = null; resumeShareAfterBinding = false; bindingRelation = null; directToLine = true
+        recipientName = null; lineRecipientName = null; relation = null
+        resumeShareAfterBinding = false; bindingRelation = null; directToLine = true
+        LineAutomationSession.abort()
         openDialog?.dismiss(); openDialog = null
         PhotoSanitizer.clear(activity)
         return generation
@@ -170,10 +174,46 @@ class AssistantPanel(
                 .setNegativeButton("取消") { _, _ -> cancel("已取消") }.showForTask()
             // Ambiguity is resolved on the phone; the cloud never sees candidate names.
             names.size > 1 -> dialog().setTitle("要傳給哪一位$label？").setItems(names.toTypedArray()) { _, i ->
-                ui(task) { recipientName = names[i]; ensureShareDestination(task) }
+                ui(task) { recipientName = names[i]; prepareLineRecipient(task) }
             }.setOnCancelListener { cancel("已取消") }.showForTask()
-            else -> { recipientName = names[0]; ensureShareDestination(task) }
+            else -> { recipientName = names[0]; prepareLineRecipient(task) }
         }
+    }
+
+    private fun prepareLineRecipient(task: Int) {
+        val contact = recipientName ?: return
+        val key = relation ?: return
+        if (!LineAutomationSettings.consented(activity)) {
+            lineRecipientName = null
+            ensureShareDestination(task)
+            return
+        }
+        RelationBindings.lineName(activity, key, contact)?.let {
+            lineRecipientName = it
+            ensureShareDestination(task)
+            return
+        }
+        val input = EditText(activity).apply {
+            setText(contact)
+            selectAll()
+            textSize = 20f
+            hint = "LINE 顯示名稱"
+        }
+        dialog().setTitle("設定 LINE 中的顯示名稱")
+            .setMessage("免觸控分享只會精確比對唯一名稱。請確認這與 LINE 分享畫面顯示的名稱完全相同；資料只存在手機。")
+            .setView(input)
+            .setPositiveButton("儲存並繼續") { _, _ ->
+                val value = input.text.toString().trim()
+                if (task != generation) return@setPositiveButton
+                if (value.isEmpty()) { cancel("LINE 顯示名稱不能空白，已停止") }
+                else {
+                    RelationBindings.setLineName(activity, key, contact, value)
+                    lineRecipientName = value
+                    ensureShareDestination(task)
+                }
+            }
+            .setNegativeButton("取消") { _, _ -> cancel("已取消") }
+            .setOnCancelListener { cancel("已取消") }.showForTask()
     }
 
     private fun ensureShareDestination(task: Int) {
@@ -240,6 +280,7 @@ class AssistantPanel(
         val label = CoreTasks.relationLabel.getValue(relation!!)
         val name = recipientName!!
         val lineReady = directToLine && lineInstalled()
+        val noTouch = lineReady && lineRecipientName != null && LineAutomationSettings.ready(activity)
         val view = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0)
             addView(ImageView(activity).apply { setImageBitmap(photo.thumbnail); adjustViewBounds = true; maxHeight = dp(260) })
@@ -249,13 +290,26 @@ class AssistantPanel(
                     append("步驟 4/4：要把這張照片傳給$label「$name」嗎？\n")
                     if (photo.hadLocation) append("・${CoreTasks.reasonText["LOCATION_REMOVED"]}\n")
                     append("・${CoreTasks.reasonText["PRIVATE_BACKGROUND_REVIEW"]}\n")
-                    append(if (lineReady) "按「開啟 LINE」後會直接進入 LINE 的分享對象畫面，請選「$name」再按傳送。"
+                    append(if (noTouch) "免觸控模式已就緒：畫面將自動進入 LINE、精確選取「$name」，最後請說「確認傳送」。不確定時會停止。"
+                        else if (lineReady) "按「開啟 LINE」後會直接進入 LINE 的分享對象畫面，請選「$name」再按傳送。"
                         else "按「確認分享」後會打開分享選單，請選 App 和「$name」。")
                 }
             })
         }
-        dialog().setTitle("確認要分享").setView(view)
-            .setPositiveButton(if (lineReady) "開啟 LINE" else "確認分享") { _, _ ->
+        val builder = dialog().setTitle(if (noTouch) "免觸控分享即將開始" else "確認要分享").setView(view)
+        if (noTouch) {
+            builder.setNegativeButton("取消") { _, _ -> cancel("已取消，照片沒有傳出去") }
+                .setOnCancelListener { cancel("已取消，照片沒有傳出去") }.showForTask()
+            // The original spoken request is the initial authorization; the irreversible Send
+            // action still requires a second, explicit spoken confirmation inside LINE.
+            status.postDelayed({
+                ui(task) {
+                    openDialog?.dismiss()
+                    openDialog = null
+                    planShare(task, photo, lineReady)
+                }
+            }, 1800L)
+        } else builder.setPositiveButton(if (lineReady) "開啟 LINE" else "確認分享") { _, _ ->
                 if (task == generation) planShare(task, photo, lineReady)
             }
             .setNegativeButton("取消") { _, _ -> cancel("已取消，照片沒有傳出去") }
@@ -289,16 +343,20 @@ class AssistantPanel(
         val uri = FileProvider.getUriForFile(activity, activity.packageName + ".share", photo.file)
         val send = LineShare.imageIntent(uri, lineReady)
         val name = recipientName
+        val automatic = lineReady && lineRecipientName != null && LineAutomationSettings.ready(activity)
+        if (automatic) LineAutomationSession.start(lineRecipientName!!)
         try {
             activity.startActivity(if (lineReady) send else Intent.createChooser(send, "分享照片"))
         } catch (_: ActivityNotFoundException) {
+            LineAutomationSession.abort()
             val fallback = LineShare.imageIntent(uri, false)
             activity.startActivity(Intent.createChooser(fallback, "分享照片"))
         }
         // The copy must outlive the share screen; it is removed when the next task starts or on cancel.
-        recipientName = null; relation = null
+        recipientName = null; lineRecipientName = null; relation = null
         say(if (lineReady)
-            "照片已安全交給 LINE。請在 LINE 選「$name」並按傳送；回到這裡不代表 LINE 已送出。\n判讀來源：$source"
+            if (automatic) "照片已安全交給 LINE。系統只會精確選取「$name」；請在語音詢問時說「確認傳送」。任何畫面不確定都會停止。\n判讀來源：$source"
+            else "照片已安全交給 LINE。請在 LINE 選「$name」並按傳送；回到這裡不代表 LINE 已送出。\n判讀來源：$source"
         else "已打開分享畫面，請選 App 和「$name」再按傳送。照片沒有拍攝地點資訊。\n判讀來源：$source",
             Color.rgb(27, 94, 32))
     }
@@ -314,6 +372,30 @@ class AssistantPanel(
         catch (_: ActivityNotFoundException) {
             try { activity.startActivity(web) } catch (_: ActivityNotFoundException) { say("無法開啟 LINE 安裝頁") }
         }
+    }
+
+    private fun configureLineAutomation() {
+        newTask()
+        val connected = LineShareAccessibilityService.connected
+        val consented = LineAutomationSettings.consented(activity)
+        val status = when {
+            connected && consented -> "目前已就緒。"
+            consented -> "App 內已同意，但仍需在下一頁手動開啟「PrivAgent LINE 免觸控分享」。"
+            else -> "目前未啟用。"
+        }
+        val builder = dialog().setTitle("LINE 免觸控分享")
+            .setMessage("$status\n\n啟用後，只有在你主動要求分享照片後的 2 分鐘內，服務才會讀取 LINE 的畫面元件，精確尋找已設定的唯一收件人。它不截圖、不保存或上傳畫面、不用座標亂點；真正送出前一定會再問，只有聽到「確認傳送」才按一次傳送。若同名、畫面改版、彈窗或按鈕不唯一，就停止。\n\n首次啟用是 Android 安全限制，必須由本人或家屬在系統設定手動開啟一次。")
+            .setPositiveButton(if (consented) "開啟系統設定" else "同意並前往設定") { _, _ ->
+                LineAutomationSettings.setConsented(activity, true)
+                try { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                catch (_: Exception) { say("無法直接開啟設定，請從系統設定的無障礙功能手動開啟") }
+            }
+            .setNegativeButton("取消", null)
+        if (consented) builder.setNeutralButton("停用免觸控") { _, _ ->
+                LineAutomationSettings.setConsented(activity, false)
+                say("已停用 LINE 免觸控分享；系統服務即使仍開啟也不會執行操作")
+            }
+        builder.showForTask()
     }
 
     // ------------------------------------------------------------ relation bindings

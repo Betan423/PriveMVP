@@ -19,6 +19,7 @@ import java.io.File
 /** L1 initialization data: which contacts are 女兒、兒子… Kept only on the phone, never sent. */
 object RelationBindings {
     private const val PREFS = "relation_bindings"
+    private const val LINE_PREFIX = "line_name:"
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun names(context: Context, relation: String): List<String> {
@@ -31,7 +32,22 @@ object RelationBindings {
         prefs(context).edit().putString(relation, JSONArray(names).toString()).apply()
     }
 
-    fun clear(context: Context, relation: String) { prefs(context).edit().remove(relation).apply() }
+    /** LINE display names are separate because they often differ from Android contact names. */
+    fun lineName(context: Context, relation: String, contactName: String): String? =
+        prefs(context).getString(lineKey(relation, contactName), null)?.takeIf { it.isNotBlank() }
+
+    fun setLineName(context: Context, relation: String, contactName: String, lineName: String) {
+        require(lineName.isNotBlank())
+        prefs(context).edit().putString(lineKey(relation, contactName), lineName.trim()).apply()
+    }
+
+    fun clear(context: Context, relation: String) {
+        val editor = prefs(context).edit().remove(relation)
+        names(context, relation).forEach { editor.remove(lineKey(relation, it)) }
+        editor.apply()
+    }
+
+    private fun lineKey(relation: String, contactName: String) = "$LINE_PREFIX$relation:$contactName"
 }
 
 /**

@@ -110,6 +110,27 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Separate from research collection: package-scoped, one-shot LINE sharing only. -->
+        <service
+            android:name=".LineShareAccessibilityService"
+            android:label="PrivAgent LINE 免觸控分享"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/line_share_accessibility_config" />
+        </service>
+
+        <activity
+            android:name=".LineVoiceConfirmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/FloatingDialog" />
+
         <activity
             android:name=".QuickAssistActivity"
             android:exported="false"
