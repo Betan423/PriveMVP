@@ -1,8 +1,15 @@
-# AI 金孫：情境一、情境二隱私與功能實作交接文件
+# PrivAgent：情境一、情境二隱私、功能與 UI 交接文件
 
-> 更新日期：2026-10-31（Asia/Taipei）  
-> 對應分支：`feature/check-message-ai`  
-> 對應基準提交：`6cf4673`  
+> 更新日期：2026-11-02（Asia/Taipei）
+>
+> 對應分支：`feature/share-photo-line-chain`
+>
+> 功能基準提交：`94d2e56`（正式亮色雙情境 UI）
+>
+> 前置提交：`76ae711`（照片到 LINE 完整鏈）、`ee9263b`（fail-closed LINE 免觸控）
+>
+> 上游基準：`origin/main` 的 `a765896`
+>
 > 文件目的：讓下一位開發者可以區分「已完成」「部分完成」「規劃中」，並能沿著既有架構繼續實作、測試及製作競賽展示。
 
 ---
@@ -13,8 +20,9 @@
 
 1. **情境一：把圖片發送給女兒**（`SHARE_PHOTO`）
    - 核心隱私目標：只存取使用者選中的一張照片；聯絡人身分只在手機解析；分享前移除 EXIF/GPS；雲端 AI 不取得照片、姓名、聯絡方式或完整語音內容。
-   - 現況：基本分享流程、單張選取、本機關係綁定、照片重新編碼、GPS/EXIF 清除、確認畫面、雲端代號封包與 SOP 白名單已完成。
-   - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；分享 App 內的最終收件人仍需使用者再次確認；暫存照片清除策略仍可強化。
+   - 現況：基本分享流程、單張／最新照片、本機關係綁定、獨立 LINE 顯示名稱、照片重新編碼、GPS/EXIF 清除、確認畫面、雲端代號封包與 SOP 白名單已完成。
+   - 選用免觸控：已加入只監看 LINE package 的獨立 AccessibilityService，以固定狀態機做「分享畫面指紋 → 唯一精確收件人 → 唯一傳送按鈕 → 明確語音確認 → 各點一次」。任何不確定皆停止。
+   - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；真實 LINE 版本仍需逐版校準畫面節點；LINE 無障礙自動化有 Google Play 政策風險。
 
 2. **情境二：收到訊息，判斷是不是詐騙**（`CHECK_MESSAGE`）
    - 核心隱私目標：原始訊息預設不離開手機；手機先去識別化並萃取少量風險特徵；高風險訊息禁止送摘錄；雲端 AI 只能從固定 SOP 中選擇，而且不得降低手機本機規則的風險判定。
@@ -24,6 +32,21 @@
 本專案最值得強調的競賽亮點不是「用了很多 PET 名詞」，而是採取以下做法：
 
 > **先研究紅隊曾成功利用的推回、oracle、實作錯誤與隱私—效用落差，再把防守直接放入資料流、封包契約、輸出限制與自動化評測。**
+
+目前產品首頁只顯示這兩個情境。舊的手機救援與原始研究蒐集模組仍留在 repository 供研究測試，但 `MainActivity` 不再提供啟動入口，且開啟新版首頁時會停止舊研究 session／realtime service。
+
+### 0.1 目前可交付成品
+
+| 成品 | 位置／版本 | 狀態 |
+|---|---|---:|
+| Android 原始碼 | `app/`，功能基準 `94d2e56` | ✅ |
+| 情境一 LINE 完整鏈 | `76ae711` + `ee9263b` | ✅ MVP |
+| 正式亮色雙情境 UI | `94d2e56` | ✅ |
+| Debug APK | `D:\PriveMVP\PrivAgent-two-scenarios-light-ui-v0.4-debug.apk` | ✅，v2 簽章 |
+| APK SHA-256 | `1EE49B62455BF86F6CB9591BFD6297EB6BD0CAF40514B241479B7DDB5CA4AA33` | ✅ |
+| JVM 測試 | 67／67 | ✅ |
+| Android instrumentation | 8／8（Pixel 6 Pro AVD / API 34） | ✅ |
+| Android Lint | 0 error；37 個既有 warning | ✅ 可建置 |
 
 ---
 
@@ -136,15 +159,24 @@ flowchart TD
     F --> G[手機重新解碼與編碼成新 JPEG]
     G --> H[不複製 EXIF/GPS/拍攝時間/裝置資訊]
     H --> I[本機預覽與敏感背景檢查]
-    I --> J[使用者確認照片與收件人]
-    J --> K{是否同意雲端規劃？}
+    I --> J{LINE 免觸控是否已設定？}
+    J -- 否 --> K1[使用者確認照片與收件人]
+    J -- 是 --> K2[顯示照片預覽後自動進入 LINE]
+    K1 --> K{是否同意雲端規劃？}
+    K2 --> K
     K -- 否 --> L[本機 SOP]
     K -- 是 --> M[只送狀態布林值 + 一次性 CONTACT/PHOTO token]
     M --> N[Receiver schema + SOP 白名單驗證]
     N --> O[AI 只能回 SHARE / ASK / STOP]
     L --> P[Android ACTION_SEND / LINE]
     O --> P
-    P --> Q[使用者在分享 App 再確認收件人並送出]
+    P --> Q{免觸控模式？}
+    Q -- 否 --> R[使用者在 LINE 選人並送出]
+    Q -- 是 --> S[本機節點樹確認 LINE 分享畫面]
+    S --> T[精確比對唯一收件人並點一次]
+    T --> U[唯一傳送按鈕 + 收件人仍一致]
+    U --> V[語音詢問；只接受明確「確認傳送」]
+    V --> W[重新驗證後按一次傳送；60 秒後清理副本]
 ```
 
 ### 4.2 現有實作盤點
@@ -163,19 +195,31 @@ flowchart TD
 | AI SOP 白名單 | ✅ | 只允許 `SHARE_PHOTO_GUIDED`、`ASK_USER`、`STOP` |
 | AI 不得比本機更冒進 | ✅ | `AssistClient.plan()` 以 caution order 保留較謹慎結果 |
 | 取消／新任務清除暫存 | ✅ | `newTask()`、取消、App 初始化會刪除 `cache/shared` 暫存照片 |
+| LINE 顯示名稱獨立綁定 | ✅ | Android 聯絡人名稱與 LINE 名稱分開儲存；第一次使用時本機確認，不送到 AI |
+| LINE package 範圍限制 | ✅ | `line_share_accessibility_config.xml` 只接收 `jp.naver.line.android` 事件 |
+| 一次性自動化 capability | ✅ | `LineAutomationSession` 只存在記憶體、TTL 120 秒、每階段只允許前進一次 |
+| 防一般聊天室誤觸 | ✅ | 必須先辨識「分享對象／Share with」等固定畫面指紋；普通聊天畫面即使也有姓名與 Send 也不操作 |
+| 防同名／模糊選人 | ✅ | 只接受正規化後完全相同且唯一的收件人；0 或多個結果皆不送 |
+| 送出前語音確認 | ✅ | 語音只接受 allowlist 明確句型；「好」等模糊回答視為 unknown 並停止 |
+| 自動化不由 AI 決定 | ✅ | AI 不能產生座標或操作；固定本機狀態機最多點一次收件人與一次送出 |
+| 傳送後暫存清理 | ✅ MVP | LINE 接受送出操作後保留 60 秒 I/O 寬限，再清除清理後 JPEG；新任務與冷啟動也會清理 |
 | 視覺型個資偵測 | 🟡 | 目前只有提醒使用者檢查背景；沒有 OCR、人臉、證件或 QR 偵測 |
 | 自動模糊／裁切 | ⬜ | 尚未實作 |
 | 關係綁定加密 | 🟡 | 只存在手機，但目前為一般 SharedPreferences；應改成 Android Keystore 保護 |
-| 分享後立即／定時撤銷暫存 | 🟡 | 暫存需讓分享 App 讀取，目前通常到下一任務才清除；需補 TTL／生命週期策略 |
-| 確保 LINE 最終選中正確收件人 | 🟡 | App 可顯示預期姓名，但 Android 分享流程仍由使用者在 LINE 內選擇，不能宣稱自動鎖定收件人 |
+| 真實 LINE 版本相容性 | 🟡 | 邏輯與 fail-closed 測試已完成，但模擬器沒有 LINE；需用實機校準每版分享頁標籤／resource id |
+| Google Play Accessibility 政策 | 🟡 | 適合競賽／側載展示；上架前須做 Accessibility API 聲明、醒目揭露與政策資格審查 |
 | 完全本機語音辨識 | 🟡 | 設定 `EXTRA_PREFER_OFFLINE=true`，但是否真的不上雲仍受手機語音服務影響 |
 
 主要程式位置：
 
-- [`AssistantPanel.kt`](../app/src/main/java/com/example/privagentcollector/AssistantPanel.kt)：分享流程、選人、選照片、確認與 share intent。
-- [`CoreSupport.kt`](../app/src/main/java/com/example/privagentcollector/CoreSupport.kt)：關係綁定、照片重新編碼與 EXIF/GPS 處理。
-- [`CoreTasks.kt`](../app/src/main/java/com/example/privagentcollector/CoreTasks.kt)：分享封包、token 與 SOP。
-- [`receiver/core_tasks.py`](../receiver/core_tasks.py)：Receiver 契約與情境一規則參考實作。
+- [`AssistantPanel.kt`](app/src/main/java/com/example/privagentcollector/AssistantPanel.kt)：分享流程、選人、選照片、確認與 share intent。
+- [`CoreSupport.kt`](app/src/main/java/com/example/privagentcollector/CoreSupport.kt)：關係／LINE 名稱綁定、照片重新編碼與 EXIF/GPS 處理。
+- [`LineAutomation.kt`](app/src/main/java/com/example/privagentcollector/LineAutomation.kt)：一次性 session、TTL 與不可逆狀態轉移。
+- [`LineAutomationRules.kt`](app/src/main/java/com/example/privagentcollector/LineAutomationRules.kt)：收件人、分享畫面、Send 與語音 allowlist 規則。
+- [`LineShareAccessibilityService.kt`](app/src/main/java/com/example/privagentcollector/LineShareAccessibilityService.kt)：LINE 節點樹偵測與 fail-closed 點擊。
+- [`LineVoiceConfirmActivity.kt`](app/src/main/java/com/example/privagentcollector/LineVoiceConfirmActivity.kt)：最後語音確認。
+- [`CoreTasks.kt`](app/src/main/java/com/example/privagentcollector/CoreTasks.kt)：分享封包、token 與 SOP。
+- [`receiver/core_tasks.py`](receiver/core_tasks.py)：Receiver 契約與情境一規則參考實作。
 
 ### 4.3 資料最小化：每一層實際能看到什麼
 
@@ -186,6 +230,7 @@ flowchart TD
 | Receiver | `recipient_ready`、`photo_ready`、`location_removed`、selection、一次性 token | 圖片 bytes、姓名、電話、LINE ID、原始 URI |
 | 雲端 AI | 與 Receiver 相同的少量狀態 | 照片、姓名、原始語音、聯絡人清單 |
 | 分享 App | 清除 metadata 後的新 JPEG | 原始 EXIF/GPS；但仍能看到照片像素中的內容 |
+| LINE 免觸控服務 | 工作階段內的 LINE 節點文字、content description、view id、可點擊／選取狀態 | 不截圖、不做 OCR、不保存／上傳畫面、不處理其他 package |
 | 稽核 | 任務 alias、SOP、reason code | 圖片、姓名、token → 真實對象映射 |
 
 ### 4.4 雲端封包範例
@@ -235,14 +280,14 @@ flowchart TD
    - 提供「模糊」「裁切」「仍要分享」「取消」。
    - 編輯後再次重新編碼，避免編輯軟體重新帶入 metadata。
 
-4. **分享暫存 TTL**
-   - 檔案命名不可含真實姓名或原始檔名。
-   - App 下次 resume 後若分享頁已離開，撤銷 URI grant 並刪除暫存。
-   - 設置最長 TTL，例如 10 分鐘；App 冷啟動一律清除過期檔。
-
-5. **關係綁定加密**
+4. **關係綁定加密**
    - 使用 Android Keystore 產生不可匯出的金鑰，以 AES-GCM 加密 relation → name。
    - `allowBackup=false` 已存在，仍應確認自動備份及裝置轉移不會帶走明文。
+
+5. **暫存與 URI grant 完整生命週期**
+   - 現況已有新任務／冷啟動清除，以及自動送出後 60 秒刪除。
+   - 後續仍應補「手動 LINE 分享完成／取消」的可靠 callback 或最長 TTL，並驗證 process death 後的過期檔清除。
+   - 目前只使用 Intent 的暫時 URI grant，沒有建立長期 `grantUriPermission`；仍需做 OEM 相容性測試。
 
 #### P1：紅隊導向強化
 
@@ -257,7 +302,7 @@ flowchart TD
 - 正式 release signing、Play Integrity／供應鏈檢查。
 - 清楚的相機／相簿／聯絡人權限說明與撤回入口。
 - 無障礙的大字體預覽、語音重述與「最後一次確認」。
-- 若要真正自動選 LINE 收件人，需有官方、可授權且可驗證的整合 API；不可用 Accessibility 偷點畫面。
+- 若要 Google Play 正式上架，優先評估 LINE 官方授權整合；若保留 Accessibility，必須維持 package scope、靜態狀態機、醒目揭露、語音確認與 fail-closed，並完成政策審查。不可改成 AI 自主規劃任意點擊。
 
 ### 4.6 情境一驗收條件
 
@@ -269,7 +314,10 @@ flowchart TD
 | 未授權相簿照片讀取 | Photo Picker 設計上 0 | 0 |
 | 不唯一收件人直接分享 | 已阻擋 | 0 |
 | 視覺型個資自動攔截 | 尚未完成 | 高風險測試集 recall 需另外訂門檻 |
-| 分享後暫存逾期殘留 | 尚未量化 | TTL 後 0 |
+| 自動送出後暫存逾期殘留 | 60 秒清理已實作，尚未做 process-death 批次證據 | TTL 後 0 |
+| 非 LINE／普通聊天室誤點 | 固定 package + 分享畫面指紋阻擋 | 0 |
+| 同名或非唯一收件人自動送出 | fail closed | 0 |
+| 未明確說「確認傳送」仍送出 | allowlist + unknown/cancel 中止 | 0 |
 
 目前 `core_eval` 的合成工作流中共有 576 個 `SHARE_PHOTO` 任務：19 個符合完整授權後產生 cloud packet，320 個要求補問、24 個留在本機、213 個停止。19 個情境一 cloud packet 中未發現直接識別值、不必要欄位、未授權傳送、token 重用或 schema 拒絕。這是政策一致性測試，不是照片視覺內容隱私測試。
 
@@ -333,13 +381,13 @@ flowchart TD
 
 主要程式位置：
 
-- [`MessageGuard.kt`](../app/src/main/java/com/example/privagentcollector/MessageGuard.kt)：Android 本機正規化、遮蔽、特徵與 packet。
-- [`MessageCheckPanel.kt`](../app/src/main/java/com/example/privagentcollector/MessageCheckPanel.kt)：同意、預覽、傳送與 UI fail-safe。
-- [`LiveMessageWatch.kt`](../app/src/main/java/com/example/privagentcollector/LiveMessageWatch.kt)：通知自動檢查。
-- [`receiver/assistant.py`](../receiver/assistant.py)：Receiver 驗證、本機規則、AI adapter、SOP 約束與 audit。
-- [`receiver/privacy_policy.py`](../receiver/privacy_policy.py) 與 [`check_message_privacy_policy.json`](../receiver/policies/check_message_privacy_policy.json)：可執行隱私政策。
-- [`receiver/message_eval.py`](../receiver/message_eval.py)：隱私、效用與紅隊評測。
-- [`receiver/redteam_mutations.py`](../receiver/redteam_mutations.py)：可重現的變形攻擊產生器。
+- [`MessageGuard.kt`](app/src/main/java/com/example/privagentcollector/MessageGuard.kt)：Android 本機正規化、遮蔽、特徵與 packet。
+- [`MessageCheckPanel.kt`](app/src/main/java/com/example/privagentcollector/MessageCheckPanel.kt)：同意、預覽、傳送與 UI fail-safe。
+- [`LiveMessageWatch.kt`](app/src/main/java/com/example/privagentcollector/LiveMessageWatch.kt)：通知自動檢查。
+- [`receiver/assistant.py`](receiver/assistant.py)：Receiver 驗證、本機規則、AI adapter、SOP 約束與 audit。
+- [`receiver/privacy_policy.py`](receiver/privacy_policy.py) 與 [`check_message_privacy_policy.json`](receiver/policies/check_message_privacy_policy.json)：可執行隱私政策。
+- [`receiver/message_eval.py`](receiver/message_eval.py)：隱私、效用與紅隊評測。
+- [`receiver/redteam_mutations.py`](receiver/redteam_mutations.py)：可重現的變形攻擊產生器。
 
 ### 5.3 原始訊息如何轉換
 
@@ -541,9 +589,62 @@ ETH SRI 的成果提醒我們：布林特徵也可能是敏感資料。因此現
 
 ---
 
-## 7. 最終成果對比應如何呈現
+## 7. 正式雙情境 UI 與操作交接
 
-### 7.1 展示原則
+### 7.1 UI 範圍
+
+產品 `MainActivity` 已從研究控制台改為正式亮色首頁，只保留：
+
+1. **情境 01｜安心傳送照片**
+   - 選擇照片並傳送。
+   - 傳送最新一張照片。
+   - 家人設定。
+   - LINE 免觸控設定。
+2. **情境 02｜詐騙訊息檢查**
+   - 自動檢查新通知。
+   - 貼上訊息／從通知選取。
+   - 雲端 AI 與摘錄個別同意。
+   - 執行本機／雲端風險判讀。
+3. **支援設定**
+   - 右上角 Receiver URL／token 連線設定與健康檢查。
+   - 通知存取。
+   - 浮動 PrivAgent 助理。
+
+手機救援、原始資料類別、快照、NDJSON 匯出、原始資料傳送與 realtime research pipeline 都不再出現在產品 UI。相關類別仍保留，避免破壞研究測試；新版首頁會停止舊 collection session，不能宣稱程式碼已完全移除。
+
+### 7.2 視覺規格
+
+- 背景：霧藍白 `#F6F9FC`。
+- Surface：白色卡片、20dp 圓角、淡藍灰邊框。
+- Primary：正式深藍 `#1E5A78`。
+- Accent／隱私狀態：低飽和青綠 `#1E756D`。
+- 文字：深藍黑 `#17324D`；次要文字 `#627D98`。
+- 所有主要操作至少約 48–52dp 高，已在大字體 Pixel 6 Pro AVD 視覺檢查。
+- 共用程式設計系統位於 [`AppUi.kt`](app/src/main/java/com/example/privagentcollector/AppUi.kt)；不要在各畫面重新散落硬編色彩。
+
+### 7.3 UI 主要程式位置
+
+| 檔案 | 責任 |
+|---|---|
+| [`MainActivity.kt`](app/src/main/java/com/example/privagentcollector/MainActivity.kt) | 雙情境首頁、正式卡片、連線與支援設定 |
+| [`AppUi.kt`](app/src/main/java/com/example/privagentcollector/AppUi.kt) | 色彩、圓角、卡片、按鈕、輸入框、checkbox 共用樣式 |
+| [`AssistantPanel.kt`](app/src/main/java/com/example/privagentcollector/AssistantPanel.kt) | 情境一流程；支援 `showControls=false` 嵌入正式首頁 |
+| [`MessageCheckPanel.kt`](app/src/main/java/com/example/privagentcollector/MessageCheckPanel.kt) | 情境二；支援 `showHeader=false, formalStyle=true` |
+| [`QuickAssistActivity.kt`](app/src/main/java/com/example/privagentcollector/QuickAssistActivity.kt) | 浮動快速助理，只顯示情境一、二 |
+| [`FloatingAssistant.kt`](app/src/main/java/com/example/privagentcollector/FloatingAssistant.kt) | 正式 PrivAgent 浮動按鈕與通知 |
+
+### 7.4 UI 驗收證據
+
+- 首頁及情境二向下捲動畫面已以模擬器截圖人工檢查。
+- 情境一主按鈕已點測並正常開啟「要傳給誰？」清單。
+- 情境二空白送出已點測，會安全提示且不 crash。
+- instrumentation `productHomeShowsOnlyTheTwoApprovedScenarios` 會實際啟動 `MainActivity`，確認存在情境一、二，且沒有「手機救援」或「研究資料蒐集」功能入口。
+
+---
+
+## 8. 最終成果對比應如何呈現
+
+### 8.1 展示原則
 
 圖表要同時呈現三件事：
 
@@ -553,7 +654,7 @@ ETH SRI 的成果提醒我們：布林特徵也可能是敏感資料。因此現
 
 只展示「資料量減少」會被質疑功能失效；只展示「準確率」則無法證明隱私。
 
-### 7.2 情境一建議對比
+### 8.2 情境一建議對比
 
 | 面向 | 直接分享原圖基準 | 目前 MVP | 目標版本 |
 |---|---|---|---|
@@ -574,7 +675,7 @@ ETH SRI 的成果提醒我們：布林特徵也可能是敏感資料。因此現
 - 堆疊圖：敏感照片測試集中的 OCR、臉、QR、文件偵測率。
 - 流程截圖：原圖資訊 → 清除 metadata → 預覽提示 → 最終 share sheet。
 
-### 7.3 情境二建議對比
+### 8.3 情境二建議對比
 
 目前可重現的數字：
 
@@ -599,7 +700,7 @@ ETH SRI 的成果提醒我們：布林特徵也可能是敏感資料。因此現
 
 「直接送原文」是設計基準，不是目前產品真的曾經上傳 6,144 則訊息；簡報必須標成 **hypothetical direct-send baseline**。
 
-### 7.4 建議最終儀表板版面
+### 8.4 建議最終儀表板版面
 
 第一列：隱私
 
@@ -631,14 +732,14 @@ ETH SRI 的成果提醒我們：布林特徵也可能是敏感資料。因此現
 
 ---
 
-## 8. 測試、重現與證據檔
+## 9. 測試、重現與證據檔
 
-### 8.1 情境二評測
+### 9.1 情境二評測
 
 Windows PowerShell：
 
 ```powershell
-cd D:\PriveMVP\PriveMVP-feature-check-message-ai
+cd D:\PriveMVP\PriveMVP-main-apk-a765896
 
 python -m receiver.message_eval `
   --dataset "dataset\AI金孫_合成原始資料集_v5_廣度擴充\dataset\source_raw_v5.json" `
@@ -657,7 +758,7 @@ python -m receiver.message_eval `
 - `mutation_results.csv`：140 組自動變形攻擊。
 - `manifest.json`：輸入、引擎與輸出 SHA-256。
 
-### 8.2 Android 與 Receiver 回歸
+### 9.2 Android 與 Receiver 回歸
 
 ```powershell
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
@@ -669,23 +770,45 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 python -m unittest discover -s receiver/tests
 ```
 
+目前 Android 驗證結果：
+
+| 驗證 | 結果 | 重要覆蓋 |
+|---|---:|---|
+| JVM unit tests | 67／67 | message guard、packet、隱私規則、LINE 純規則、儲存與傳輸 |
+| Android instrumentation | 8／8 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、share Intent、一次性自動化 session、Android ICU regex、加密儲存 |
+| Android Lint | 0 error；37 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
+| Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |
+
+直接執行 Gradle 驗證：
+
+```powershell
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+$env:JAVA_HOME = "D:\PriveMVP\PrivAgentRawCollectorMVP_v0.1\PrivAgentRawCollectorMVP\.tools\jdk-17.0.20.1+1"
+
+.\gradlew.bat testDebugUnitTest lintDebug assembleDebug
+.\gradlew.bat connectedDebugAndroidTest  # 需先啟動 API 28+ 模擬器／裝置
+```
+
 情境二曾因 Android ICU 不支援桌面 JVM 的 `(?U)` regex flag 而在按鈕點擊時 crash。修正後已有 Android instrumentation test；涉及正規化或 regex 時，不能只跑 JVM unit test。
 
-### 8.3 `core_eval` 評測器債務（已於 2026-11-02 修正）
+### 9.3 `core_eval` 評測器債務（已於 2026-11-02 修正）
 
 舊版 `receiver.core_eval` 會把情境二 v2 的 `issued_at_ms` 長數字誤判成 direct identifier leak（總表顯示 72／92），並用寫死的欄位清單判斷 unnecessary disclosure。現已改為：
 
 1. `CHECK_MESSAGE` 的 leak 掃描改用 `packet_forbidden_hits`（只掃 facts 與 excerpt，與 Receiver 線上規則相同）。
 2. `CHECK_MESSAGE` 可揭露欄位直接讀 `check_message_privacy_policy.json`，政策新增欄位（如 `link_kind`）不會再被誤計。
 
-修正後三情境總表：direct_identifier_leak 0／92、unnecessary_disclosure 0／92。情境二細部仍以 `message_eval` 為權威。
+修正後底層核心任務總表（評測器仍包含已從產品 UI 隱藏的 RESCUE_PHONE）：direct_identifier_leak 0／92、unnecessary_disclosure 0／92。產品展示只呈現情境一、二；情境二細部仍以 `message_eval` 為權威。
 
 ---
 
-## 9. 後續開發優先順序
+## 10. 後續開發優先順序
 
 ### 第一優先：情境一補齊視覺隱私
 
+- 在實機安裝目前台灣 LINE 版本，校準分享畫面 marker／resource id；必須維持未知畫面停止，不可用固定座標補洞
+- 建立同名、普通聊天室、彈窗、登入頁、LINE 改版等負向 UI 測試案例
 - `PhotoPrivacyScanner`
 - OCR／臉／QR／文件提示
 - 模糊與裁切
@@ -709,6 +832,7 @@ python -m unittest discover -s receiver/tests
 
 ### 第四優先：競賽展示
 
+- 正式亮色雙情境首頁已完成；後續維持同一 `AppUi` 設計系統
 - 前後對比儀表板
 - 紅隊攻擊矩陣
 - 手機實際操作錄影
@@ -716,7 +840,7 @@ python -m unittest discover -s receiver/tests
 
 ---
 
-## 10. 交接完成定義
+## 11. 交接完成定義
 
 下一位開發者接手後，至少應能回答：
 
@@ -730,12 +854,15 @@ python -m unittest discover -s receiver/tests
 8. 為何目前不硬加 FL／DP／HE／SMPC？未來什麼條件下才需要？
 9. 6,144／140 等結果的限制是什麼？
 10. `core_eval` 的 72／92 警示為何是評測器誤判，以及應如何修正？
+11. LINE 免觸控為何不能只靠姓名與 Send 按鈕？分享畫面指紋防住哪種普通聊天室誤觸？
+12. 為何無障礙自動化必須是 package-scoped 靜態狀態機，而不能讓 AI 自主產生點擊？
+13. 哪些功能已從產品 UI 移除但程式仍存在？如何避免簡報把「隱藏」說成「完全刪除」？
 
 能回答以上問題，並能重新執行 Android、Receiver、message evaluation，才算完成技術交接。
 
 ---
 
-## 11. 參考資料
+## 12. 參考資料
 
 1. NIST, [**US-UK PETs Prize Challenge**](https://www.nist.gov/itl/applied-cybersecurity/privacy-engineering/collaboration-space/challenges/us-uk-pets-prize)
 2. DrivenData, [**U.S. PETs Prize Challenge: Phase 3 (Red Teams)**](https://www.drivendata.org/competitions/139/nist-federated-learning-3-red-teams/page/633/)
