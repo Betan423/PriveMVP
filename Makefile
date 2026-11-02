@@ -141,8 +141,9 @@ core-eval: ## 1,728 筆核心任務跑政策引擎並輸出證據檔（隱私指
 	$(PYTHON) -m receiver.core_eval --dataset "$(DATASET)" --out $(EVAL_OUT)
 	@echo "證據檔：$(EVAL_OUT)/（summary.json、derived_tasks.csv、packets.jsonl、failures.json、manifest.json）"
 
-golden: ## 改了 receiver/core_tasks.py 後，重新產生 Android 的對照測試資料
+golden: ## 改了 receiver/core_tasks.py 或 phone_sim.py 後，重新產生 Android 的對照測試資料
 	$(PYTHON) -m receiver.gen_core_golden --dataset "$(DATASET)"
+	$(PYTHON) -m receiver.gen_message_golden
 
 # ---- 雜項 ----
 

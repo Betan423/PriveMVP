@@ -52,7 +52,8 @@ def main() -> None:
         flags = "".join("1" if facts[name] else "0" for name in FLAG_ORDER)
         fields = (text, redact(text), flags, facts["impersonation"], facts["link_kind"], level, ",".join(codes))
         lines.append("        Golden(" + ", ".join('"' + kt_escape(field) + '"' for field in fields) + "),")
-    KT_PATH.write_text(HEADER + "\n".join(lines) + "\n)\n", encoding="utf-8")
+    # newline="\n": the repo pins *.kt to LF and the generator must not produce CRLF on Windows.
+    KT_PATH.write_text(HEADER + "\n".join(lines) + "\n)\n", encoding="utf-8", newline="\n")
     print(f"{len(lines)} golden cases -> {KT_PATH}")
 
 

@@ -214,7 +214,9 @@ def rule_assessment(facts: dict[str, Any]) -> tuple[str, list[str]]:
         if facts[fact]:
             codes.append(code)
     link_kind = facts.get("link_kind", "unknown" if facts["has_link"] else "none")
-    if link_kind == "suspicious":
+    if not facts["has_link"]:
+        link_kind = "none"  # validate_packet enforces this on the wire; keep the rule total anyway.
+    elif link_kind == "suspicious":
         codes.insert(codes.index("HAS_LINK") + 1, "LINK_SUSPICIOUS")
     elif link_kind == "shortener":
         codes.insert(codes.index("HAS_LINK") + 1, "LINK_SHORTENER")

@@ -80,6 +80,102 @@
       "expected_facts": {"context_sufficient": false},
       "redaction_contains": [],
       "redaction_excludes": []
+    },
+    {
+      "id": "official_link_with_urgency_is_not_high",
+      "text": "您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未領取將退回。",
+      "expected_level": "verify",
+      "expected_facts": {"has_link": true, "link_kind": "known_official", "urgency": true},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["post.gov.tw", "https"]
+    },
+    {
+      "id": "official_bank_link_with_support_claim_is_not_high",
+      "text": "我是銀行客服，帳單明細請至 https://www.esunbank.com.tw/ 的官方網站查看。",
+      "expected_level": "verify",
+      "expected_facts": {"has_link": true, "link_kind": "known_official", "impersonation": "support"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["esunbank"]
+    },
+    {
+      "id": "lookalike_official_subdomain_is_suspicious",
+      "text": "您的包裹已到，請上 https://post.gov.tw.verify.cc/track 查詢。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["verify.cc"]
+    },
+    {
+      "id": "lookalike_165_in_host_is_suspicious",
+      "text": "反詐騙中心通知：請至 https://165-gov.com/report 回報。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["165-gov"]
+    },
+    {
+      "id": "high_risk_tld_calm_wording_is_high",
+      "text": "您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious", "urgency": false},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["xyz"]
+    },
+    {
+      "id": "ip_literal_link_is_suspicious",
+      "text": "請點 http://203.0.113.9/login 查看。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["203.0.113.9"]
+    },
+    {
+      "id": "punycode_host_is_suspicious",
+      "text": "請點 https://xn--fiq228c.com/x 查看。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["xn--"]
+    },
+    {
+      "id": "userinfo_trick_hides_real_host",
+      "text": "請點 https://www.gov.tw@evil.example/login 查看。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": [],
+      "redaction_excludes": ["evil", "gov.tw"]
+    },
+    {
+      "id": "shortener_with_urgency_is_high",
+      "text": "您的包裹已到，請點 https://reurl.cc/abc 補填，今天內未處理將退回。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "shortener", "urgency": true},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["reurl"]
+    },
+    {
+      "id": "shortener_alone_stays_verify",
+      "text": "活動照片放在 https://reurl.cc/abc 這裡，有空看看。",
+      "expected_level": "verify",
+      "expected_facts": {"link_kind": "shortener"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["reurl"]
+    },
+    {
+      "id": "most_severe_link_wins",
+      "text": "官方公告 https://www.gov.tw 另見 https://promo.bad.xyz/go 。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["bad.xyz", "gov.tw"]
+    },
+    {
+      "id": "zero_width_in_host_cannot_fake_official",
+      "text": "請上 https://post.gov.tw\u200b.verify.cc/track 查詢。",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[LINK]"],
+      "redaction_excludes": ["verify.cc"]
     }
   ]
 }

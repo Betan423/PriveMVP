@@ -40,6 +40,14 @@ class DemoFeedUnitTests(unittest.TestCase):
             self.assertNotIn(value, json.dumps(steps["triggers"], ensure_ascii=False))
         self.assertIsNone(steps["packet"]["redacted_excerpt"])
 
+    def test_phone_steps_explain_link_grade_without_the_host(self) -> None:
+        steps = phone_steps("您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料")
+        self.assertEqual("suspicious", steps["facts"]["link_kind"])
+        self.assertEqual(["使用常見於釣魚的高風險頂級網域"], steps["triggers"]["link_kind"])
+        shown = json.dumps(steps["triggers"], ensure_ascii=False) + json.dumps(steps["packet"], ensure_ascii=False)
+        for host in ("taiwanpost", "xyz"):
+            self.assertNotIn(host, shown)
+
     def test_public_mode_refuses_demo_feed(self) -> None:
         with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent) as temp, self.assertRaises(ValueError):
             create_server("127.0.0.1", 0, data_dir=temp, api_token="t", assist_only=True, demo_feed=True)

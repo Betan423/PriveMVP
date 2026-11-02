@@ -66,55 +66,81 @@ SALUTATION = re.compile(r"[一-鿿]{2,4}(?=(您好|你好|先生|小姐|女士|�
 # link locally and only the category below is sent. Keep lists and order in sync with MessageGuard.kt.
 LINK_KINDS = ("none", "known_official", "unknown", "shortener", "suspicious")
 _LINK_SEVERITY = {kind: rank for rank, kind in enumerate(LINK_KINDS)}
-# Registrable domains treated as official: whole gov.tw plus the retail banks elders actually use.
+# Registrable domains treated as official: all of gov.tw / edu.tw plus the retail banks elders
+# actually use. Matching is on whole DNS labels (host == entry or host ends with "." + entry), so
+# "post.gov.tw.verify.cc" is NOT official. This is a demo list, not a complete registry.
 OFFICIAL_DOMAINS = (
-    "gov.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw", "hncb.com.tw",
-    "chb.com.tw", "megabank.com.tw", "ctbcbank.com", "cathaybk.com.tw", "esunbank.com.tw",
-    "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
+    "gov.tw", "edu.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw",
+    "hncb.com.tw", "chb.com.tw", "megabank.com.tw", "tbb.com.tw", "ctbcbank.com", "cathaybk.com.tw",
+    "esunbank.com.tw", "esunbank.com", "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
+    "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw",
 )
 # A URL shortener hides the destination, so it can never count as official.
 SHORTENER_DOMAINS = (
-    "bit.ly", "tinyurl.com", "goo.gl", "t.co", "is.gd", "t.ly", "reurl.cc", "ppt.cc", "pse.is",
-    "lihi.cc", "lihi1.com", "lihi2.net", "lin.ee",
+    "bit.ly", "tinyurl.com", "tiny.cc", "goo.gl", "t.co", "is.gd", "t.ly", "cutt.ly", "rb.gy",
+    "shorturl.at", "ow.ly", "buff.ly", "reurl.cc", "ppt.cc", "pse.is", "lihi.cc", "lihi1.com",
+    "lihi2.net", "lurl.cc", "risu.io", "0rz.tw", "lin.ee",
 )
 # TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
 HIGH_RISK_TLDS = frozenset({"tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click"})
-# Distinctive official tokens appearing inside a NON-official host mean a lookalike domain.
+# Distinctive official tokens appearing inside a NON-official host mean a lookalike domain
+# ("165-gov.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
 LOOKALIKE_TOKENS = (
-    "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank", "hncb",
-    "sinopac", "firstbank", "tcbbank", "scsb", "fubon",
+    "govtw", "165", "bank", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
+    "hncb", "sinopac", "firstbank", "tcbbank", "scsb", "fubon",
 )
+# Fixed, host-free wording for why a link got its grade; shown in the on-device preview and the demo.
+LINK_REASON_TEXT = {
+    "none": "沒有連結", "official": "政府、學校或主要銀行的官方網域", "unknown": "無法辨識的一般網域",
+    "shortener": "短網址服務，看不出真正目的地", "ipv4": "直接用 IP 位址，不是網域名稱",
+    "ipv6": "直接用 IPv6 位址，不是網域名稱", "userinfo": "網址用 @ 夾帶假網域",
+    "non_ascii": "網域含非英數字元，可能是同形字仿冒", "punycode": "網域使用 punycode 編碼，可能是同形字仿冒",
+    "lookalike": "網域夾帶政府或銀行名稱但不是官方網域", "high_risk_tld": "使用常見於釣魚的高風險頂級網域",
+}
 
 
-def classify_link(link: str) -> str:
-    """Grade one matched link; only the category ever leaves the phone, never the URL."""
+def classify_link_detail(link: str) -> tuple[str, str]:
+    """Grade one matched link -> (kind, reason). Only the kind ever leaves the phone, never the URL;
+    the reason is a fixed LINK_REASON_TEXT key for the on-device preview and the stage demo."""
     stripped = re.sub(r"(?i)^https?://", "", link.strip().lower())
     host = re.split(r"[/?#]", stripped, 1)[0]
+    if "@" in host or host.startswith("[email]"):
+        return "suspicious", "userinfo"  # "https://www.gov.tw@evil.example/": the real host is after the @.
     if host.startswith("["):
-        return "suspicious"  # Raw IPv6 literal: no legitimate zh-TW notification uses one.
+        return "suspicious", "ipv6"  # Raw IPv6 literal: no legitimate zh-TW notification uses one.
     host = host.split(":")[0]
     host = re.sub(r"^[^a-z0-9\u0080-\U0010ffff]+|[^a-z0-9\u0080-\U0010ffff]+$", "", host)
     if not host:
-        return "unknown"
+        return "unknown", "unknown"
     if any(ord(c) > 127 for c in host):
-        return "suspicious"  # Non-ASCII host: IDN/homoglyph risk the user cannot read reliably.
+        return "suspicious", "non_ascii"  # IDN/homoglyph risk the user cannot read reliably.
     labels = [label for label in host.split(".") if label]
     if labels and all(label.isdigit() for label in labels):
-        return "suspicious"  # Raw IPv4 literal.
+        return "suspicious", "ipv4"
     for official in OFFICIAL_DOMAINS:
         if host == official or host.endswith("." + official):
-            return "known_official"
+            return "known_official", "official"
     if any(label.startswith("xn--") for label in labels):
-        return "suspicious"  # Punycode outside the whitelist.
+        return "suspicious", "punycode"  # Punycode outside the whitelist.
     compact = host.replace(".", "").replace("-", "")
     if any(token in compact for token in LOOKALIKE_TOKENS):
-        return "suspicious"  # Official brand token inside a non-official host.
+        return "suspicious", "lookalike"  # Official brand token inside a non-official host.
     if labels and labels[-1] in HIGH_RISK_TLDS:
-        return "suspicious"
+        return "suspicious", "high_risk_tld"
     for shortener in SHORTENER_DOMAINS:
         if host == shortener or host.endswith("." + shortener):
-            return "shortener"
-    return "unknown"
+            return "shortener", "shortener"
+    return "unknown", "unknown"
+
+
+def classify_link(link: str) -> str:
+    return classify_link_detail(link)[0]
+
+
+def link_reasons(links: list[str]) -> list[str]:
+    """Fixed reason keys (never hosts) for the links in a message, most severe first."""
+    details = sorted((classify_link_detail(link) for link in links), key=lambda d: -_LINK_SEVERITY[d[0]])
+    return list(dict.fromkeys(reason for _kind, reason in details))
 
 
 def classify_links(links: list[str]) -> str:

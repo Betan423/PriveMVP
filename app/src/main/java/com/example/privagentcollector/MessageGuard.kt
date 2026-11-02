@@ -56,23 +56,29 @@ object MessageGuard {
     // phishing link from an official notification without disclosing the URL, each link is graded
     // locally and only the category is sent. Keep lists and order in sync with receiver/phone_sim.py.
     private val linkKinds = listOf("none", "known_official", "unknown", "shortener", "suspicious")
-    // Registrable domains treated as official: whole gov.tw plus the retail banks elders actually use.
+    // Registrable domains treated as official: all of gov.tw / edu.tw plus the retail banks elders
+    // actually use. Matching is on whole DNS labels (host == entry or host ends with "." + entry), so
+    // "post.gov.tw.verify.cc" is NOT official. Demo list, not a complete registry.
+    // receiver/tests/test_link_lists.py pins these four lists to the Python reference.
     private val officialDomains = listOf(
-        "gov.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw", "hncb.com.tw",
-        "chb.com.tw", "megabank.com.tw", "ctbcbank.com", "cathaybk.com.tw", "esunbank.com.tw",
-        "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com"
+        "gov.tw", "edu.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw",
+        "hncb.com.tw", "chb.com.tw", "megabank.com.tw", "tbb.com.tw", "ctbcbank.com", "cathaybk.com.tw",
+        "esunbank.com.tw", "esunbank.com", "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
+        "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw"
     )
     // A URL shortener hides the destination, so it can never count as official.
     private val shortenerDomains = listOf(
-        "bit.ly", "tinyurl.com", "goo.gl", "t.co", "is.gd", "t.ly", "reurl.cc", "ppt.cc", "pse.is",
-        "lihi.cc", "lihi1.com", "lihi2.net", "lin.ee"
+        "bit.ly", "tinyurl.com", "tiny.cc", "goo.gl", "t.co", "is.gd", "t.ly", "cutt.ly", "rb.gy",
+        "shorturl.at", "ow.ly", "buff.ly", "reurl.cc", "ppt.cc", "pse.is", "lihi.cc", "lihi1.com",
+        "lihi2.net", "lurl.cc", "risu.io", "0rz.tw", "lin.ee"
     )
     // TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
     private val highRiskTlds = setOf("tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click")
-    // Distinctive official tokens appearing inside a NON-official host mean a lookalike domain.
+    // Distinctive official tokens appearing inside a NON-official host mean a lookalike domain
+    // ("165-gov.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
     private val lookalikeTokens = listOf(
-        "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank", "hncb",
-        "sinopac", "firstbank", "tcbbank", "scsb", "fubon"
+        "govtw", "165", "bank", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
+        "hncb", "sinopac", "firstbank", "tcbbank", "scsb", "fubon"
     )
     // Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised.
     // Do not use Java's inline (?U) flag here: Android's ICU regex engine rejects it. Character
@@ -172,6 +178,8 @@ object MessageGuard {
     internal fun classifyLink(link: String): String {
         val stripped = link.trim().lowercase().replaceFirst(Regex("^https?://"), "")
         var host = stripped.split('/', '?', '#').first()
+        // "https://www.gov.tw@evil.example/": the real host is after the @ (seen as "[email]" after redaction).
+        if ('@' in host || host.startsWith("[email]")) return "suspicious"
         if (host.startsWith("[")) return "suspicious" // Raw IPv6 literal.
         host = host.substringBefore(':').trim { it.code < 128 && !it.isLetterOrDigit() }
         if (host.isEmpty()) return "unknown"

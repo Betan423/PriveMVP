@@ -144,6 +144,8 @@ const PRESETS = [
   ["假冒客服", "王小明您好，我是銀行客服，您的帳戶異常，請立即提供簡訊驗證碼 482913，並到 https://bank-verify.example/login 驗證，電話 0912-345-678"],
   ["假冒家人", "媽，我換新號碼了，現在急需用錢，先幫我匯款兩萬到 0123456789，晚點還你"],
   ["中獎連結", "恭喜您抽中 iPhone！限時今天內點 bit.ly/abc123 免費領取"],
+  ["釣魚網域", "您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料"],
+  ["官方通知", "您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未領取將退回"],
   ["一般訊息", "明天中午一起吃飯，記得帶傘"],
 ];
 
@@ -167,7 +169,7 @@ function factChips(facts, triggers) {
   Object.entries(facts).forEach(([k, v]) => {
     let label = FACT[k] || k, on = false;
     if (typeof v === "boolean") { on = k === "context_sufficient" ? false : v; label += v ? " ✓" : " ✗"; }
-    else { label += "：" + (VALUE[v] || v); on = k === "impersonation" && v !== "none"; }
+    else { label += "：" + (VALUE[v] || v); on = (k === "impersonation" && v !== "none") || v === "suspicious" || v === "shortener"; }
     const chip = el("span", "chip" + (on ? " on" : ""), label);
     if (triggers && triggers[k]) chip.title = "觸發字詞：" + triggers[k].join("、");
     c.append(chip);

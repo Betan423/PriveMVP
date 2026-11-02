@@ -45,6 +45,7 @@ def phone_steps(text: str, allow_excerpt: bool = False) -> dict[str, Any]:
     detection = re.sub(r"\s+", "", phone_sim.HAN_GAP.sub("", redacted))
     without_negation = phone_sim.NEGATED_ACTION.sub("", detection)
     facts = phone_sim.extract_facts(text, "pasted")
+    _redacted_again, links = phone_sim._redact_collecting_links(text)
 
     # Which words fired each feature. They come from the redacted text, so no identifier is shown.
     triggers: dict[str, list[str]] = {}
@@ -55,6 +56,8 @@ def phone_steps(text: str, allow_excerpt: bool = False) -> dict[str, Any]:
         triggers["requests_secret"] = sorted(set(secret_hits + [m.group(0) for m in phone_sim.REQUEST_VERBS.finditer(without_negation)]))
     if facts["has_link"]:
         triggers["has_link"] = ["[LINK]"]
+        # Why the link got its grade, as fixed wording; the host itself is never shown or sent.
+        triggers["link_kind"] = [phone_sim.LINK_REASON_TEXT[r] for r in phone_sim.link_reasons(links)]
     for kind, pattern in phone_sim.IMPERSONATION:
         if kind == facts["impersonation"]:
             triggers["impersonation"] = sorted({m.group(0) for m in pattern.finditer(detection)})

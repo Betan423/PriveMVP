@@ -24,7 +24,7 @@
 | Android 手機 | 資料最小化 | 只處理使用者選定的一則訊息；預設封包只含 7 個布林特徵、連結網域分級、冒充類型與來源類型。 |
 | Android 手機 | 本機處理（edge processing） | 去識別、特徵抽取與規則風險底線都在手機完成；未同意雲端時不連網。 |
 | Android 手機 | 去識別／遮蔽 | 電話、OTP、帳號、URL、Email、身分證、合成私密值、稱呼姓名與已知聯絡人姓名改成類型占位符。 |
-| Android 手機 | 本機連結網域分級 | URL、路徑與查詢參數都不出手機；手機端把每個連結分級為官方白名單（gov.tw 與主要銀行）、短網址、可疑（假冒拼寫、IP 直連、punycode、高風險 TLD）或無法辨識，封包只送 `link_kind` 類別值。官方通知不再只因「連結＋催促」被判高風險；釣魚網域即使語氣平靜也直接高風險。 |
+| Android 手機 | 本機連結網域分級 | URL、路徑與查詢參數都不出手機；手機端把每個連結分級為官方白名單（gov.tw、edu.tw 與主要銀行）、短網址、可疑（假冒拼寫、`@` 夾帶、IP 直連、punycode、非 ASCII 網域、高風險 TLD）或無法辨識，封包只送 `link_kind` 類別值。官方通知不再只因「連結＋催促」被判高風險；釣魚網域即使語氣平靜也直接高風險。見下節。 |
 | Android 手機 | Unicode 正規化與反規避 | NFKC 統一全形字；移除零寬與 bidi 控制字；特徵掃描另用去空白視圖，避免 `匯 款`、`驗​證碼` 規避。 |
 | Android UI | 明確同意與分層揭露 | 雲端開關預設由使用者決定；傳送前顯示實際特徵與是否包含摘錄。摘錄另行 opt-in，且本機已判高風險時不傳。 |
 | Packet | 假名化／不可關聯代號 | 每項任務使用新的隨機 `TASK_[A-Z]{8}`，不送手機 ID、帳號或永久使用者 ID。 |
@@ -71,6 +71,35 @@
   "redacted_excerpt": null
 }
 ```
+
+## 連結：為什麼送 `link_kind` 分級，而不是網域或網址
+
+舊版封包只有 `has_link` 一個布林值。網址被整段遮成 `[LINK]` 後，雲端與本機規則都無法分辨「郵局官方追蹤連結」和「釣魚網域」，只能用「連結＋催促＝高風險」這種粗規則，官方通知容易被誤判成高風險，語氣平靜的釣魚連結又會漏掉。評估過兩種補救方式：
+
+| 方案 | 雲端看到什麼 | 隱私成本 | 訊號 | 採用 |
+| --- | --- | --- | --- | --- |
+| A. 手機抽特徵，只送類別值 `link_kind` | `none / known_official / unknown / shortener / suspicious` 五選一 | 接近零：一個五值枚舉，不含任何網址片段 | 白名單、短網址、IP 直連、punycode、仿冒拼寫、高風險 TLD 都在手機判完 | **是** |
+| B. 只送 registrable domain（eTLD+1） | 例如 `esunbank.com.tw`、`example-clinic.com.tw` | 中：網域本身會透露往來銀行、醫院、交友或宗教網站等敏感關係，且 Receiver 的禁用值掃描必須對網址開洞 | 雲端可查黑名單、看拼寫 | 否 |
+| B'. Safe Browsing 式 hash 前綴比對 | 網域 SHA-256 的前 4 bytes | 低（k-匿名），但需要雲端維護一份黑名單資料庫並回傳候選雜湊 | 只能回答「是否在黑名單」，看不出短網址、IP、仿冒拼寫 | 未來可加在 A 之上 |
+
+選 A 的理由：它符合本專案「雲端只拿布林／枚舉特徵」的既有邊界，不需要在 Receiver 的 DLP 規則開例外（網址明文仍一律拒收），而且 A 能提供的訊號比 B 多。B' 不是 A 的替代而是補強：若未來接入 165 或 NCC 的黑名單，可在手機先算雜湊前綴，再把命中結果併入 `suspicious`，仍然只送類別值。
+
+手機端分級規則（Android `MessageGuard.classifyLink` 與 `receiver/phone_sim.py` 逐條相同，由 golden case 與 `test_link_lists.py` 固定）：
+
+1. `@` 夾帶（`https://www.gov.tw@evil.example/`）、IPv6／IPv4 直連、非 ASCII 網域 → `suspicious`。
+2. 主機以整段 DNS label 比對官方白名單（`gov.tw`、`edu.tw`、主要銀行）→ `known_official`；`post.gov.tw.verify.cc` 不會命中。
+3. punycode（`xn--`）、網域去掉點與連字號後含 `govtw`、`165`、`bank` 或銀行品牌字串、高風險 TLD（`.xyz`、`.top`、`.icu`、`.tk` 等）→ `suspicious`。
+4. 短網址服務（`reurl.cc`、`lihi.cc`、`bit.ly`、`lin.ee` 等）→ `shortener`。
+5. 其餘 → `unknown`。一則訊息有多個連結時送最嚴重的一個。
+
+對風險規則的影響：`known_official` 的連結不再單獨觸發「連結＋催促／獎勵／冒充」的高風險；`suspicious` 單獨即為高風險；`shortener` 與 `unknown` 維持舊規則並多附一個原因碼。匯款、索取驗證碼、遠端控制等其他高風險條件不受連結分級影響，所以官方白名單不會把真正的詐騙降級。
+
+誠實的限制：
+
+- `link_kind` 仍是一個語意特徵。`known_official` 會告訴雲端「這則訊息含政府或銀行連結」，比 `has_link` 多洩漏一點點；這與其他布林特徵一樣受 [PETs Prize 紅隊「布林旗標推回」](../HANDOFF_SCENARIO_1_2_PRIVACY.md) 的提醒約束，未同意雲端時不會送出。
+- 白名單與短網址清單是示範用清單，不是完整登錄；上線前應改成可更新的資料檔並定期維護。
+- `bank` 這類通用字串會把所有不在白名單的「bank」網域判成可疑（例如 v5 資料集的 `bank.example.invalid` 192 則），這是刻意保守，但代價是未列入白名單的合法銀行會被判高風險。
+- 分級只看主機名稱，不看路徑；這是刻意的，因為路徑與查詢參數最常夾帶 session token 與個資。
 
 ## 為什麼目前不使用 FL、DP、HE、SMPC
 
