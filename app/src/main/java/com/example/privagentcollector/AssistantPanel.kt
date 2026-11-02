@@ -24,7 +24,8 @@ import androidx.core.content.FileProvider
 import kotlin.math.ceil
 
 /**
- * Entry point for the three core scenarios. One task runs at a time; cancelling bumps [generation],
+ * Entry point for the product-facing photo and message scenarios. One task runs at a time;
+ * cancelling bumps [generation],
  * so callbacks from an older task are ignored and its photo copy and recipient mapping are dropped.
  */
 class AssistantPanel(
@@ -36,6 +37,7 @@ class AssistantPanel(
     private val onSay: (String) -> Unit = {},
     /** Every task dialog right after it is shown, e.g. to enlarge its text. */
     private val onDialog: (AlertDialog) -> Unit = {},
+    private val showControls: Boolean = true,
     private val onCheckMessage: () -> Unit
 ) {
     companion object {
@@ -62,27 +64,45 @@ class AssistantPanel(
 
     init {
         fun label(text: String, size: Float = 16f) = TextView(activity).apply {
-            this.text = text; textSize = size; setPadding(0, dp(8), 0, dp(8)); root.addView(this)
+            this.text = text; textSize = size; setTextColor(AppUi.TEXT)
+            setPadding(0, dp(8), 0, dp(8)); root.addView(this)
         }
         fun row(vararg buttons: Pair<String, () -> Unit>) = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             for ((text, action) in buttons) addView(Button(activity).apply {
-                this.text = text; textSize = 17f; setOnClickListener { action() }
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                this.text = text; AppUi.secondary(this); setOnClickListener { action() }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = dp(3); marginEnd = dp(3)
+            })
             root.addView(this)
         }
-        label("AI 金孫助理", 23f)
-        label("用說的或打字，例如：「把剛拍的照片傳給女兒」、「手機突然沒聲音」、「這則訊息可信嗎」。")
-        input = EditText(activity).apply { hint = "想請我幫什麼忙？"; textSize = 19f; root.addView(this) }
-        row("🎤 用說的" to ::listen, "好，開始" to { run(input.text.toString()) })
-        row("傳照片到 LINE" to { run("把照片傳給") }, "手機救援" to { run("手機好像壞掉了") }, "檢查訊息" to { run("這則訊息可信嗎") })
-        row("設定家人" to ::editBindings, "取消" to { cancel("已取消，沒有傳送任何東西") })
-        row("LINE 免觸控設定" to ::configureLineAutomation)
+        input = EditText(activity).apply {
+            hint = "例如：把最新照片傳給女兒"
+            AppUi.field(this)
+        }
+        if (showControls) {
+            label("PrivAgent 快速助理", 23f).let { AppUi.title(it, 23f) }
+            label("用說的或打字，快速使用照片分享與詐騙訊息檢查。", 15f).let { AppUi.body(it, 15f) }
+            root.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8); bottomMargin = dp(6) })
+            row("用說的" to ::listen, "開始" to { run(input.text.toString()) })
+            row("傳照片到 LINE" to ::sharePhoto, "檢查訊息" to { run("這則訊息可信嗎") })
+            row("設定家人" to ::editBindings, "LINE 免觸控" to ::configureLineAutomation)
+            row("取消目前操作" to { cancel("已取消，沒有傳送任何東西") })
+        }
         status = label("", 19f)
+        if (!showControls) status.visibility = android.view.View.GONE
         PhotoSanitizer.clear(activity)  // Leftover copies from an earlier session.
     }
 
-    private fun say(text: String, color: Int = Color.DKGRAY) { status.text = text; status.setTextColor(color); onSay(text) }
+    private fun say(text: String, color: Int = AppUi.TEXT) {
+        status.visibility = android.view.View.VISIBLE
+        status.text = text
+        status.setTextColor(color)
+        status.background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 12)
+        status.setPadding(dp(14), dp(12), dp(14), dp(12))
+        onSay(text)
+    }
     private fun ui(task: Int, action: () -> Unit) = activity.runOnUiThread {
         if (task == generation && !activity.isFinishing && !activity.isDestroyed) action()
     }
@@ -104,15 +124,20 @@ class AssistantPanel(
         say(message)
     }
 
+    fun sharePhoto() = run("把照片傳給")
+    fun shareLatestPhoto() = run("把最新照片傳給")
+    fun openFamilySettings() = editBindings()
+    fun openLineAutomationSettings() = configureLineAutomation()
+
     fun run(utterance: String) {
         val interpreted = CoreTasks.interpret(utterance)
         when (interpreted.intent) {
             "CANCEL" -> cancel("好，已取消")
             "SHARE_PHOTO" -> startShare(interpreted)
-            "RESCUE_PHONE" -> startRescue(interpreted)
+            "RESCUE_PHONE" -> say("目前版本只保留照片分享與詐騙訊息檢查。")
             "CHECK_MESSAGE" -> { newTask(); say("請在下方「可疑訊息檢查」貼上訊息，或從通知選一則。"); onCheckMessage() }
-            "UNSUPPORTED" -> say("這件事我還在學。現在可以幫你：分享照片、檢查可疑訊息、手機救援。")
-            else -> say("我還聽不懂。可以說：「把照片傳給女兒」、「手機沒聲音」或「這則訊息可信嗎」。")
+            "UNSUPPORTED" -> say("目前可以幫你分享照片，或檢查可疑訊息。")
+            else -> say("我還聽不懂。可以說：「把照片傳給女兒」或「這則訊息可信嗎」。")
         }
     }
 

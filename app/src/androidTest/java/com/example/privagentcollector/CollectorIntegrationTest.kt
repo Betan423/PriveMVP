@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.media.ExifInterface
 import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -17,6 +20,30 @@ import java.io.File
 /** Run only on a disposable emulator: these tests clear the target app's test data. */
 @RunWith(AndroidJUnit4::class)
 class CollectorIntegrationTest {
+    @Test fun productHomeShowsOnlyTheTwoApprovedScenarios() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val activity = instrumentation.startActivitySync(
+            Intent(instrumentation.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        try {
+            var visibleValues = emptyList<String>()
+            instrumentation.runOnMainSync {
+                val values = mutableListOf<String>()
+                fun collect(view: View) {
+                    if (view is TextView) values += view.text.toString()
+                    if (view is ViewGroup) for (index in 0 until view.childCount) collect(view.getChildAt(index))
+                }
+                collect(activity.window.decorView)
+                visibleValues = values
+            }
+            val visibleText = visibleValues.joinToString("\n")
+            assertTrue(visibleText.contains("安心傳送照片"))
+            assertTrue(visibleText.contains("詐騙訊息檢查"))
+            assertFalse(visibleValues.any { it.trim() == "手機救援" })
+            assertFalse(visibleValues.any { it.trim() == "研究資料蒐集" })
+        } finally { activity.finish() }
+    }
+
     @Test fun relationBindingCanContinueTheShareChainWithoutDuplicates() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         RelationBindings.clear(context, "daughter")

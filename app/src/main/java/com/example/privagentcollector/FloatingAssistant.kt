@@ -119,17 +119,17 @@ class FloatingBubbleService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.TOP or Gravity.START; x = 0; y = resources.displayMetrics.heightPixels / 2 }
         val view = TextView(this).apply {
-            text = "金孫"
-            textSize = 22f
+            text = "助理"
+            textSize = 20f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             elevation = dp(6).toFloat()
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.rgb(230, 81, 0))
+                setColor(AppUi.PRIMARY)
                 setStroke(dp(3), Color.WHITE)
             }
-            contentDescription = "打開 AI 金孫助理"
+            contentDescription = "打開 PrivAgent 助理"
         }
         val slop = dp(8)
         var downX = 0f; var downY = 0f; var startX = 0; var startY = 0
@@ -172,8 +172,8 @@ class FloatingBubbleService : Service() {
             PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_collector)
-            .setContentTitle("金孫按鈕已開啟")
-            .setContentText("點畫面上的「金孫」就能找我幫忙")
+            .setContentTitle("PrivAgent 快速按鈕已開啟")
+            .setContentText("點畫面上的「助理」即可使用照片分享或訊息檢查")
             .setContentIntent(open)
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, "隱藏按鈕", hide).build())
