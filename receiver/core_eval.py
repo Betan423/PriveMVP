@@ -20,16 +20,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .assistant import forbidden_hits, validate_packet
+from .assistant import forbidden_hits, packet_forbidden_hits, validate_packet
 from .core_tasks import (POLICY_VERSION, RESCUE_FACTS_BY_CATEGORY, SHARE_FACTS, decide_task, validate_plan_packet)
 from .contracts import ReceiverError
+from .privacy_policy import POLICY as MESSAGE_PRIVACY_POLICY
 
 CORE = ("SHARE_PHOTO", "CHECK_MESSAGE", "RESCUE_PHONE")
 # Facts each intent may disclose; anything else in a packet counts as unnecessary disclosure.
+# CHECK_MESSAGE takes its budget from the executable privacy policy so the two can never drift.
 ALLOWED_FACTS = {
     "SHARE_PHOTO": set(SHARE_FACTS) | {"selection"},
-    "CHECK_MESSAGE": {"asks_transfer", "requests_secret", "urgency", "has_link", "offers_reward",
-                      "requests_remote_control", "context_sufficient", "impersonation", "source_kind"},
+    "CHECK_MESSAGE": set(MESSAGE_PRIVACY_POLICY["facts"]),
 }
 
 
@@ -78,7 +79,9 @@ def run(dataset_path: Path, out: Path, seed: int) -> dict[str, Any]:
                 or "cloud_features" not in task["grants"] or record.decision != "ALLOW"
                 or (expected_intent == "SHARE_PHOTO" and task["confirmation"] != "approved")):
             violations.append(record.task_id)
-        if forbidden_hits(packet):
+        # Schema-aware scan: CHECK_MESSAGE v2+ packets carry issued_at_ms, a long number that is
+        # not an identifier; only user-derived values (facts, excerpt) are scanned for that intent.
+        if (packet_forbidden_hits if expected_intent == "CHECK_MESSAGE" else forbidden_hits)(packet):
             leaks.append(record.task_id)
         allowed = (ALLOWED_FACTS.get(expected_intent) or
                    {"symptom_category", "symptom_detail", "requested_scope"} |

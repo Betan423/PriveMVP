@@ -13,6 +13,7 @@ class MessageGuardTest {
             val facts = MessageGuard.extractFacts(case.text, "pasted")
             assertEquals(case.text, case.flags, flags(facts))
             assertEquals(case.text, case.impersonation, facts.impersonation)
+            assertEquals(case.text, case.linkKind, facts.linkKind)
             val assessment = MessageGuard.assess(facts)
             assertEquals(case.text, case.level, assessment.level.wire)
             assertEquals(case.text, case.codes, assessment.reasonCodes.joinToString(","))
@@ -36,7 +37,8 @@ class MessageGuardTest {
         for (leak in listOf("王小明", "0912", "482913", "example", "https")) {
             assertFalse(leak, packet.json.contains(leak))
         }
-        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.check_message_packet.v2\""))
+        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.check_message_packet.v3\""))
+        assertTrue(packet.json.contains("\"link_kind\":\"unknown\""))
         assertTrue(packet.json.contains("\"source_kind\":\"notification\""))
         assertTrue(Regex("^TASK_[A-Z]{8}$").matches(packet.alias))
         assertTrue(Regex("^REQ_[A-Z]{20}$").matches(packet.requestNonce))
@@ -94,5 +96,47 @@ class MessageGuardTest {
         assertTrue(phone.contains("[PHONE]"))
         assertFalse(url.contains("example"))
         assertTrue(url.contains("[LINK]"))
+    }
+
+    @Test fun linkKindIsClassifiedOnDevice() {
+        val cases = mapOf(
+            "請上 https://www.post.gov.tw/track 查詢進度" to "known_official",
+            "請上 https://esunbank.com.tw/login 查詢" to "known_official",
+            "請點 https://taiwanpost-verify.xyz/login 補填資料" to "suspicious",
+            "請點 https://post.gov.tw.verify.cc/login" to "suspicious",
+            "請點 https://192.168.0.99/login" to "suspicious",
+            "請點 https://xn--fiq228c.com/x" to "suspicious",
+            "詳情 https://reurl.cc/abc 查看" to "shortener",
+            "詳情 https://news.example.invalid/article" to "unknown",
+            "明天下午一起吃飯。" to "none"
+        )
+        for ((text, expected) in cases) {
+            val facts = MessageGuard.extractFacts(text, "pasted")
+            assertEquals(text, expected, facts.linkKind)
+            assertEquals(text, expected != "none", facts.hasLink)
+        }
+    }
+
+    @Test fun mostSevereLinkKindWinsAndLiteralPlaceholderIsNotALink() {
+        val mixed = MessageGuard.extractFacts("官方 https://www.gov.tw 公告，另見 https://promo.bad.xyz/go", "pasted")
+        assertEquals("suspicious", mixed.linkKind)
+        val literal = MessageGuard.extractFacts("對方傳來的內容是 [LINK] 這五個字，我沒有看到網址。", "pasted")
+        assertFalse(literal.hasLink)
+        assertEquals("none", literal.linkKind)
+    }
+
+    @Test fun officialLinkNoLongerEscalatesButSuspiciousLinkIsDecisive() {
+        val official = MessageGuard.assess(MessageGuard.extractFacts(
+            "您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未處理將退回", "pasted"))
+        assertEquals(MessageGuard.Level.VERIFY, official.level)
+        assertTrue(official.reasonCodes.contains("HAS_LINK"))
+        val phishing = MessageGuard.assess(MessageGuard.extractFacts(
+            "您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料", "pasted"))
+        assertEquals(MessageGuard.Level.HIGH, phishing.level)
+        assertTrue(phishing.reasonCodes.contains("LINK_SUSPICIOUS"))
+        val shortener = MessageGuard.assess(MessageGuard.extractFacts(
+            "您的包裹已到，請點 https://reurl.cc/abc 補填，今天內未處理將退回", "pasted"))
+        assertEquals(MessageGuard.Level.HIGH, shortener.level)
+        assertTrue(shortener.reasonCodes.contains("LINK_SHORTENER"))
     }
 }

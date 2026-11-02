@@ -83,6 +83,55 @@ class PhoneSideTests(unittest.TestCase):
         self.assertEqual(facts["impersonation"], "family")
         self.assertEqual(rule_assessment(facts)[0], "high")
 
+    def test_link_kind_is_classified_on_device(self) -> None:
+        cases = {
+            "請上 https://www.post.gov.tw/track 查詢進度": "known_official",
+            "請上 https://esunbank.com.tw/login 查詢": "known_official",
+            "請點 https://taiwanpost-verify.xyz/login 補填資料": "suspicious",
+            "請點 https://post.gov.tw.verify.cc/login": "suspicious",
+            "請點 https://192.168.0.99/login": "suspicious",
+            "請點 https://xn--fiq228c.com/x": "suspicious",
+            "詳情 https://reurl.cc/abc 查看": "shortener",
+            "詳情 https://news.example.invalid/article": "unknown",
+            "明天下午一起吃飯。": "none",
+        }
+        for text, expected in cases.items():
+            facts = extract_facts(text, "pasted")
+            self.assertEqual(expected, facts["link_kind"], text)
+            self.assertEqual(expected != "none", facts["has_link"], text)
+
+    def test_most_severe_link_kind_wins_and_literal_placeholder_is_not_a_link(self) -> None:
+        mixed = extract_facts("官方 https://www.gov.tw 公告，另見 https://promo.bad.xyz/go", "pasted")
+        self.assertEqual("suspicious", mixed["link_kind"])
+        literal = extract_facts("對方傳來的內容是 [LINK] 這五個字，我沒有看到網址。", "pasted")
+        self.assertFalse(literal["has_link"])
+        self.assertEqual("none", literal["link_kind"])
+
+    def test_official_link_no_longer_escalates_but_suspicious_link_is_decisive(self) -> None:
+        official = extract_facts("您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未處理將退回", "pasted")
+        level, codes = rule_assessment(official)
+        self.assertEqual("verify", level)
+        self.assertIn("HAS_LINK", codes)
+        phishing = extract_facts("您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料", "pasted")
+        level, codes = rule_assessment(phishing)
+        self.assertEqual("high", level)
+        self.assertIn("LINK_SUSPICIOUS", codes)
+        shortener = extract_facts("您的包裹已到，請點 https://reurl.cc/abc 補填，今天內未處理將退回", "pasted")
+        level, codes = rule_assessment(shortener)
+        self.assertEqual("high", level)
+        self.assertIn("LINK_SHORTENER", codes)
+
+    def test_link_kind_must_be_consistent_with_has_link(self) -> None:
+        packet = build_packet("詳情 https://news.example.invalid/article 查看")
+        packet["facts"]["link_kind"] = "none"
+        with self.assertRaises(ReceiverError) as caught:
+            parse_packet(encode(packet))
+        self.assertEqual(caught.exception.code, "PACKET_CONTRACT_VIOLATION")
+        packet = build_packet("明天下午一起吃飯。")
+        packet["facts"]["link_kind"] = "unknown"
+        with self.assertRaises(ReceiverError):
+            parse_packet(encode(packet))
+
     def test_excerpt_is_opt_in_and_only_when_local_rules_are_not_decisive(self) -> None:
         self.assertIsNone(build_packet("明天下午一起吃飯。")["redacted_excerpt"])
         scam = "請立即轉帳到 SYN_ACCOUNT_PRIVATE_1，否則停權"

@@ -156,11 +156,11 @@ make message-eval
 
 設定環境變數 `PRIVAGENT_API_TOKEN` 後，Receiver 會要求 `X-Api-Token` 標頭（phone_sim 也讀同一變數）。區網展示時建議設定。
 
-### Packet 契約（`privagent.check_message_packet.v2`）
+### Packet 契約（`privagent.check_message_packet.v3`）
 
 ```json
 {
-  "schema": "privagent.check_message_packet.v2",
+  "schema": "privagent.check_message_packet.v3",
   "task_id_alias": "TASK_CZFVITYL",
   "request_nonce": "REQ_QWERTYUIOPASDFGHJKLZ",
   "issued_at_ms": 1793320000000,
@@ -169,12 +169,12 @@ make message-eval
   "cloud_consent": true,
   "facts": {
     "asks_transfer": true, "requests_secret": false, "urgency": false, "has_link": false,
-    "offers_reward": false, "requests_remote_control": false, "context_sufficient": true,
-    "impersonation": "family", "source_kind": "pasted"
+    "link_kind": "none", "offers_reward": false, "requests_remote_control": false,
+    "context_sufficient": true, "impersonation": "family", "source_kind": "pasted"
   },
   "redacted_excerpt": null,
   "allowed_sops": ["MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER"],
-  "client_policy_version": "phone-msg-2"
+  "client_policy_version": "phone-msg-3"
 }
 ```
 
@@ -186,12 +186,14 @@ make message-eval
   "risk_level": "high", "reason_codes": ["ASKS_TRANSFER", "IMPERSONATION_FAMILY"],
   "sop_id": "MESSAGE_CAUTION",
   "planner": {"kind": "GEMINI_PROXY", "fallback_reason": null},
-  "policy_version": "server-msg-2", "privacy_policy_version": "check-message-privacy-2",
+  "policy_version": "server-msg-3", "privacy_policy_version": "check-message-privacy-3",
   "privacy_policy_sha256": "...", "packet_sha256": "..."
 }
 ```
 
 `planner.kind` 為 `RULES` 時，`fallback_reason` 說明原因：`PLANNER_DISABLED`、`PLANNER_UNREACHABLE`、`PLANNER_TIMEOUT`、`PLANNER_HTTP_<code>`、`PLANNER_BAD_ENVELOPE`、`PLANNER_INVALID_RESPONSE`。
+
+`facts.link_kind` 是手機端對訊息內連結的網域分級（`none`／`known_official`／`unknown`／`shortener`／`suspicious`），用來在不揭露網址的前提下區分官方通知與釣魚連結：官方白名單網域（gov.tw 與主要銀行）不再只因「連結＋催促」就升高風險；假冒拼寫、IP 直連、punycode 或高風險 TLD 則即使語氣平靜也直接判高風險；短網址視同無法辨識並附註原因。網址本身、路徑與查詢參數仍然不出手機，Receiver 的 DLP 也持續拒收任何網址明文。
 
 `request_nonce` 每個任務只可使用一次；`issued_at_ms` 超過五分鐘、快於 Receiver 時鐘超過一分鐘，或 nonce 已使用時，Receiver 會在呼叫 AI 前拒絕。可執行隱私預算位於 `receiver/policies/check_message_privacy_policy.json`；允許欄位、事實用途、摘錄上限、保存規則與新鮮度限制由該檔案載入，而不是只寫在說明文件中。高風險訊息即使是惡意客戶端也不得附摘錄。
 

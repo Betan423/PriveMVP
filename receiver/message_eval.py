@@ -46,6 +46,7 @@ TAG_FACTS: dict[str, tuple[str, Any]] = {
     "investment": ("offers_reward", True),
     "insufficient_context": ("context_sufficient", False),
 }
+LINK_KINDS = ("none", "known_official", "unknown", "shortener", "suspicious")
 
 
 def _sha256(path: Path) -> str:
@@ -132,6 +133,7 @@ def run(
 
     failures: dict[str, list[str]] = collections.defaultdict(list)
     feature_checks = 0
+    link_kinds: collections.Counter[str] = collections.Counter()
     aliases: set[str] = set()
     rows: list[dict[str, Any]] = []
     family_counts: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
@@ -150,6 +152,9 @@ def run(
         excerpt_packet = build_packet(message["text"], source_kind="notification", allow_excerpt=True)
         redacted_text = redact(message["text"])
 
+        link_kinds[facts["link_kind"]] += 1
+        if facts["has_link"] != (facts["link_kind"] != "none"):
+            failures["link_kind_inconsistent"].append(message_id)
         if actual_level != expected_level:
             if expected_level == "high":
                 failures["high_risk_missed"].append(message_id)
@@ -195,6 +200,7 @@ def run(
             "expected_level": expected_level,
             "actual_level": actual_level,
             "reason_codes": "|".join(reason_codes),
+            "link_kind": facts["link_kind"],
             "packet_has_excerpt": excerpt_packet["redacted_excerpt"] is not None,
             "redaction_leak": bool(forbidden_hits({"redacted_excerpt": redacted_text})),
         })
@@ -292,6 +298,7 @@ def run(
         "packet_contract_rejected": _metric(failures["packet_contract_rejected"], len(messages)),
         "high_risk_unnecessary_excerpt": _metric(failures["high_risk_unnecessary_excerpt"], high_rows),
         "cross_message_alias_reuse": _metric(failures["cross_message_alias_reuse"], len(messages)),
+        "link_kind_inconsistent": _metric(failures["link_kind_inconsistent"], len(messages)),
         "unknown_template": _metric(failures["unknown_template"], len(messages)),
         "semantic_feature_missed": _metric(failures["semantic_feature_missed"], feature_checks),
         "high_risk_missed": _metric(failures["high_risk_missed"], high_rows),
@@ -311,6 +318,9 @@ def run(
         "policy_basis": "authored semantic tags + explicit adversarial cases",
         "messages": len(messages),
         "environments": len(dataset["phone_environments"]),
+        # On-device link grading seen over the dataset. v5 links are all *.example.invalid, so the
+        # official / shortener / suspicious grades are exercised by the attack corpus, not by v5.
+        "link_kind_distribution": {kind: link_kinds.get(kind, 0) for kind in LINK_KINDS},
         "template_families": {
             name: dict(sorted(counts.items())) for name, counts in sorted(family_counts.items())
         },
@@ -322,6 +332,7 @@ def run(
             "No raw or redacted message text is written to evaluation CSV files.",
             "Cloud boundary attacks use deterministic fake planner outputs; no message is sent to a cloud service.",
             "Mutation cases are generated deterministically from seed phrases; evidence CSV omits mutated message text.",
+            "link_kind is graded on the phone from the URL host; the URL never enters a packet or this evidence.",
         ],
     }
     failure_output = {name: values for name, values in sorted(failures.items()) if values}
