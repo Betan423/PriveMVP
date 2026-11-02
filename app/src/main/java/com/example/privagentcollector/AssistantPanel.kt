@@ -42,7 +42,6 @@ class AssistantPanel(
         const val REQ_SPEECH = 7401
         const val REQ_PHOTO = 7402
         const val REQ_CONTACT = 7403
-        private const val LINE_PACKAGE = "jp.naver.line.android"
         private const val STALE_MS = 300_000L
     }
 
@@ -55,6 +54,7 @@ class AssistantPanel(
     private var selection = "selected"
     private var bindingRelation: String? = null
     private var resumeShareAfterBinding = false
+    private var directToLine = true
     // The task that launched the photo or contact picker; a result for an older task is dropped.
     private var pickerTask = -1
     private var openDialog: AlertDialog? = null
@@ -74,7 +74,7 @@ class AssistantPanel(
         label("用說的或打字，例如：「把剛拍的照片傳給女兒」、「手機突然沒聲音」、「這則訊息可信嗎」。")
         input = EditText(activity).apply { hint = "想請我幫什麼忙？"; textSize = 19f; root.addView(this) }
         row("🎤 用說的" to ::listen, "好，開始" to { run(input.text.toString()) })
-        row("分享照片" to { run("把照片傳給") }, "手機救援" to { run("手機好像壞掉了") }, "檢查訊息" to { run("這則訊息可信嗎") })
+        row("傳照片到 LINE" to { run("把照片傳給") }, "手機救援" to { run("手機好像壞掉了") }, "檢查訊息" to { run("這則訊息可信嗎") })
         row("設定家人" to ::editBindings, "取消" to { cancel("已取消，沒有傳送任何東西") })
         status = label("", 19f)
         PhotoSanitizer.clear(activity)  // Leftover copies from an earlier session.
@@ -89,7 +89,7 @@ class AssistantPanel(
 
     private fun newTask(): Int {
         generation++
-        recipientName = null; relation = null; resumeShareAfterBinding = false; bindingRelation = null
+        recipientName = null; relation = null; resumeShareAfterBinding = false; bindingRelation = null; directToLine = true
         openDialog?.dismiss(); openDialog = null
         PhotoSanitizer.clear(activity)
         return generation
@@ -147,6 +147,7 @@ class AssistantPanel(
     private fun startShare(interpreted: CoreTasks.Interpretation) {
         val task = newTask()
         selection = interpreted.selection ?: "selected"
+        say("分享照片到 LINE｜步驟 1/4：確認要傳給誰")
         val chosen = interpreted.relation
         if (chosen == null) {
             val labels = CoreTasks.relationLabel.values.toTypedArray()
@@ -164,15 +165,33 @@ class AssistantPanel(
             names.isEmpty() -> dialog().setTitle("還沒設定$label")
                 .setMessage("我還不知道誰是你的$label。要現在從通訊錄選嗎？（只存在這支手機）")
                 .setPositiveButton("從通訊錄選") { _, _ ->
-                    if (task == generation) { pickContact(chosen); resumeShareAfterBinding = true }
+                    if (task == generation) { resumeShareAfterBinding = true; pickContact(chosen) }
                 }
                 .setNegativeButton("取消") { _, _ -> cancel("已取消") }.showForTask()
             // Ambiguity is resolved on the phone; the cloud never sees candidate names.
             names.size > 1 -> dialog().setTitle("要傳給哪一位$label？").setItems(names.toTypedArray()) { _, i ->
-                ui(task) { recipientName = names[i]; choosePhoto(task) }
+                ui(task) { recipientName = names[i]; ensureShareDestination(task) }
             }.setOnCancelListener { cancel("已取消") }.showForTask()
-            else -> { recipientName = names[0]; choosePhoto(task) }
+            else -> { recipientName = names[0]; ensureShareDestination(task) }
         }
+    }
+
+    private fun ensureShareDestination(task: Int) {
+        if (lineInstalled()) {
+            directToLine = true
+            choosePhoto(task)
+            return
+        }
+        dialog().setTitle("這支手機尚未安裝 LINE")
+            .setMessage("要完成『傳照片到 LINE』需要先安裝 LINE。也可以改用 Android 分享選單傳到其他 App。")
+            .setPositiveButton("安裝 LINE") { _, _ ->
+                if (task == generation) { cancel("請安裝 LINE，完成後再按「傳照片到 LINE」"); openLineStore() }
+            }
+            .setNeutralButton("改用其他 App") { _, _ ->
+                ui(task) { directToLine = false; choosePhoto(task) }
+            }
+            .setNegativeButton("取消") { _, _ -> cancel("已取消") }
+            .setOnCancelListener { cancel("已取消") }.showForTask()
     }
 
     private fun choosePhoto(task: Int) {
@@ -180,7 +199,7 @@ class AssistantPanel(
             val latest = latestPhoto()
             if (latest != null) { preparePhoto(task, latest); return }
         }
-        say(when (selection) {
+        say("分享照片到 LINE｜步驟 2/4：" + when (selection) {
             "family_album" -> "請在相簿選家庭相簿裡的那一張"
             "outing_album" -> "請在相簿選出遊的那一張"
             "latest" -> "請選剛拍的那一張"
@@ -207,7 +226,7 @@ class AssistantPanel(
     }
 
     private fun preparePhoto(task: Int, uri: Uri) {
-        say("正在準備照片（移除拍攝地點等資訊）…")
+        say("分享照片到 LINE｜步驟 3/4：正在建立不含 EXIF／GPS 的照片副本…")
         Thread({
             val prepared = try { PhotoSanitizer.prepare(activity, uri, "PHOTO_$task") }
                 catch (_: Exception) { null } catch (_: OutOfMemoryError) { null }
@@ -220,23 +239,25 @@ class AssistantPanel(
     private fun confirmShare(task: Int, photo: PhotoSanitizer.Result) {
         val label = CoreTasks.relationLabel.getValue(relation!!)
         val name = recipientName!!
-        val lineReady = lineInstalled()
+        val lineReady = directToLine && lineInstalled()
         val view = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0)
             addView(ImageView(activity).apply { setImageBitmap(photo.thumbnail); adjustViewBounds = true; maxHeight = dp(260) })
             addView(TextView(activity).apply {
                 textSize = 18f
                 text = buildString {
-                    append("要把這張照片傳給$label「$name」嗎？\n")
+                    append("步驟 4/4：要把這張照片傳給$label「$name」嗎？\n")
                     if (photo.hadLocation) append("・${CoreTasks.reasonText["LOCATION_REMOVED"]}\n")
                     append("・${CoreTasks.reasonText["PRIVATE_BACKGROUND_REVIEW"]}\n")
-                    append(if (lineReady) "按「確認分享」後會打開 LINE，請在 LINE 選「$name」再按傳送。"
+                    append(if (lineReady) "按「開啟 LINE」後會直接進入 LINE 的分享對象畫面，請選「$name」再按傳送。"
                         else "按「確認分享」後會打開分享選單，請選 App 和「$name」。")
                 }
             })
         }
         dialog().setTitle("確認要分享").setView(view)
-            .setPositiveButton("確認分享") { _, _ -> if (task == generation) planShare(task, photo, lineReady) }
+            .setPositiveButton(if (lineReady) "開啟 LINE" else "確認分享") { _, _ ->
+                if (task == generation) planShare(task, photo, lineReady)
+            }
             .setNegativeButton("取消") { _, _ -> cancel("已取消，照片沒有傳出去") }
             .setOnCancelListener { cancel("已取消，照片沒有傳出去") }.showForTask()
     }
@@ -266,24 +287,40 @@ class AssistantPanel(
     private fun openShare(task: Int, photo: PhotoSanitizer.Result, lineReady: Boolean, source: String) {
         if (task != generation) return
         val uri = FileProvider.getUriForFile(activity, activity.packageName + ".share", photo.file)
-        val send = Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val send = LineShare.imageIntent(uri, lineReady)
         val name = recipientName
         try {
-            activity.startActivity(if (lineReady) Intent(send).setPackage(LINE_PACKAGE) else Intent.createChooser(send, "分享照片"))
+            activity.startActivity(if (lineReady) send else Intent.createChooser(send, "分享照片"))
         } catch (_: ActivityNotFoundException) {
-            activity.startActivity(Intent.createChooser(send, "分享照片"))
+            val fallback = LineShare.imageIntent(uri, false)
+            activity.startActivity(Intent.createChooser(fallback, "分享照片"))
         }
         // The copy must outlive the share screen; it is removed when the next task starts or on cancel.
         recipientName = null; relation = null
-        say("已打開分享畫面，請選「$name」再按傳送。照片沒有拍攝地點資訊。\n判讀來源：$source", Color.rgb(27, 94, 32))
+        say(if (lineReady)
+            "照片已安全交給 LINE。請在 LINE 選「$name」並按傳送；回到這裡不代表 LINE 已送出。\n判讀來源：$source"
+        else "已打開分享畫面，請選 App 和「$name」再按傳送。照片沒有拍攝地點資訊。\n判讀來源：$source",
+            Color.rgb(27, 94, 32))
     }
 
-    private fun lineInstalled() = try { activity.packageManager.getPackageInfo(LINE_PACKAGE, 0); true } catch (_: Exception) { false }
+    private fun lineInstalled() = try {
+        activity.packageManager.getPackageInfo(LineShare.PACKAGE_NAME, 0); true
+    } catch (_: Exception) { false }
+
+    private fun openLineStore() {
+        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${LineShare.PACKAGE_NAME}"))
+        val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${LineShare.PACKAGE_NAME}"))
+        try { activity.startActivity(market) }
+        catch (_: ActivityNotFoundException) {
+            try { activity.startActivity(web) } catch (_: ActivityNotFoundException) { say("無法開啟 LINE 安裝頁") }
+        }
+    }
 
     // ------------------------------------------------------------ relation bindings
 
     private fun editBindings() {
+        newTask() // Opening settings intentionally cancels any older photo/share callbacks.
+        say("設定家人：選擇一個關係。設定完成後可以直接接續傳照片到 LINE。")
         val keys = CoreTasks.relationLabel.keys.toList()
         val labels = keys.map { key ->
             val names = RelationBindings.names(activity, key)
@@ -291,11 +328,35 @@ class AssistantPanel(
         }.toTypedArray()
         dialog().setTitle("家人與常用聯絡人（只存在這支手機）").setItems(labels) { _, i ->
             val key = keys[i]
-            dialog().setTitle(CoreTasks.relationLabel.getValue(key))
-                .setPositiveButton("從通訊錄加一位") { _, _ -> pickContact(key) }
-                .setNeutralButton("清除") { _, _ -> RelationBindings.clear(activity, key); say("已清除") }
-                .setNegativeButton("返回", null).show()
-        }.show()
+            manageBinding(key)
+        }.showForTask()
+    }
+
+    private fun manageBinding(key: String) {
+        val label = CoreTasks.relationLabel.getValue(key)
+        val names = RelationBindings.names(activity, key)
+        val options = if (names.isEmpty()) arrayOf("設定並立即分享照片", "只設定聯絡人")
+        else arrayOf("立即分享照片", "從通訊錄再加一位", "清除設定")
+        dialog().setTitle("$label：${if (names.isEmpty()) "未設定" else names.joinToString("、")}")
+            .setItems(options) { _, which ->
+                if (names.isEmpty()) when (which) {
+                    0 -> beginBindingAndShare(key)
+                    1 -> { resumeShareAfterBinding = false; pickContact(key) }
+                } else when (which) {
+                    0 -> startShare(CoreTasks.Interpretation("SHARE_PHOTO", relation = key, selection = "selected"))
+                    1 -> { resumeShareAfterBinding = false; pickContact(key) }
+                    2 -> { RelationBindings.clear(activity, key); say("已清除${label}設定") }
+                }
+            }.setNegativeButton("返回", null).showForTask()
+    }
+
+    private fun beginBindingAndShare(key: String) {
+        newTask()
+        relation = key
+        selection = "selected"
+        resumeShareAfterBinding = true
+        say("分享照片到 LINE｜步驟 1/4：先從通訊錄設定${CoreTasks.relationLabel.getValue(key)}")
+        pickContact(key)
     }
 
     private fun pickContact(key: String) {
@@ -303,7 +364,9 @@ class AssistantPanel(
         pickerTask = generation
         // The contact picker grants access to the one chosen contact; no contacts permission is needed.
         try { activity.startActivityForResult(Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI), REQ_CONTACT) }
-        catch (_: ActivityNotFoundException) { say("找不到通訊錄 App") }
+        catch (_: ActivityNotFoundException) {
+            bindingRelation = null; resumeShareAfterBinding = false; say("找不到通訊錄 App")
+        }
     }
 
     private fun onContactPicked(resultCode: Int, uri: Uri?) {
@@ -313,10 +376,20 @@ class AssistantPanel(
             activity.contentResolver.query(uri, arrayOf(ContactsContract.Contacts.DISPLAY_NAME), null, null, null)
                 ?.use { if (it.moveToFirst()) it.getString(0) else null }
         } catch (_: Exception) { null } else null
-        if (name.isNullOrBlank()) { if (resumeShareAfterBinding) cancel("沒有選聯絡人，已取消"); return }
+        val continueShare = resumeShareAfterBinding
+        resumeShareAfterBinding = false
+        if (name.isNullOrBlank()) {
+            if (continueShare) cancel("沒有選聯絡人，已取消") else say("沒有選聯絡人，原本設定沒有變更")
+            return
+        }
         RelationBindings.add(activity, key, name)
         say("已設定${CoreTasks.relationLabel.getValue(key)}：$name")
-        if (resumeShareAfterBinding) { resumeShareAfterBinding = false; resolveRecipient(generation, key) }
+        if (continueShare) resolveRecipient(generation, key)
+        else dialog().setTitle("設定完成")
+            .setMessage("已把「$name」設為${CoreTasks.relationLabel.getValue(key)}。要現在直接選照片傳到 LINE 嗎？")
+            .setPositiveButton("現在傳照片") { _, _ ->
+                startShare(CoreTasks.Interpretation("SHARE_PHOTO", relation = key, selection = "selected"))
+            }.setNegativeButton("完成", null).showForTask()
     }
 
     // ------------------------------------------------------------ RESCUE_PHONE

@@ -1,7 +1,9 @@
 package com.example.privagentcollector
 
 import android.app.NotificationManager
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -30,6 +32,26 @@ object RelationBindings {
     }
 
     fun clear(context: Context, relation: String) { prefs(context).edit().remove(relation).apply() }
+}
+
+/**
+ * Builds the Android hand-off for the last SHARE_PHOTO step.
+ *
+ * LINE doesn't expose a supported API for a third-party app to select a private friend and press
+ * send. We therefore hand the sanitized JPEG to LINE's normal "Share with" screen. ClipData and
+ * FLAG_GRANT_READ_URI_PERMISSION are both present because receiving apps differ in how they read a
+ * content:// URI on older and newer Android releases.
+ */
+object LineShare {
+    const val PACKAGE_NAME = "jp.naver.line.android"
+
+    fun imageIntent(uri: Uri, directToLine: Boolean): Intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/jpeg"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        clipData = ClipData.newRawUri("privacy-sanitized-photo", uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (directToLine) setPackage(PACKAGE_NAME)
+    }
 }
 
 /** Reads the few system values RESCUE_PHONE needs, as bands; nothing else on the device is touched. */

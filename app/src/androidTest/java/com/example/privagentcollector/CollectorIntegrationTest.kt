@@ -1,5 +1,10 @@
 package com.example.privagentcollector
 
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.media.ExifInterface
+import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -7,10 +12,62 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 /** Run only on a disposable emulator: these tests clear the target app's test data. */
 @RunWith(AndroidJUnit4::class)
 class CollectorIntegrationTest {
+    @Test fun relationBindingCanContinueTheShareChainWithoutDuplicates() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        RelationBindings.clear(context, "daughter")
+        try {
+            RelationBindings.add(context, "daughter", "測試女兒")
+            RelationBindings.add(context, "daughter", "測試女兒")
+            assertEquals(listOf("測試女兒"), RelationBindings.names(context, "daughter"))
+        } finally { RelationBindings.clear(context, "daughter") }
+    }
+
+    @Test fun photoSanitizerRemovesGpsAndDeviceExif() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = File(context.cacheDir, "source-with-private-exif.jpg")
+        val bitmap = Bitmap.createBitmap(40, 30, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        source.outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it)) }
+        ExifInterface(source.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "25/1,1/1,588/100")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "121/1,33/1,5544/100")
+            setAttribute(ExifInterface.TAG_MAKE, "PRIVATE_DEVICE_MAKE")
+            setAttribute(ExifInterface.TAG_MODEL, "PRIVATE_DEVICE_MODEL")
+            saveAttributes()
+        }
+        try {
+            val result = PhotoSanitizer.prepare(context, Uri.fromFile(source), "TEST_SANITIZED")
+            assertTrue(result.hadLocation)
+            val output = ExifInterface(result.file.absolutePath)
+            assertNull(output.getAttribute(ExifInterface.TAG_GPS_LATITUDE))
+            assertNull(output.getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
+            assertNull(output.getAttribute(ExifInterface.TAG_MAKE))
+            assertNull(output.getAttribute(ExifInterface.TAG_MODEL))
+        } finally {
+            source.delete()
+            PhotoSanitizer.clear(context)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun lineShareIntentTargetsLineAndGrantsTheSanitizedUri() {
+        val uri = Uri.parse("content://com.example.privagentcollector.share/shared/PHOTO_1.jpg")
+        val intent = LineShare.imageIntent(uri, directToLine = true)
+        assertEquals(Intent.ACTION_SEND, intent.action)
+        assertEquals("image/jpeg", intent.type)
+        assertEquals(LineShare.PACKAGE_NAME, intent.`package`)
+        assertEquals(uri, intent.getParcelableExtra(Intent.EXTRA_STREAM))
+        assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
+        assertNotEquals(0, intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        assertNull(LineShare.imageIntent(uri, directToLine = false).`package`)
+    }
+
     @Test fun messageGuardPatternsInitializeOnAndroid() {
         // Android uses ICU's regex engine, which does not accept every flag supported by the
         // desktop JVM. Exercising the real packet path here prevents click-time initializer crashes.
