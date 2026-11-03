@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Requested just-in-time only for the final spoken LINE send confirmation. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Floating 金孫 button and full-screen scam warning; the user grants overlay access in Settings. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -63,6 +65,10 @@
         <!-- Text-to-speech engines read results aloud in the quick assistant. -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- Required on Android 11+ to discover the installed system speech recognizer. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 

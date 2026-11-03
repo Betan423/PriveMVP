@@ -7,6 +7,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -121,6 +122,36 @@ class CollectorIntegrationTest {
             assertTrue(LineAutomationSession.complete(id))
             assertNull(LineAutomationSession.snapshot())
         } finally { LineAutomationSession.abort() }
+    }
+
+    @Test fun voiceConfirmationAlwaysOffersAnExplicitManualFallback() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        LineAutomationSession.abort()
+        val id = LineAutomationSession.start("LINE 小美")
+        assertTrue(LineAutomationSession.beginRecipientClick(id))
+        assertTrue(LineAutomationSession.beginVoiceConfirmation(id))
+        val activity = instrumentation.startActivitySync(
+            Intent(instrumentation.targetContext, LineVoiceConfirmActivity::class.java)
+                .putExtra(LineVoiceConfirmActivity.EXTRA_SESSION_ID, id)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        try {
+            var confirm: Button? = null
+            instrumentation.runOnMainSync {
+                fun find(view: View) {
+                    if (view is Button && view.text.toString() == "確認傳送") confirm = view
+                    if (view is ViewGroup) for (index in 0 until view.childCount) find(view.getChildAt(index))
+                }
+                find(activity.window.decorView)
+                assertNotNull(confirm)
+                confirm!!.performClick()
+            }
+            instrumentation.waitForIdleSync()
+            assertEquals(LineAutomationSession.Phase.CONFIRMED, LineAutomationSession.snapshot()!!.phase)
+        } finally {
+            activity.finish()
+            LineAutomationSession.abort()
+        }
     }
 
     @Test fun messageGuardPatternsInitializeOnAndroid() {

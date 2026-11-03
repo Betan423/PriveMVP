@@ -202,7 +202,7 @@ flowchart TD
 | 姓名最小留存比對 | ✅ | 工作階段不保存原始 LINE 姓名或未加鹽 hash；每次用隨機 256-bit key 做 HMAC-SHA256，比對可見節點後只保留摘要 |
 | 找不到時的有限滑動 | ✅ | 只對可見且可向前捲動的清單執行 `ACTION_SCROLL_FORWARD`；頁面 HMAC 不變、24 頁上限或清單無法捲動即停止 |
 | 防同名／模糊選人 | ✅ | 只接受正規化後 HMAC 完全相同且畫面唯一的收件人；0 個會有限滑動，多個結果立即停止 |
-| 送出前語音確認 | ✅ | 語音只接受 allowlist 明確句型；「好」等模糊回答視為 unknown 並停止 |
+| 送出前語音確認 | ✅ | 優先使用 on-device ASR；只接受 allowlist 明確句型。「好」等模糊回答不會送出；無辨識服務時提供明確手動確認／取消，不會自動降級成送出 |
 | 自動化不由 AI 決定 | ✅ | AI 不能產生座標或操作；固定本機狀態機最多點一次收件人與一次送出 |
 | 傳送後暫存清理 | ✅ MVP | LINE 接受送出操作後保留 60 秒 I/O 寬限，再清除清理後 JPEG；新任務與冷啟動也會清理 |
 | 視覺型個資偵測 | 🟡 | 目前只有提醒使用者檢查背景；沒有 OCR、人臉、證件或 QR 偵測 |
@@ -210,7 +210,7 @@ flowchart TD
 | 關係綁定加密 | 🟡 | 只存在手機，但目前為一般 SharedPreferences；應改成 Android Keystore 保護 |
 | 真實 LINE 版本相容性 | 🟡 | 邏輯與 fail-closed 測試已完成，但模擬器沒有 LINE；需用實機校準每版分享頁標籤／resource id |
 | Google Play Accessibility 政策 | 🟡 | 適合競賽／側載展示；上架前須做 Accessibility API 聲明、醒目揭露與政策資格審查 |
-| 完全本機語音辨識 | 🟡 | 設定 `EXTRA_PREFER_OFFLINE=true`，但是否真的不上雲仍受手機語音服務影響 |
+| 完全本機語音辨識 | 🟡 | Android 12+ 優先 `createOnDeviceSpeechRecognizer()`；否則設定 `EXTRA_PREFER_OFFLINE=true`，但是否真的不上雲仍受手機系統語音服務影響；麥克風權限只在最後確認時即時詢問 |
 
 主要程式位置：
 
