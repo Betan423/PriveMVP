@@ -19,9 +19,9 @@
 本專案目前處理兩個核心情境：
 
 1. **情境一：把圖片發送給女兒**（`SHARE_PHOTO`）
-   - 核心隱私目標：長輩在 LINE 看到別人傳來的圖片後，從該圖片分享選單呼叫 PrivAgent；Android 只交付明確選中的一張照片。聯絡人身分只在手機解析；分享前移除 EXIF/GPS；雲端 AI 不取得照片、姓名、聯絡方式或完整語音內容。
-   - 現況：PrivAgent 已註冊為單張 `image/*` 分享目標，收到圖片後立即建立安全副本並預設轉給女兒；首頁單張／最新照片、本機關係綁定、獨立 LINE 顯示名稱、GPS/EXIF 清除、確認畫面、雲端代號封包與 SOP 白名單也仍保留。
-   - 選用免觸控：已加入只監看 LINE package 的獨立 AccessibilityService，以固定狀態機做「分享畫面指紋 → 唯一精確收件人 → 唯一傳送按鈕 → 明確語音確認 → 各點一次」。任何不確定皆停止。
+   - 核心隱私目標：長輩在 LINE 聊天室看到別人傳來的圖片後，按浮動按鈕並親自點一下目標圖片；App 只用 LINE 的語意無障礙節點操作該圖片的分享，不截圖、不取得圖片 bytes／URI，也不把畫面交給雲端 AI。
+   - 現況：已加入60秒一次性「等待點圖」能力，驗證聊天輸入框與圖片節點後，優先點擊目標圖片附近唯一的分享控制，找不到才長按圖片並選唯一「分享」；之後接回既有女兒HMAC選人、「已選 (1)」驗證與最後確認。首頁自行選圖、重新編碼與GPS/EXIF清除的另一條流程仍保留。
+   - 選用免觸控：獨立 AccessibilityService 只監看 LINE package，以固定狀態機做「使用者點圖 → 唯一分享控制 → 分享畫面指紋 → 唯一女兒 → 最後確認 → 各點一次」。任何不確定皆停止。
    - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；真實 LINE 版本仍需逐版校準畫面節點；LINE 無障礙自動化有 Google Play 政策風險。
 
 2. **情境二：收到訊息，判斷是不是詐騙**（`CHECK_MESSAGE`）
@@ -42,11 +42,11 @@
 | Android 原始碼 | `app/`，功能基準 `94d2e56` | ✅ |
 | 情境一 LINE 完整鏈 | `76ae711` + `ee9263b` | ✅ MVP |
 | 正式亮色雙情境 UI | `94d2e56` | ✅ |
-| Debug APK | `D:\PriveMVP\PrivAgent-two-scenarios-light-ui-v0.4-debug.apk` | ✅，v2 簽章 |
-| APK SHA-256 | `1EE49B62455BF86F6CB9591BFD6297EB6BD0CAF40514B241479B7DDB5CA4AA33` | ✅ |
-| JVM 測試 | 69／69 | ✅ |
+| Debug APK | `D:\PriveMVP\PrivAgent-line-chat-forward-v0.7-debug.apk` | ✅，v2 Debug 簽章 |
+| APK SHA-256 | `5A7C6F8738BA8E55F679799E008219CBB089D5138936F5274197070F83AA0E4C` | ✅ |
+| JVM 測試 | 70／70 | ✅ |
 | Android instrumentation | 10／10（Pixel 6 Pro AVD / API 34） | ✅ |
-| Android Lint | 0 error；37 個既有 warning | ✅ 可建置 |
+| Android Lint | 0 error；36 個既有 warning | ✅ 可建置 |
 
 ---
 
@@ -149,35 +149,26 @@
 
 ```mermaid
 flowchart TD
-    A[長輩在 LINE 對收到的單張圖片按分享] --> B[Android 分享目標：PrivAgent 安心轉傳給女兒]
-    B --> B1{是否為單一 image/content URI？}
-    B1 -- 否 --> X[停止，不讀取或傳送]
-    B1 -- 是 --> F[立即複製並重新解碼／編碼成新 JPEG]
-    F --> G[不複製 EXIF/GPS/拍攝時間/裝置資訊]
-    G --> C{女兒是否已綁定且唯一？}
-    C -- 否，未設定 --> D[系統聯絡人 Picker：只選一人]
-    C -- 否，多位候選 --> E[手機本機顯示候選，不上雲]
-    C -- 是 --> I[本機預覽與敏感背景檢查]
-    D --> I
-    E --> I
-    I --> J{LINE 免觸控是否已設定？}
-    J -- 否 --> K1[使用者確認照片與收件人]
-    J -- 是 --> K2[顯示照片預覽後自動進入 LINE]
-    K1 --> K{是否同意雲端規劃？}
-    K2 --> K
-    K -- 否 --> L[本機 SOP]
-    K -- 是 --> M[只送狀態布林值 + 一次性 CONTACT/PHOTO token]
-    M --> N[Receiver schema + SOP 白名單驗證]
-    N --> O[AI 只能回 SHARE / ASK / STOP]
-    L --> P[Android ACTION_SEND / LINE]
-    O --> P
-    P --> Q{免觸控模式？}
-    Q -- 否 --> R[使用者在 LINE 選人並送出]
-    Q -- 是 --> S[本機節點樹確認 LINE 分享畫面]
+    A[長輩停留在含圖片的 LINE 聊天室] --> B[按浮動助理]
+    B --> C{唯一女兒與 LINE 名稱已設定？}
+    C -- 否 --> X[停止並引導設定]
+    C -- 是 --> D{聊天輸入框與圖片節點可確認？}
+    D -- 否 --> X
+    D -- 是 --> E[60秒等待：朗讀請點一下目標圖片]
+    E --> F[長輩點一下圖片]
+    F --> G{唯一且具圖片語意？}
+    G -- 否 --> X
+    G -- 是 --> H{附近有唯一分享控制？}
+    H -- 是 --> I[語意 ACTION_CLICK]
+    H -- 否 --> J[對圖片 ACTION_LONG_CLICK]
+    J --> K{選單有唯一文字分享？}
+    K -- 否 --> X
+    K -- 是 --> I
+    I --> S[本機節點樹確認 LINE 分享對象畫面]
     S --> T[精確比對唯一收件人並點一次]
     T --> U[唯一傳送按鈕 + 收件人仍一致]
     U --> V[語音詢問；只接受明確「確認傳送」]
-    V --> W[重新驗證後按一次傳送；60 秒後清理副本]
+    V --> W[重新驗證後按一次傳送]
 ```
 
 ### 4.2 現有實作盤點
@@ -186,8 +177,12 @@ flowchart TD
 |---|---:|---|
 | 本機意圖解析 | ✅ | `CoreTasks.interpret()` 解析 `SHARE_PHOTO`、relation、selection |
 | 單一照片最小存取 | ✅ | Android 13+ 使用 `MediaStore.ACTION_PICK_IMAGES`；舊版用 `ACTION_GET_CONTENT`，不必掃描整本相簿 |
-| LINE 單張圖片分享入口 | ✅ | `ACTION_SEND image/*` 讓 PrivAgent 出現在分享目標；只接受一個 `content://` URI，立即複製清理後不再依賴原始 grant |
-| 不可信分享輸入限制 | ✅ | 拒絕文字、多張 ClipData、`file://`、無法解碼與已知大小超過 40 MiB 的圖片，避免 exported Activity 擴大攻擊面 |
+| LINE 聊天浮動入口 | ✅ | 浮動按鈕只在目前前景是含圖片與輸入框的 LINE 聊天頁時啟動；再次按可取消 |
+| 一次性圖片選取 capability | ✅ | `LineChatForwardSession` 只在記憶體存在60秒；長輩必須在期限內親自點一下圖片 |
+| 圖片語意與唯一性 | ✅ | 只接受尺寸足夠的 ImageView／圖片描述節點；文字、小圖示、多圖片容器或未知節點不操作 |
+| 圖片分享操作 | ✅ MVP | 優先選目標圖片附近唯一語意分享控制；否則對圖片執行 `ACTION_LONG_CLICK`，再選唯一文字「分享」；不用固定座標 |
+| 聊天圖片零 bytes 存取 | ✅ | 聊天內轉傳不讀取圖片 bytes、URI、檔名、像素或 EXIF，也不建立App副本；由LINE內部轉傳 |
+| 聊天轉傳 EXIF 限制 | 🟡 | 因App不取得圖片，無法重新編碼或驗證LINE持有副本的EXIF；只有首頁自行選圖路徑可保證清除EXIF/GPS |
 | 單一聯絡人最小存取 | ✅ | 使用系統 contact picker，只取得使用者選中的 DISPLAY_NAME，不要求讀取整本通訊錄 |
 | 關係綁定留在手機 | ✅ | `RelationBindings` 儲存 relation → name；不送到雲端 |
 | 多位同關係候選本機消歧 | ✅ | 多位「女兒」候選只在手機顯示，雲端不會看到名字 |
@@ -230,7 +225,8 @@ flowchart TD
 
 | 層級 | 可看到 | 不應看到 |
 |---|---|---|
-| 手機 App | 使用者選中的照片、選中的聯絡人名稱、關係、原始 EXIF | 其他相簿照片、其他未選聯絡人 |
+| 手機 App（聊天內轉傳） | 使用者點選圖片節點的 class／description／bounds、收件人關係與名稱 | 圖片 bytes、URI、檔名、像素、EXIF、其他聊天室內容的持久副本 |
+| 手機 App（首頁自行選圖） | 使用者選中的照片、選中的聯絡人名稱、關係、原始 EXIF | 其他相簿照片、其他未選聯絡人 |
 | 暫存目錄 | 新 JPEG 像素、縮圖 | 原始 EXIF、GPS、原始檔案名稱 |
 | Receiver | `recipient_ready`、`photo_ready`、`location_removed`、selection、一次性 token | 圖片 bytes、姓名、電話、LINE ID、原始 URI |
 | 雲端 AI | 與 Receiver 相同的少量狀態 | 照片、姓名、原始語音、聯絡人清單 |
@@ -779,9 +775,9 @@ python -m unittest discover -s receiver/tests
 
 | 驗證 | 結果 | 重要覆蓋 |
 |---|---:|---|
-| JVM unit tests | 69／69 | message guard、packet、隱私規則、LINE 純規則、儲存與傳輸 |
-| Android instrumentation | 10／10 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、對外／對內 share Intent、單張 `content://` 入口限制、一次性自動化 session、語音手動備援、Android ICU regex、加密儲存 |
-| Android Lint | 0 error；37 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
+| JVM unit tests | 70／70 | message guard、packet、隱私規則、LINE 圖片／分享／選人純規則、儲存與傳輸 |
+| Android instrumentation | 10／10 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、聊天圖片與選人兩段一次性 session、語音手動備援、Android ICU regex、加密儲存 |
+| Android Lint | 0 error；36 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
 | Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |
 
 直接執行 Gradle 驗證：

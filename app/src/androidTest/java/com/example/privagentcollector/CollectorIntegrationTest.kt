@@ -1,10 +1,9 @@
 package com.example.privagentcollector
 
 import android.content.Intent
-import android.content.ClipData
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
 import android.media.ExifInterface
 import android.net.Uri
 import android.view.View
@@ -102,26 +101,6 @@ class CollectorIntegrationTest {
         assertNull(LineShare.imageIntent(uri, directToLine = false).`package`)
     }
 
-    @Test fun sharedImageIngressAcceptsOnlyOneExplicitContentImage() {
-        val uri = Uri.parse("content://jp.naver.line.android/selected/image-1")
-        val valid = Intent(Intent.ACTION_SEND).setType("image/jpeg")
-            .putExtra(Intent.EXTRA_STREAM, uri)
-        assertEquals(uri, SharedImageIntake.extract(valid))
-        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("text/plain")
-            .putExtra(Intent.EXTRA_STREAM, uri)))
-        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("image/jpeg")
-            .putExtra(Intent.EXTRA_STREAM, Uri.parse("file:///sdcard/private.jpg"))))
-        val multiple = ClipData.newRawUri("one", uri).apply {
-            addItem(ClipData.Item(Uri.parse("content://jp.naver.line.android/selected/image-2")))
-        }
-        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("image/jpeg").apply {
-            clipData = multiple
-        }))
-        val resolvers = InstrumentationRegistry.getInstrumentation().targetContext.packageManager
-            .queryIntentActivities(Intent(Intent.ACTION_SEND).setType("image/jpeg"), PackageManager.MATCH_DEFAULT_ONLY)
-        assertTrue(resolvers.any { it.activityInfo.name == MainActivity::class.java.name })
-    }
-
     @Test fun lineAutomationSessionIsOneShotAndOrdered() {
         LineAutomationSession.abort()
         val id = LineAutomationSession.start("LINE 小美")
@@ -144,6 +123,23 @@ class CollectorIntegrationTest {
             assertTrue(LineAutomationSession.complete(id))
             assertNull(LineAutomationSession.snapshot())
         } finally { LineAutomationSession.abort() }
+    }
+
+    @Test fun lineChatForwardSessionRequiresOneExplicitImageBeforeRecipientAutomation() {
+        LineChatForwardSession.abort()
+        val id = LineChatForwardSession.start("LINE 小美")
+        try {
+            assertEquals(LineChatForwardSession.Phase.WAIT_IMAGE_TAP,
+                LineChatForwardSession.snapshot()!!.phase)
+            assertNull(LineChatForwardSession.consumeRecipient(id))
+            assertFalse(LineChatForwardSession.selectImage(id, Rect()))
+            assertTrue(LineChatForwardSession.selectImage(id, Rect(100, 300, 700, 1100)))
+            assertEquals(LineChatForwardSession.Phase.FIND_SHARE_CONTROL,
+                LineChatForwardSession.snapshot()!!.phase)
+            assertEquals("LINE 小美", LineChatForwardSession.recipient(id))
+            assertEquals("LINE 小美", LineChatForwardSession.consumeRecipient(id))
+            assertNull(LineChatForwardSession.snapshot())
+        } finally { LineChatForwardSession.abort() }
     }
 
     @Test fun voiceConfirmationAlwaysOffersAnExplicitManualFallback() {

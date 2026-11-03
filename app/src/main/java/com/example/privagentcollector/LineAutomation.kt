@@ -1,6 +1,7 @@
 package com.example.privagentcollector
 
 import android.content.Context
+import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -21,10 +22,76 @@ object LineAutomationSettings {
 
     fun setConsented(context: Context, value: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit { putBoolean(CONSENT, value) }
-        if (!value) LineAutomationSession.abort()
+        if (!value) {
+            LineAutomationSession.abort()
+            LineChatForwardSession.abort()
+        }
     }
 
     fun ready(context: Context): Boolean = consented(context) && LineShareAccessibilityService.connected
+}
+
+/**
+ * Short-lived capability used before LINE opens its recipient screen. The user must first tap the
+ * floating button and then one image; only that image's semantic node may lead to a Share action.
+ */
+object LineChatForwardSession {
+    const val TTL_MS = 60_000L
+
+    enum class Phase { WAIT_IMAGE_TAP, FIND_SHARE_CONTROL }
+    data class Snapshot(val id: Long, val phase: Phase, val imageBounds: Rect?, val startedElapsed: Long)
+    private data class Active(val snapshot: Snapshot, val recipient: String)
+
+    private var nextId = 1L
+    private var active: Active? = null
+    private val expiryHandler = Handler(Looper.getMainLooper())
+
+    @Synchronized fun start(recipient: String): Long {
+        require(recipient.isNotBlank())
+        active = null
+        val id = nextId++
+        active = Active(Snapshot(id, Phase.WAIT_IMAGE_TAP, null, SystemClock.elapsedRealtime()), recipient.trim())
+        expiryHandler.postDelayed({ expire(id) }, TTL_MS + 100L)
+        return id
+    }
+
+    @Synchronized fun snapshot(): Snapshot? {
+        val value = active ?: return null
+        if (SystemClock.elapsedRealtime() - value.snapshot.startedElapsed > TTL_MS) {
+            active = null
+            return null
+        }
+        return value.snapshot.copy(imageBounds = value.snapshot.imageBounds?.let(::Rect))
+    }
+
+    @Synchronized fun selectImage(id: Long, bounds: Rect): Boolean {
+        val value = active ?: return false
+        if (value.snapshot.id != id || value.snapshot.phase != Phase.WAIT_IMAGE_TAP || bounds.isEmpty) return false
+        active = value.copy(snapshot = value.snapshot.copy(phase = Phase.FIND_SHARE_CONTROL, imageBounds = Rect(bounds)))
+        return true
+    }
+
+    @Synchronized fun recipient(id: Long): String? =
+        active?.takeIf { it.snapshot.id == id }?.recipient
+
+    @Synchronized fun consumeRecipient(id: Long): String? {
+        val value = active ?: return null
+        if (value.snapshot.id != id || value.snapshot.phase != Phase.FIND_SHARE_CONTROL) return null
+        active = null
+        return value.recipient
+    }
+
+    @Synchronized fun abort(id: Long? = null): Boolean {
+        if (active == null || (id != null && active?.snapshot?.id != id)) return false
+        active = null
+        return true
+    }
+
+    @Synchronized private fun expire(id: Long) {
+        val value = active ?: return
+        if (value.snapshot.id == id &&
+            SystemClock.elapsedRealtime() - value.snapshot.startedElapsed >= TTL_MS) active = null
+    }
 }
 
 /**

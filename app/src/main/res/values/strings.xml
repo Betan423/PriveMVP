@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">PrivAgent 隱私助理</string>
     <string name="accessibility_desc">用於高齡友善手機助理研究，擷取目前畫面結構與互動事件；僅在使用者主動啟用後運作。</string>
-    <string name="line_accessibility_desc">只在使用者主動分享照片後，於 LINE 本機畫面精確選取已設定的唯一收件人；聽到「確認傳送」後才按一次傳送。不截圖、不上傳畫面。</string>
+    <string name="line_accessibility_desc">只在使用者主動按浮動按鈕或分享照片後，於 LINE 本機畫面確認一張由使用者點選的圖片，再精確選取唯一收件人；最後確認後才傳送。不截圖、不上傳畫面。</string>
     <string name="line_voice_confirm_screen">最後確認\n要把照片傳給剛才找到的家人嗎？\n請說：確認傳送</string>
     <string name="line_voice_manual_fallback">%1$s。照片仍未傳送；可再試一次或手動確認。</string>
-    <string name="share_to_daughter">PrivAgent 安心轉傳給女兒</string>
+    <string name="app_footer">PrivAgent %1$s  ·  隱私優先，必要資料才離開手機</string>
 </resources>

@@ -58,7 +58,6 @@ class AssistantPanel(
     private var bindingRelation: String? = null
     private var resumeShareAfterBinding = false
     private var directToLine = true
-    private var preparedIncomingPhoto: PhotoSanitizer.Result? = null
     // The task that launched the photo or contact picker; a result for an older task is dropped.
     private var pickerTask = -1
     private var openDialog: AlertDialog? = null
@@ -114,7 +113,6 @@ class AssistantPanel(
         generation++
         recipientName = null; lineRecipientName = null; relation = null
         resumeShareAfterBinding = false; bindingRelation = null; directToLine = true
-        preparedIncomingPhoto = null
         LineAutomationSession.abort()
         openDialog?.dismiss(); openDialog = null
         PhotoSanitizer.clear(activity)
@@ -129,25 +127,6 @@ class AssistantPanel(
     fun sharePhoto() = run("把照片傳給")
     fun shareLatestPhoto() = run("把最新照片傳給")
 
-    /** Receives exactly one image explicitly shared from LINE and defaults the recipient to 女兒. */
-    fun forwardSharedPhoto(uri: Uri) {
-        val task = newTask()
-        selection = "selected"
-        relation = "daughter"
-        say("已收到從 LINE 選取的一張圖片，正在建立不含 EXIF／GPS 的安全副本…")
-        Thread({
-            val prepared = try { PhotoSanitizer.prepare(activity, uri, "PHOTO_$task") }
-                catch (_: Exception) { null } catch (_: OutOfMemoryError) { null }
-            ui(task) {
-                if (prepared == null) cancel("無法讀取 LINE 分享的圖片，已取消且沒有傳送")
-                else {
-                    preparedIncomingPhoto = prepared
-                    say("圖片已安全匯入，只保留重新編碼後的副本。正在確認女兒的 LINE 對象…")
-                    resolveRecipient(task, "daughter")
-                }
-            }
-        }, "shared-photo-prepare").start()
-    }
     fun openFamilySettings() = editBindings()
     fun openLineAutomationSettings() = configureLineAutomation()
 
@@ -266,7 +245,7 @@ class AssistantPanel(
     private fun ensureShareDestination(task: Int) {
         if (lineInstalled()) {
             directToLine = true
-            continueWithPreparedOrPicker(task)
+            choosePhoto(task)
             return
         }
         dialog().setTitle("這支手機尚未安裝 LINE")
@@ -275,15 +254,10 @@ class AssistantPanel(
                 if (task == generation) { cancel("請安裝 LINE，完成後再按「傳照片到 LINE」"); openLineStore() }
             }
             .setNeutralButton("改用其他 App") { _, _ ->
-                ui(task) { directToLine = false; continueWithPreparedOrPicker(task) }
+                ui(task) { directToLine = false; choosePhoto(task) }
             }
             .setNegativeButton("取消") { _, _ -> cancel("已取消") }
             .setOnCancelListener { cancel("已取消") }.showForTask()
-    }
-
-    private fun continueWithPreparedOrPicker(task: Int) {
-        val incoming = preparedIncomingPhoto
-        if (incoming != null) confirmShare(task, incoming) else choosePhoto(task)
     }
 
     private fun choosePhoto(task: Int) {
@@ -405,7 +379,7 @@ class AssistantPanel(
             activity.startActivity(Intent.createChooser(fallback, "分享照片"))
         }
         // The copy must outlive the share screen; it is removed when the next task starts or on cancel.
-        recipientName = null; lineRecipientName = null; relation = null; preparedIncomingPhoto = null
+        recipientName = null; lineRecipientName = null; relation = null
         say(if (lineReady)
             if (automatic) "照片已安全交給 LINE。系統只會精確選取「$name」；請在語音詢問時說「確認傳送」。任何畫面不確定都會停止。\n判讀來源：$source"
             else "照片已安全交給 LINE。請在 LINE 選「$name」並按傳送；回到這裡不代表 LINE 已送出。\n判讀來源：$source"

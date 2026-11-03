@@ -20,6 +20,18 @@ class LineAutomationRulesTest {
         assertFalse(LineAutomationRules.isSendControl("下一步"))
     }
 
+    @Test fun chatImageAndItsShareControlMustBeSemanticAndLargeEnough() {
+        assertTrue(LineAutomationRules.isMessageShareControl("分享"))
+        assertTrue(LineAutomationRules.isMessageShareControl("Share"))
+        assertFalse(LineAutomationRules.isMessageShareControl("分享對象"))
+        assertTrue(LineAutomationRules.isPlausibleChatImage(
+            "android.widget.ImageView", null, "照片", 500, 600, 1080, 2400))
+        assertFalse(LineAutomationRules.isPlausibleChatImage(
+            "android.widget.ImageView", null, "分享", 72, 72, 1080, 2400))
+        assertFalse(LineAutomationRules.isPlausibleChatImage(
+            "android.view.View", "匯款訊息", null, 500, 600, 1080, 2400))
+    }
+
     @Test fun normalChatDoesNotLookLikeTheShareRecipientScreen() {
         assertTrue(LineAutomationRules.isShareScreenMarker("分享對象"))
         assertTrue(LineAutomationRules.isShareScreenMarker("選擇傳送對象"))

@@ -21,6 +21,7 @@ object LineAutomationRules {
     private val cancelPhrases = setOf(
         "取消", "不要傳送", "不要傳", "先不要", "不傳送", "停止"
     )
+    private val messageShareLabels = setOf("分享", "share", "シェア", "共有", "공유")
 
     /** Ignores presentation-only whitespace and punctuation, but never does fuzzy name matching. */
     fun normalize(value: CharSequence?): String = value?.toString().orEmpty()
@@ -31,6 +32,26 @@ object LineAutomationRules {
         normalize(value).isNotEmpty() && normalize(value) == normalize(recipient)
 
     fun isSendControl(value: CharSequence?): Boolean = normalize(value) in sendLabels
+
+    fun isMessageShareControl(value: CharSequence?): Boolean = normalize(value) in messageShareLabels
+
+    fun isPlausibleChatImage(
+        className: CharSequence?,
+        text: CharSequence?,
+        description: CharSequence?,
+        width: Int,
+        height: Int,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Boolean {
+        if (width < screenWidth / 6 || height < screenHeight / 10) return false
+        if (normalize(text).isNotEmpty()) return false
+        val type = className?.toString()?.lowercase(Locale.ROOT).orEmpty()
+        val label = normalize(description)
+        val imageType = type.contains("imageview") || type.endsWith(".image")
+        val imageLabel = listOf("圖片", "照片", "相片", "image", "photo").any { label.contains(it) }
+        return imageType || imageLabel
+    }
 
     /** Deliberately excludes generic labels such as plain "分享" that may occur in a chat menu. */
     fun isShareScreenMarker(value: CharSequence?): Boolean = normalize(value) in shareScreenLabels

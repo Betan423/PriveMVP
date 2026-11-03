@@ -20,6 +20,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.app.ServiceCompat
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -88,13 +89,19 @@ class FloatingBubbleService : Service() {
         fun setCovered(covered: Boolean) {
             instance.get()?.bubble?.visibility = if (covered) View.GONE else View.VISIBLE
         }
+
+        fun setImageSelectionMode(active: Boolean) {
+            instance.get()?.setImageSelectionModeInternal(active)
+        }
     }
 
     private var bubble: View? = null
+    private var speaker: Speaker? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = WeakReference(this)
+        speaker = Speaker(this)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -157,9 +164,36 @@ class FloatingBubbleService : Service() {
     }
 
     private fun openAssistant() {
+        when (LineShareAccessibilityService.beginChatImageForward()) {
+            LineChatForwardStart.STARTED,
+            LineChatForwardStart.CANCELLED -> Unit
+            LineChatForwardStart.NOT_LINE -> openQuickAssistant(listen = true)
+            LineChatForwardStart.NOT_LINE_CHAT ->
+                Toast.makeText(this, "請停留在有圖片且輸入框可見的 LINE 聊天室，再按浮動按鈕", Toast.LENGTH_LONG).show()
+            LineChatForwardStart.NOT_READY -> {
+                Toast.makeText(this, "請先啟用 LINE 免觸控服務", Toast.LENGTH_LONG).show()
+                openQuickAssistant(listen = false)
+            }
+            LineChatForwardStart.NEED_DAUGHTER -> {
+                Toast.makeText(this, "請先在家人設定中設定唯一一位女兒", Toast.LENGTH_LONG).show()
+                openQuickAssistant(listen = false)
+            }
+            LineChatForwardStart.NEED_LINE_NAME -> {
+                Toast.makeText(this, "請先完成女兒的 LINE 顯示名稱設定", Toast.LENGTH_LONG).show()
+                openQuickAssistant(listen = false)
+            }
+        }
+    }
+
+    private fun openQuickAssistant(listen: Boolean) {
         startActivity(Intent(this, QuickAssistActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            .putExtra(QuickAssistActivity.EXTRA_LISTEN, true))
+            .putExtra(QuickAssistActivity.EXTRA_LISTEN, listen))
+    }
+
+    private fun setImageSelectionModeInternal(active: Boolean) {
+        (bubble as? TextView)?.text = if (active) "點圖片" else "助理"
+        if (active) speaker?.say("請點一下要轉傳給女兒的圖片")
     }
 
     private fun notification(): Notification {
@@ -183,6 +217,8 @@ class FloatingBubbleService : Service() {
     override fun onDestroy() {
         bubble?.let { getSystemService(WindowManager::class.java).removeView(it) }
         bubble = null
+        speaker?.shutdown()
+        speaker = null
         if (instance.get() === this) instance.clear()
         super.onDestroy()
     }

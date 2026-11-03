@@ -50,19 +50,6 @@ object RelationBindings {
     private fun lineKey(relation: String, contactName: String) = "$LINE_PREFIX$relation:$contactName"
 }
 
-/** Strict single-image ingress for LINE/Android Sharesheet; all other payload shapes fail closed. */
-object SharedImageIntake {
-    @Suppress("DEPRECATION")
-    fun extract(intent: Intent): Uri? {
-        if (intent.action != Intent.ACTION_SEND || intent.type?.startsWith("image/") != true) return null
-        val clip = intent.clipData
-        if (clip != null && clip.itemCount > 1) return null
-        val fromExtra = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        val uri = fromExtra ?: clip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri ?: return null
-        return uri.takeIf { it.scheme == "content" }
-    }
-}
-
 /**
  * Builds the Android hand-off for the last SHARE_PHOTO step.
  *
