@@ -28,6 +28,19 @@ class LineAutomationRulesTest {
         assertFalse(LineAutomationRules.isShareScreenMarker("聊天室"))
     }
 
+    @Test fun verticalScrollingNeverUsesTheHorizontalLinePager() {
+        assertEquals(LineAutomationRules.ScrollChoice.DOWN,
+            LineAutomationRules.verticalScrollChoice(true, false, false, true, 20, 1))
+        assertEquals(LineAutomationRules.ScrollChoice.FORWARD,
+            LineAutomationRules.verticalScrollChoice(false, false, false, true, 20, 1))
+        assertEquals(LineAutomationRules.ScrollChoice.NONE,
+            LineAutomationRules.verticalScrollChoice(false, true, true, true, 1, 3))
+        assertEquals(LineAutomationRules.ScrollChoice.NONE,
+            LineAutomationRules.verticalScrollChoice(false, false, false, true, 1, 3))
+        assertEquals(LineAutomationRules.ScrollChoice.NONE,
+            LineAutomationRules.verticalScrollChoice(false, false, false, true, null, null))
+    }
+
     @Test fun voiceConfirmationFailsClosed() {
         assertEquals(LineAutomationRules.VoiceDecision.CONFIRM,
             LineAutomationRules.voiceDecision("確認傳送"))

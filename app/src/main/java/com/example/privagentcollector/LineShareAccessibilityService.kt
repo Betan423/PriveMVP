@@ -137,17 +137,34 @@ class LineShareAccessibilityService : AccessibilityService() {
             LineAutomationSession.ScrollDecision.ALLOW -> Unit
         }
 
-        val containers = matchingNodes(root) { node ->
-            node.isVisibleToUser && node.isEnabled && node.isScrollable &&
-                node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD } &&
-                isLikelyVerticalList(node)
+        val containers = mutableListOf<Pair<AccessibilityNodeInfo, Int>>()
+        walk(root) { node ->
+            if (!node.isVisibleToUser || !node.isEnabled || !node.isScrollable) return@walk
+            val actionIds = node.actionList.mapTo(mutableSetOf()) { it.id }
+            val collection = node.collectionInfo
+            val choice = LineAutomationRules.verticalScrollChoice(
+                hasDown = AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id in actionIds,
+                hasLeft = AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id in actionIds,
+                hasRight = AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id in actionIds,
+                hasForward = AccessibilityNodeInfo.ACTION_SCROLL_FORWARD in actionIds,
+                rowCount = collection?.rowCount,
+                columnCount = collection?.columnCount
+            )
+            val action = when (choice) {
+                LineAutomationRules.ScrollChoice.DOWN ->
+                    AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id
+                LineAutomationRules.ScrollChoice.FORWARD -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                LineAutomationRules.ScrollChoice.NONE -> return@walk
+            }
+            containers += copy(node) to action
         }
         try {
-            val target = containers.maxByOrNull { node ->
-                val rect = Rect().also(node::getBoundsInScreen)
-                rect.width().toLong() * rect.height().toLong()
+            // A LINE ViewPager can contain the actual vertical chat list. Prefer the deeper visual
+            // region (larger top edge) instead of the larger outer pager rectangle.
+            val target = containers.maxByOrNull { (node, _) ->
+                Rect().also(node::getBoundsInScreen).top
             }
-            if (target == null || !target.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) {
+            if (target == null || !target.first.performAction(target.second)) {
                 stopSession("已搜尋目前可讀取的 LINE 名單，但找不到已設定的唯一對象，沒有按下任何人")
                 return
             }
@@ -155,7 +172,7 @@ class LineShareAccessibilityService : AccessibilityService() {
             // transient event, then hash and inspect the next stable page.
             ignoreEventsUntil = SystemClock.elapsedRealtime() + 550L
             handler.postDelayed(::processActiveWindow, 700L)
-        } finally { containers.forEach(::release) }
+        } finally { containers.forEach { (node, _) -> release(node) } }
     }
 
     private fun verifyAndAsk(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
@@ -243,13 +260,6 @@ class LineShareAccessibilityService : AccessibilityService() {
                 LineAutomationRules.isShareScreenMarker(node.contentDescription))) found = true
         }
         return found
-    }
-
-    private fun isLikelyVerticalList(node: AccessibilityNodeInfo): Boolean {
-        val type = node.className?.toString()?.lowercase().orEmpty()
-        if (type.contains("recyclerview") || type.contains("listview") || type.contains("scrollview")) return true
-        val rect = Rect().also(node::getBoundsInScreen)
-        return rect.height() > rect.width()
     }
 
     /** Returns one copied clickable ancestor per screen rectangle, never raw screen text. */
