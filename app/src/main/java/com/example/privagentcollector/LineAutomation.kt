@@ -57,6 +57,11 @@ object LineChatForwardSession {
     private var nextId = 1L
     private var active: Active? = null
     private val expiryHandler = Handler(Looper.getMainLooper())
+    private val allowedTransitions = setOf(
+        Phase.FIND_CONTEXT_SHARE to Phase.FIND_SELECTED_MESSAGE_SHARE,
+        Phase.FIND_SELECTED_MESSAGE_SHARE to Phase.FIND_MORE,
+        Phase.FIND_MORE to Phase.WAIT_RECIPIENT_SCREEN
+    )
 
     @Synchronized fun start(recipient: String): Long {
         require(recipient.isNotBlank())
@@ -99,7 +104,8 @@ object LineChatForwardSession {
 
     @Synchronized fun advance(id: Long, from: Phase, to: Phase): Boolean {
         val value = active ?: return false
-        if (value.snapshot.id != id || value.snapshot.phase != from) return false
+        if (value.snapshot.id != id || value.snapshot.phase != from ||
+            (from to to) !in allowedTransitions) return false
         active = value.copy(snapshot = value.snapshot.copy(phase = to))
         return true
     }

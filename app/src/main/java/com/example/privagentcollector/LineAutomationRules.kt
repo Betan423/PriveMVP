@@ -81,11 +81,17 @@ object LineAutomationRules {
     /** Deliberately excludes generic labels such as plain "分享" that may occur in a chat menu. */
     fun isShareScreenMarker(value: CharSequence?): Boolean = normalize(value) in shareScreenLabels
 
-    /** Accepted only after this session already clicked one recipient on a verified share screen. */
-    fun isSelectedShareScreenMarker(value: CharSequence?): Boolean {
+    /** Returns LINE's visible selected-recipient count without trusting it as authorization. */
+    fun selectedRecipientCount(value: CharSequence?): Int? {
         val normalized = normalize(value)
-        return Regex("^(已選|selected|選択済み)[1-9][0-9]?$", RegexOption.IGNORE_CASE).matches(normalized)
+        val match = Regex("^(已選|selected|選択済み)([0-9]{1,2})$", RegexOption.IGNORE_CASE)
+            .matchEntire(normalized) ?: return null
+        return match.groupValues[2].toIntOrNull()
     }
+
+    /** A send screen is trusted only when LINE explicitly reports exactly one selected target. */
+    fun isSelectedShareScreenMarker(value: CharSequence?): Boolean =
+        selectedRecipientCount(value) == 1
 
     /**
      * Selects only a vertical accessibility action. A ViewPager usually exposes LEFT/RIGHT or a

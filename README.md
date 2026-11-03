@@ -290,6 +290,14 @@ JVM 測試涵蓋加密 round trip、nonce、篡改與錯誤金鑰、記錄上限
 .\gradlew.bat connectedDebugAndroidTest
 ```
 
+### 生成式隱私紅隊測試
+
+專案另有固定 seed 的合成對抗 campaign，針對兩個正式情境生成收件人混淆、偽造／重複按鈕、模糊語音、水平頁籤、詐騙文字混淆、PII 洩漏與 Prompt Injection。初版共2,921項隱私不變條件檢查，另在 Android 裝置窮舉前置分享狀態機的25種 phase pair。完整威脅模型、初次實測及限制請見 [`docs/PRIVACY_ADVERSARIAL_TESTING.md`](docs/PRIVACY_ADVERSARIAL_TESTING.md)。
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest --tests "com.example.privagentcollector.PrivacyAdversarialTest" --console=plain
+```
+
 實機驗收：Android 9／12／14／16 分別檢查首次拒絕權限、
 Android 14 只選部分照片、撤銷同意、通知／畫面啟停、匯出取消、
 儲存空間不足、快速停止再開始、重新開啟 App 與大量事件情境。

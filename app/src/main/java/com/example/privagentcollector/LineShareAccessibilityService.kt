@@ -500,6 +500,12 @@ class LineShareAccessibilityService : AccessibilityService() {
     }
 
     private fun verifyAndAsk(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
+        val selectedCounts = selectedRecipientCounts(root)
+        if (selectedCounts.any { it != 1 }) {
+            stopSession("LINE 顯示已選取的對象不是一人，為避免誤傳已停止")
+            return
+        }
+        if (1 !in selectedCounts) return // The confirmation screen may still be settling.
         if (!containsExactRecipient(root, session.id)) return
         val send = actionNodes(root) { node ->
             LineAutomationRules.isSendControl(node.text) || LineAutomationRules.isSendControl(node.contentDescription)
@@ -519,6 +525,10 @@ class LineShareAccessibilityService : AccessibilityService() {
     }
 
     private fun clickVerifiedSend(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
+        if (selectedRecipientCounts(root) != setOf(1)) {
+            stopSession("送出前無法確認 LINE 只選取一位對象，已停止")
+            return
+        }
         if (!containsExactRecipient(root, session.id)) {
             stopSession("送出前收件人已改變，已停止")
             return
@@ -613,6 +623,16 @@ class LineShareAccessibilityService : AccessibilityService() {
                 LineAutomationRules.isSelectedShareScreenMarker(node.contentDescription))) found = true
         }
         return found
+    }
+
+    private fun selectedRecipientCounts(root: AccessibilityNodeInfo): Set<Int> {
+        val result = mutableSetOf<Int>()
+        walk(root) { node ->
+            if (!node.isVisibleToUser) return@walk
+            LineAutomationRules.selectedRecipientCount(node.text)?.let(result::add)
+            LineAutomationRules.selectedRecipientCount(node.contentDescription)?.let(result::add)
+        }
+        return result
     }
 
     /**
