@@ -1,8 +1,15 @@
 package com.example.privagentcollector
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.core.content.edit
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /** Explicit local consent is independent from Android's system-level Accessibility switch. */
 object LineAutomationSettings {
@@ -26,38 +33,97 @@ object LineAutomationSettings {
  */
 object LineAutomationSession {
     const val TTL_MS = 120_000L
+    const val MAX_SCROLLS = 24
 
     enum class Phase { FIND_RECIPIENT, VERIFY_CONFIRM_SCREEN, WAIT_VOICE, CONFIRMED, SENDING }
+    enum class ScrollDecision { ALLOW, SAME_PAGE, LIMIT, INVALID }
+
+    /** Public state deliberately contains neither the LINE name nor the HMAC key/digest. */
     data class Snapshot(
         val id: Long,
-        val recipient: String,
         val phase: Phase,
-        val searched: Boolean,
+        val scrollCount: Int,
         val startedElapsed: Long
     )
 
+    private data class Active(
+        val snapshot: Snapshot,
+        val hmacKey: ByteArray,
+        val recipientDigest: ByteArray,
+        val lastPageDigest: ByteArray? = null
+    )
+
     private var nextId = 1L
-    private var active: Snapshot? = null
+    private var active: Active? = null
+    private val expiryHandler = Handler(Looper.getMainLooper())
 
     @Synchronized fun start(recipient: String): Long {
-        val clean = recipient.trim()
-        require(clean.isNotEmpty())
+        val normalized = LineAutomationRules.normalize(recipient)
+        require(normalized.isNotEmpty())
+        clearActive()
         val id = nextId++
-        active = Snapshot(id, clean, Phase.FIND_RECIPIENT, searched = false, SystemClock.elapsedRealtime())
+        val key = ByteArray(32).also(SecureRandom()::nextBytes)
+        val target = keyedDigest(key, "recipient", normalized)
+        active = Active(
+            Snapshot(id, Phase.FIND_RECIPIENT, scrollCount = 0, SystemClock.elapsedRealtime()),
+            key,
+            target
+        )
+        expiryHandler.postDelayed({ expire(id) }, TTL_MS + 100L)
         return id
     }
 
     @Synchronized fun snapshot(): Snapshot? {
         val value = active ?: return null
-        if (SystemClock.elapsedRealtime() - value.startedElapsed > TTL_MS) {
-            active = null
+        if (SystemClock.elapsedRealtime() - value.snapshot.startedElapsed > TTL_MS) {
+            clearActive()
             return null
         }
-        return value
+        return value.snapshot
     }
 
-    @Synchronized fun markSearched(id: Long): Boolean = update(id, Phase.FIND_RECIPIENT) {
-        if (it.searched) null else it.copy(searched = true)
+    /** Exact local equality through per-session HMAC; raw names and raw hashes are never retained. */
+    @Synchronized fun matchesRecipient(id: Long, value: CharSequence?): Boolean {
+        val current = active ?: return false
+        if (current.snapshot.id != id || current.snapshot.phase !in setOf(
+                Phase.FIND_RECIPIENT, Phase.VERIFY_CONFIRM_SCREEN, Phase.CONFIRMED
+            )) return false
+        val normalized = LineAutomationRules.normalize(value)
+        if (normalized.isEmpty()) return false
+        val candidate = keyedDigest(current.hmacKey, "recipient", normalized)
+        return try { MessageDigest.isEqual(current.recipientDigest, candidate) }
+        finally { candidate.fill(0) }
+    }
+
+    /** HMACs a transient visible-page description for loop/end detection without retaining UI text. */
+    @Synchronized fun pageFingerprint(id: Long, values: List<CharSequence?>): ByteArray? {
+        val current = active ?: return null
+        if (current.snapshot.id != id || current.snapshot.phase != Phase.FIND_RECIPIENT) return null
+        val mac = newMac(current.hmacKey)
+        mac.update("page\u0000".toByteArray(StandardCharsets.UTF_8))
+        values.forEach { value ->
+            val normalized = LineAutomationRules.normalize(value)
+            if (normalized.isNotEmpty()) {
+                mac.update(normalized.toByteArray(StandardCharsets.UTF_8))
+                mac.update(0)
+            }
+        }
+        return mac.doFinal()
+    }
+
+    @Synchronized fun beginScroll(id: Long, pageDigest: ByteArray): ScrollDecision {
+        val current = active ?: return ScrollDecision.INVALID
+        val state = current.snapshot
+        if (state.id != id || state.phase != Phase.FIND_RECIPIENT) return ScrollDecision.INVALID
+        if (current.lastPageDigest?.let { MessageDigest.isEqual(it, pageDigest) } == true)
+            return ScrollDecision.SAME_PAGE
+        if (state.scrollCount >= MAX_SCROLLS) return ScrollDecision.LIMIT
+        current.lastPageDigest?.fill(0)
+        active = current.copy(
+            snapshot = state.copy(scrollCount = state.scrollCount + 1),
+            lastPageDigest = pageDigest.copyOf()
+        )
+        return ScrollDecision.ALLOW
     }
 
     @Synchronized fun beginRecipientClick(id: Long): Boolean = transition(
@@ -73,24 +139,52 @@ object LineAutomationSession {
     @Synchronized fun beginSendClick(id: Long): Boolean = transition(id, Phase.CONFIRMED, Phase.SENDING)
 
     @Synchronized fun complete(id: Long): Boolean {
-        if (active?.id != id || active?.phase != Phase.SENDING) return false
-        active = null
+        if (active?.snapshot?.id != id || active?.snapshot?.phase != Phase.SENDING) return false
+        clearActive()
         return true
     }
 
     @Synchronized fun abort(id: Long? = null): Boolean {
-        if (active == null || (id != null && active?.id != id)) return false
-        active = null
+        if (active == null || (id != null && active?.snapshot?.id != id)) return false
+        clearActive()
         return true
+    }
+
+    @Synchronized private fun expire(id: Long) {
+        val current = active ?: return
+        if (current.snapshot.id == id &&
+            SystemClock.elapsedRealtime() - current.snapshot.startedElapsed >= TTL_MS) clearActive()
     }
 
     private fun transition(id: Long, from: Phase, to: Phase): Boolean = update(id, from) { it.copy(phase = to) }
 
     private fun update(id: Long, phase: Phase, change: (Snapshot) -> Snapshot?): Boolean {
-        val value = active ?: return false
+        val current = active ?: return false
+        val value = current.snapshot
         if (value.id != id || value.phase != phase) return false
         val changed = change(value) ?: return false
-        active = changed
+        active = current.copy(snapshot = changed)
         return true
+    }
+
+    private fun keyedDigest(key: ByteArray, purpose: String, normalized: String): ByteArray {
+        val mac = newMac(key)
+        mac.update(purpose.toByteArray(StandardCharsets.UTF_8))
+        mac.update(0)
+        mac.update(normalized.toByteArray(StandardCharsets.UTF_8))
+        return mac.doFinal()
+    }
+
+    private fun newMac(key: ByteArray): Mac = Mac.getInstance("HmacSHA256").apply {
+        init(SecretKeySpec(key, "HmacSHA256"))
+    }
+
+    private fun clearActive() {
+        active?.let {
+            it.hmacKey.fill(0)
+            it.recipientDigest.fill(0)
+            it.lastPageDigest?.fill(0)
+        }
+        active = null
     }
 }

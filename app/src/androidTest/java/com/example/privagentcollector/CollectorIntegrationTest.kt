@@ -104,8 +104,13 @@ class CollectorIntegrationTest {
         val id = LineAutomationSession.start("LINE 小美")
         try {
             assertEquals(LineAutomationSession.Phase.FIND_RECIPIENT, LineAutomationSession.snapshot()!!.phase)
-            assertTrue(LineAutomationSession.markSearched(id))
-            assertFalse(LineAutomationSession.markSearched(id))
+            assertTrue(LineAutomationSession.matchesRecipient(id, " LINE 小美 "))
+            assertFalse(LineAutomationSession.matchesRecipient(id, "LINE 小華"))
+            assertFalse(LineAutomationSession.snapshot().toString().contains("小美"))
+            val page = LineAutomationSession.pageFingerprint(id, listOf("最近的傳送對象", "LINE 小華"))!!
+            assertEquals(LineAutomationSession.ScrollDecision.ALLOW, LineAutomationSession.beginScroll(id, page))
+            assertEquals(LineAutomationSession.ScrollDecision.SAME_PAGE, LineAutomationSession.beginScroll(id, page))
+            page.fill(0)
             assertTrue(LineAutomationSession.beginRecipientClick(id))
             assertFalse(LineAutomationSession.beginRecipientClick(id))
             assertTrue(LineAutomationSession.beginVoiceConfirmation(id))

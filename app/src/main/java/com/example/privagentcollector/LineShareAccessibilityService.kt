@@ -3,7 +3,6 @@ package com.example.privagentcollector
 import android.accessibilityservice.AccessibilityService
 import android.graphics.Rect
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -15,7 +14,7 @@ import java.lang.ref.WeakReference
 /**
  * A package-scoped, fail-closed LINE helper. It never takes screenshots, records UI text, uses
  * coordinates, or lets an AI choose actions. The only allowed state machine is:
- * exact recipient -> verified Send screen -> spoken confirmation -> one Send click.
+ * per-session HMAC recipient match -> verified Send screen -> spoken confirmation -> one Send click.
  */
 class LineShareAccessibilityService : AccessibilityService() {
     companion object {
@@ -32,6 +31,7 @@ class LineShareAccessibilityService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var lastProcessed = 0L
     private var unknownScreenTimeoutFor = -1L
+    private var ignoreEventsUntil = 0L
 
     override fun onServiceConnected() {
         connected = true
@@ -63,6 +63,7 @@ class LineShareAccessibilityService : AccessibilityService() {
             return
         }
         val now = SystemClock.elapsedRealtime()
+        if (now < ignoreEventsUntil) return
         if (now - lastProcessed < 180L) return
         lastProcessed = now
         processActiveWindow()
@@ -92,8 +93,9 @@ class LineShareAccessibilityService : AccessibilityService() {
 
     private fun findAndSelectRecipient(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
         val matches = actionNodes(root) { node ->
-            !node.isEditable && (LineAutomationRules.isExactRecipient(node.text, session.recipient) ||
-                LineAutomationRules.isExactRecipient(node.contentDescription, session.recipient))
+            node.isVisibleToUser && !node.isEditable &&
+                (LineAutomationSession.matchesRecipient(session.id, node.text) ||
+                    LineAutomationSession.matchesRecipient(session.id, node.contentDescription))
         }
         try {
             when {
@@ -104,29 +106,60 @@ class LineShareAccessibilityService : AccessibilityService() {
                         stopSession("無法安全選取 LINE 對象，已停止")
                     else handler.postDelayed(::processActiveWindow, 350L)
                 }
-                !session.searched -> searchForRecipient(root, session)
+                else -> scrollForRecipient(root, session)
             }
         } finally { matches.forEach(::release) }
     }
 
-    private fun searchForRecipient(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
-        val fields = matchingNodes(root) { node ->
-            node.isEnabled && node.isEditable && node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
+    private fun scrollForRecipient(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
+        val visibleValues = mutableListOf<CharSequence?>()
+        walk(root) { node ->
+            if (node.isVisibleToUser) {
+                visibleValues += node.text
+                visibleValues += node.contentDescription
+            }
+        }
+        val pageDigest = LineAutomationSession.pageFingerprint(session.id, visibleValues)
+        visibleValues.clear()
+        if (pageDigest == null) return
+        val decision = try { LineAutomationSession.beginScroll(session.id, pageDigest) }
+        finally { pageDigest.fill(0) }
+        when (decision) {
+            LineAutomationSession.ScrollDecision.SAME_PAGE -> {
+                stopSession("LINE 名單已沒有繼續移動，找不到已設定的唯一對象，沒有按下任何人")
+                return
+            }
+            LineAutomationSession.ScrollDecision.LIMIT -> {
+                stopSession("已安全搜尋 ${LineAutomationSession.MAX_SCROLLS} 頁仍找不到對象，沒有按下任何人")
+                return
+            }
+            LineAutomationSession.ScrollDecision.INVALID -> return
+            LineAutomationSession.ScrollDecision.ALLOW -> Unit
+        }
+
+        val containers = matchingNodes(root) { node ->
+            node.isVisibleToUser && node.isEnabled && node.isScrollable &&
+                node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD } &&
+                isLikelyVerticalList(node)
         }
         try {
-            if (fields.size != 1) return
-            if (!LineAutomationSession.markSearched(session.id)) return
-            val arguments = Bundle().apply {
-                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, session.recipient)
+            val target = containers.maxByOrNull { node ->
+                val rect = Rect().also(node::getBoundsInScreen)
+                rect.width().toLong() * rect.height().toLong()
             }
-            if (!fields[0].performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments))
-                stopSession("LINE 搜尋欄無法使用，已停止")
-            else handler.postDelayed(::processActiveWindow, 500L)
-        } finally { fields.forEach(::release) }
+            if (target == null || !target.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) {
+                stopSession("已搜尋目前可讀取的 LINE 名單，但找不到已設定的唯一對象，沒有按下任何人")
+                return
+            }
+            // Some LINE versions emit a content event before the list has settled. Ignore that
+            // transient event, then hash and inspect the next stable page.
+            ignoreEventsUntil = SystemClock.elapsedRealtime() + 550L
+            handler.postDelayed(::processActiveWindow, 700L)
+        } finally { containers.forEach(::release) }
     }
 
     private fun verifyAndAsk(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
-        if (!containsExactRecipient(root, session.recipient)) return
+        if (!containsExactRecipient(root, session.id)) return
         val send = actionNodes(root) { node ->
             LineAutomationRules.isSendControl(node.text) || LineAutomationRules.isSendControl(node.contentDescription)
         }
@@ -145,7 +178,7 @@ class LineShareAccessibilityService : AccessibilityService() {
     }
 
     private fun clickVerifiedSend(root: AccessibilityNodeInfo, session: LineAutomationSession.Snapshot) {
-        if (!containsExactRecipient(root, session.recipient)) {
+        if (!containsExactRecipient(root, session.id)) {
             stopSession("送出前收件人已改變，已停止")
             return
         }
@@ -193,11 +226,12 @@ class LineShareAccessibilityService : AccessibilityService() {
         }, 5_000L)
     }
 
-    private fun containsExactRecipient(root: AccessibilityNodeInfo, recipient: String): Boolean {
+    private fun containsExactRecipient(root: AccessibilityNodeInfo, sessionId: Long): Boolean {
         var found = false
         walk(root) { node ->
-            if (LineAutomationRules.isExactRecipient(node.text, recipient) ||
-                LineAutomationRules.isExactRecipient(node.contentDescription, recipient)) found = true
+            if (node.isVisibleToUser &&
+                (LineAutomationSession.matchesRecipient(sessionId, node.text) ||
+                    LineAutomationSession.matchesRecipient(sessionId, node.contentDescription))) found = true
         }
         return found
     }
@@ -205,10 +239,17 @@ class LineShareAccessibilityService : AccessibilityService() {
     private fun containsShareScreenMarker(root: AccessibilityNodeInfo): Boolean {
         var found = false
         walk(root) { node ->
-            if (LineAutomationRules.isShareScreenMarker(node.text) ||
-                LineAutomationRules.isShareScreenMarker(node.contentDescription)) found = true
+            if (node.isVisibleToUser && (LineAutomationRules.isShareScreenMarker(node.text) ||
+                LineAutomationRules.isShareScreenMarker(node.contentDescription))) found = true
         }
         return found
+    }
+
+    private fun isLikelyVerticalList(node: AccessibilityNodeInfo): Boolean {
+        val type = node.className?.toString()?.lowercase().orEmpty()
+        if (type.contains("recyclerview") || type.contains("listview") || type.contains("scrollview")) return true
+        val rect = Rect().also(node::getBoundsInScreen)
+        return rect.height() > rect.width()
     }
 
     /** Returns one copied clickable ancestor per screen rectangle, never raw screen text. */

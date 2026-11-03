@@ -41,7 +41,7 @@ class LineVoiceConfirmActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding((24 * dp).toInt(), (20 * dp).toInt(), (24 * dp).toInt(), (20 * dp).toInt())
             addView(TextView(this@LineVoiceConfirmActivity).apply {
-                text = getString(R.string.line_voice_confirm_screen, session.recipient)
+                text = getString(R.string.line_voice_confirm_screen)
                 textSize = 25f
                 setTextColor(Color.BLACK)
                 gravity = Gravity.CENTER

@@ -197,9 +197,11 @@ flowchart TD
 | 取消／新任務清除暫存 | ✅ | `newTask()`、取消、App 初始化會刪除 `cache/shared` 暫存照片 |
 | LINE 顯示名稱獨立綁定 | ✅ | Android 聯絡人名稱與 LINE 名稱分開儲存；第一次使用時本機確認，不送到 AI |
 | LINE package 範圍限制 | ✅ | `line_share_accessibility_config.xml` 只接收 `jp.naver.line.android` 事件 |
-| 一次性自動化 capability | ✅ | `LineAutomationSession` 只存在記憶體、TTL 120 秒、每階段只允許前進一次 |
-| 防一般聊天室誤觸 | ✅ | 必須先辨識「分享對象／Share with」等固定畫面指紋；普通聊天畫面即使也有姓名與 Send 也不操作 |
-| 防同名／模糊選人 | ✅ | 只接受正規化後完全相同且唯一的收件人；0 或多個結果皆不送 |
+| 一次性自動化 capability | ✅ | `LineAutomationSession` 只存在記憶體、TTL 120 秒、每階段只允許前進一次；完成、取消或逾時會清零工作階段 HMAC 金鑰與摘要 |
+| 防一般聊天室誤觸 | ✅ | 必須先辨識「分享對象／選擇傳送對象／Share with」等固定畫面指紋；普通聊天畫面即使也有姓名與 Send 也不操作 |
+| 姓名最小留存比對 | ✅ | 工作階段不保存原始 LINE 姓名或未加鹽 hash；每次用隨機 256-bit key 做 HMAC-SHA256，比對可見節點後只保留摘要 |
+| 找不到時的有限滑動 | ✅ | 只對可見且可向前捲動的清單執行 `ACTION_SCROLL_FORWARD`；頁面 HMAC 不變、24 頁上限或清單無法捲動即停止 |
+| 防同名／模糊選人 | ✅ | 只接受正規化後 HMAC 完全相同且畫面唯一的收件人；0 個會有限滑動，多個結果立即停止 |
 | 送出前語音確認 | ✅ | 語音只接受 allowlist 明確句型；「好」等模糊回答視為 unknown 並停止 |
 | 自動化不由 AI 決定 | ✅ | AI 不能產生座標或操作；固定本機狀態機最多點一次收件人與一次送出 |
 | 傳送後暫存清理 | ✅ MVP | LINE 接受送出操作後保留 60 秒 I/O 寬限，再清除清理後 JPEG；新任務與冷啟動也會清理 |
@@ -230,7 +232,7 @@ flowchart TD
 | Receiver | `recipient_ready`、`photo_ready`、`location_removed`、selection、一次性 token | 圖片 bytes、姓名、電話、LINE ID、原始 URI |
 | 雲端 AI | 與 Receiver 相同的少量狀態 | 照片、姓名、原始語音、聯絡人清單 |
 | 分享 App | 清除 metadata 後的新 JPEG | 原始 EXIF/GPS；但仍能看到照片像素中的內容 |
-| LINE 免觸控服務 | 工作階段內的 LINE 節點文字、content description、view id、可點擊／選取狀態 | 不截圖、不做 OCR、不保存／上傳畫面、不處理其他 package |
+| LINE 免觸控服務 | 比對當下短暫讀取 LINE 可見節點文字、content description、view id、可點擊／選取狀態 | 不截圖、不做 OCR、不保存／上傳原文、不處理其他 package；姓名與頁面只留下當次隨機金鑰的 HMAC，任務結束即清零 |
 | 稽核 | 任務 alias、SOP、reason code | 圖片、姓名、token → 真實對象映射 |
 
 ### 4.4 雲端封包範例

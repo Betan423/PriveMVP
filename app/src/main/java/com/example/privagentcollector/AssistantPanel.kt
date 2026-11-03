@@ -225,7 +225,7 @@ class AssistantPanel(
             hint = "LINE 顯示名稱"
         }
         dialog().setTitle("設定 LINE 中的顯示名稱")
-            .setMessage("免觸控分享只會精確比對唯一名稱。請確認這與 LINE 分享畫面顯示的名稱完全相同；資料只存在手機。")
+            .setMessage("免觸控分享只會在手機上以單次 HMAC 精確比對唯一名稱。請確認這與 LINE 分享畫面顯示的名稱完全相同；畫面找不到時會有限度往下搜尋，資料不會送到雲端。")
             .setView(input)
             .setPositiveButton("儲存並繼續") { _, _ ->
                 val value = input.text.toString().trim()
@@ -409,7 +409,7 @@ class AssistantPanel(
             else -> "目前未啟用。"
         }
         val builder = dialog().setTitle("LINE 免觸控分享")
-            .setMessage("$status\n\n啟用後，只有在你主動要求分享照片後的 2 分鐘內，服務才會讀取 LINE 的畫面元件，精確尋找已設定的唯一收件人。它不截圖、不保存或上傳畫面、不用座標亂點；真正送出前一定會再問，只有聽到「確認傳送」才按一次傳送。若同名、畫面改版、彈窗或按鈕不唯一，就停止。\n\n首次啟用是 Android 安全限制，必須由本人或家屬在系統設定手動開啟一次。")
+            .setMessage("$status\n\n啟用後，只有在你主動要求分享照片後的 2 分鐘內，服務才會讀取 LINE 的可見畫面元件。名稱會立即轉成每次任務不同金鑰的 HMAC 做精確比對；找不到時最多往下搜尋 24 頁。它不截圖、不保存或上傳畫面、不用座標亂點；真正送出前一定會再問，只有聽到「確認傳送」才按一次傳送。若同名、頁面不動、畫面改版、彈窗或按鈕不唯一，就停止。\n\nHMAC 是降低明文留存風險，不代表服務比對當下完全看不到文字。首次啟用是 Android 安全限制，必須由本人或家屬在系統設定手動開啟一次。")
             .setPositiveButton(if (consented) "開啟系統設定" else "同意並前往設定") { _, _ ->
                 LineAutomationSettings.setConsented(activity, true)
                 try { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }

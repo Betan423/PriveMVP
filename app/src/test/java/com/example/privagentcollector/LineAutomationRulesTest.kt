@@ -22,6 +22,7 @@ class LineAutomationRulesTest {
 
     @Test fun normalChatDoesNotLookLikeTheShareRecipientScreen() {
         assertTrue(LineAutomationRules.isShareScreenMarker("分享對象"))
+        assertTrue(LineAutomationRules.isShareScreenMarker("選擇傳送對象"))
         assertTrue(LineAutomationRules.isShareScreenMarker("Share with"))
         assertFalse(LineAutomationRules.isShareScreenMarker("分享"))
         assertFalse(LineAutomationRules.isShareScreenMarker("聊天室"))

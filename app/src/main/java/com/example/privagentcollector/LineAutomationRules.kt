@@ -10,7 +10,7 @@ object LineAutomationRules {
         "傳送", "分享", "送出", "send", "share", "送信", "送る"
     )
     private val shareScreenLabels = setOf(
-        "分享對象", "選擇分享對象", "分享至", "分享給", "選擇好友",
+        "分享對象", "選擇分享對象", "選擇傳送對象", "分享至", "分享給", "選擇好友",
         "sharewith", "selectrecipients", "chooserecipients",
         "シェア先", "共有先", "送信先"
     )
