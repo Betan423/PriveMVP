@@ -35,6 +35,12 @@ object LineAutomationRules {
     /** Deliberately excludes generic labels such as plain "分享" that may occur in a chat menu. */
     fun isShareScreenMarker(value: CharSequence?): Boolean = normalize(value) in shareScreenLabels
 
+    /** Accepted only after this session already clicked one recipient on a verified share screen. */
+    fun isSelectedShareScreenMarker(value: CharSequence?): Boolean {
+        val normalized = normalize(value)
+        return Regex("^(已選|selected|選択済み)[1-9][0-9]?$", RegexOption.IGNORE_CASE).matches(normalized)
+    }
+
     /**
      * Selects only a vertical accessibility action. A ViewPager usually exposes LEFT/RIGHT or a
      * one-row, multi-column collection; both must fail closed so Chat never advances to Groups.

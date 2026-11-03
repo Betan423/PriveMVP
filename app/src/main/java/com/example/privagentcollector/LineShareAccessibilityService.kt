@@ -76,7 +76,7 @@ class LineShareAccessibilityService : AccessibilityService() {
             if (root.packageName?.toString() != LineShare.PACKAGE_NAME) return
             // Never treat a normal LINE chat (which also has a Send button and a person's name)
             // as the ACTION_SEND recipient screen.
-            if (!containsShareScreenMarker(root)) {
+            if (!containsTrustedShareScreen(root, session.phase)) {
                 scheduleUnknownScreenTimeout(session.id)
                 return
             }
@@ -228,7 +228,8 @@ class LineShareAccessibilityService : AccessibilityService() {
         if (unknownScreenTimeoutFor == sessionId) return
         unknownScreenTimeoutFor = sessionId
         handler.postDelayed({
-            if (unknownScreenTimeoutFor != sessionId || LineAutomationSession.snapshot()?.id != sessionId)
+            val session = LineAutomationSession.snapshot()
+            if (unknownScreenTimeoutFor != sessionId || session?.id != sessionId)
                 return@postDelayed
             val root = rootInActiveWindow
             if (root == null) {
@@ -236,7 +237,8 @@ class LineShareAccessibilityService : AccessibilityService() {
                 return@postDelayed
             }
             try {
-                if (root.packageName?.toString() != LineShare.PACKAGE_NAME || !containsShareScreenMarker(root))
+                if (root.packageName?.toString() != LineShare.PACKAGE_NAME ||
+                    !containsTrustedShareScreen(root, session.phase))
                     stopSession("無法確認這是 LINE 分享對象畫面，已停止且沒有按下任何按鈕")
                 else processActiveWindow()
             } finally { release(root) }
@@ -260,6 +262,28 @@ class LineShareAccessibilityService : AccessibilityService() {
                 LineAutomationRules.isShareScreenMarker(node.contentDescription))) found = true
         }
         return found
+    }
+
+    private fun containsSelectedShareScreenMarker(root: AccessibilityNodeInfo): Boolean {
+        var found = false
+        walk(root) { node ->
+            if (node.isVisibleToUser && (LineAutomationRules.isSelectedShareScreenMarker(node.text) ||
+                LineAutomationRules.isSelectedShareScreenMarker(node.contentDescription))) found = true
+        }
+        return found
+    }
+
+    /**
+     * The selected-recipient title is trusted only after the one-shot state machine has already
+     * clicked a unique HMAC-matched row on the original, verified recipient screen.
+     */
+    private fun containsTrustedShareScreen(
+        root: AccessibilityNodeInfo,
+        phase: LineAutomationSession.Phase
+    ): Boolean {
+        if (containsShareScreenMarker(root)) return true
+        return phase != LineAutomationSession.Phase.FIND_RECIPIENT &&
+            containsSelectedShareScreenMarker(root)
     }
 
     /** Returns one copied clickable ancestor per screen rectangle, never raw screen text. */

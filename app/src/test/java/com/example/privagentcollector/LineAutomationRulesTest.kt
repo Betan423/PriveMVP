@@ -28,6 +28,16 @@ class LineAutomationRulesTest {
         assertFalse(LineAutomationRules.isShareScreenMarker("聊天室"))
     }
 
+    @Test fun selectedRecipientMarkerIsStrictAndCounted() {
+        assertTrue(LineAutomationRules.isSelectedShareScreenMarker("已選 (1)"))
+        assertTrue(LineAutomationRules.isSelectedShareScreenMarker("Selected (1)"))
+        assertTrue(LineAutomationRules.isSelectedShareScreenMarker("選択済み 2"))
+        assertFalse(LineAutomationRules.isSelectedShareScreenMarker("已選"))
+        assertFalse(LineAutomationRules.isSelectedShareScreenMarker("已選 (0)"))
+        assertFalse(LineAutomationRules.isSelectedShareScreenMarker("已選照片 (1)"))
+        assertFalse(LineAutomationRules.isSelectedShareScreenMarker("分享"))
+    }
+
     @Test fun verticalScrollingNeverUsesTheHorizontalLinePager() {
         assertEquals(LineAutomationRules.ScrollChoice.DOWN,
             LineAutomationRules.verticalScrollChoice(true, false, false, true, 20, 1))
