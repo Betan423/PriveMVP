@@ -1,6 +1,8 @@
 package com.example.privagentcollector
 
 import android.content.Intent
+import android.content.ClipData
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.media.ExifInterface
@@ -98,6 +100,26 @@ class CollectorIntegrationTest {
         assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
         assertNotEquals(0, intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
         assertNull(LineShare.imageIntent(uri, directToLine = false).`package`)
+    }
+
+    @Test fun sharedImageIngressAcceptsOnlyOneExplicitContentImage() {
+        val uri = Uri.parse("content://jp.naver.line.android/selected/image-1")
+        val valid = Intent(Intent.ACTION_SEND).setType("image/jpeg")
+            .putExtra(Intent.EXTRA_STREAM, uri)
+        assertEquals(uri, SharedImageIntake.extract(valid))
+        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_STREAM, uri)))
+        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("image/jpeg")
+            .putExtra(Intent.EXTRA_STREAM, Uri.parse("file:///sdcard/private.jpg"))))
+        val multiple = ClipData.newRawUri("one", uri).apply {
+            addItem(ClipData.Item(Uri.parse("content://jp.naver.line.android/selected/image-2")))
+        }
+        assertNull(SharedImageIntake.extract(Intent(Intent.ACTION_SEND).setType("image/jpeg").apply {
+            clipData = multiple
+        }))
+        val resolvers = InstrumentationRegistry.getInstrumentation().targetContext.packageManager
+            .queryIntentActivities(Intent(Intent.ACTION_SEND).setType("image/jpeg"), PackageManager.MATCH_DEFAULT_ONLY)
+        assertTrue(resolvers.any { it.activityInfo.name == MainActivity::class.java.name })
     }
 
     @Test fun lineAutomationSessionIsOneShotAndOrdered() {

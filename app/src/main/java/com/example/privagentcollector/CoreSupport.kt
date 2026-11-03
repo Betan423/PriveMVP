@@ -50,6 +50,19 @@ object RelationBindings {
     private fun lineKey(relation: String, contactName: String) = "$LINE_PREFIX$relation:$contactName"
 }
 
+/** Strict single-image ingress for LINE/Android Sharesheet; all other payload shapes fail closed. */
+object SharedImageIntake {
+    @Suppress("DEPRECATION")
+    fun extract(intent: Intent): Uri? {
+        if (intent.action != Intent.ACTION_SEND || intent.type?.startsWith("image/") != true) return null
+        val clip = intent.clipData
+        if (clip != null && clip.itemCount > 1) return null
+        val fromExtra = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        val uri = fromExtra ?: clip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri ?: return null
+        return uri.takeIf { it.scheme == "content" }
+    }
+}
+
 /**
  * Builds the Android hand-off for the last SHARE_PHOTO step.
  *
@@ -125,6 +138,7 @@ object DeviceState {
 object PhotoSanitizer {
     data class Result(val file: File, val thumbnail: Bitmap, val hadLocation: Boolean)
     private const val MAX_EDGE = 2048
+    private const val MAX_SOURCE_BYTES = 40L * 1024L * 1024L
 
     fun dir(context: Context) = File(context.cacheDir, "shared").apply { mkdirs() }
 
@@ -132,6 +146,9 @@ object PhotoSanitizer {
 
     fun prepare(context: Context, uri: Uri, name: String): Result {
         val resolver = context.contentResolver
+        resolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
+            if (descriptor.length > MAX_SOURCE_BYTES) error("照片檔案過大")
+        }
         var orientation = ExifInterface.ORIENTATION_NORMAL
         var hadLocation = false
         try {
@@ -146,7 +163,8 @@ object PhotoSanitizer {
         (resolver.openInputStream(uri) ?: error("無法讀取照片")).use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) error("無法讀取照片")
         var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > MAX_EDGE) sample *= 2
+        val maxDimension = maxOf(bounds.outWidth, bounds.outHeight).toLong()
+        while (maxDimension / sample > MAX_EDGE && sample < (1 shl 30)) sample *= 2
         val decoded = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
         } ?: error("無法讀取照片")

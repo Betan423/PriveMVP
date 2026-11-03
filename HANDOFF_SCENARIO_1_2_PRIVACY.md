@@ -19,8 +19,8 @@
 本專案目前處理兩個核心情境：
 
 1. **情境一：把圖片發送給女兒**（`SHARE_PHOTO`）
-   - 核心隱私目標：只存取使用者選中的一張照片；聯絡人身分只在手機解析；分享前移除 EXIF/GPS；雲端 AI 不取得照片、姓名、聯絡方式或完整語音內容。
-   - 現況：基本分享流程、單張／最新照片、本機關係綁定、獨立 LINE 顯示名稱、照片重新編碼、GPS/EXIF 清除、確認畫面、雲端代號封包與 SOP 白名單已完成。
+   - 核心隱私目標：長輩在 LINE 看到別人傳來的圖片後，從該圖片分享選單呼叫 PrivAgent；Android 只交付明確選中的一張照片。聯絡人身分只在手機解析；分享前移除 EXIF/GPS；雲端 AI 不取得照片、姓名、聯絡方式或完整語音內容。
+   - 現況：PrivAgent 已註冊為單張 `image/*` 分享目標，收到圖片後立即建立安全副本並預設轉給女兒；首頁單張／最新照片、本機關係綁定、獨立 LINE 顯示名稱、GPS/EXIF 清除、確認畫面、雲端代號封包與 SOP 白名單也仍保留。
    - 選用免觸控：已加入只監看 LINE package 的獨立 AccessibilityService，以固定狀態機做「分享畫面指紋 → 唯一精確收件人 → 唯一傳送按鈕 → 明確語音確認 → 各點一次」。任何不確定皆停止。
    - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；真實 LINE 版本仍需逐版校準畫面節點；LINE 無障礙自動化有 Google Play 政策風險。
 
@@ -44,8 +44,8 @@
 | 正式亮色雙情境 UI | `94d2e56` | ✅ |
 | Debug APK | `D:\PriveMVP\PrivAgent-two-scenarios-light-ui-v0.4-debug.apk` | ✅，v2 簽章 |
 | APK SHA-256 | `1EE49B62455BF86F6CB9591BFD6297EB6BD0CAF40514B241479B7DDB5CA4AA33` | ✅ |
-| JVM 測試 | 67／67 | ✅ |
-| Android instrumentation | 8／8（Pixel 6 Pro AVD / API 34） | ✅ |
+| JVM 測試 | 69／69 | ✅ |
+| Android instrumentation | 10／10（Pixel 6 Pro AVD / API 34） | ✅ |
 | Android Lint | 0 error；37 個既有 warning | ✅ 可建置 |
 
 ---
@@ -149,16 +149,17 @@
 
 ```mermaid
 flowchart TD
-    A[使用者說：把這張照片傳給女兒] --> B[手機本機解析 intent / relation / selection]
-    B --> C{女兒是否已綁定且唯一？}
+    A[長輩在 LINE 對收到的單張圖片按分享] --> B[Android 分享目標：PrivAgent 安心轉傳給女兒]
+    B --> B1{是否為單一 image/content URI？}
+    B1 -- 否 --> X[停止，不讀取或傳送]
+    B1 -- 是 --> F[立即複製並重新解碼／編碼成新 JPEG]
+    F --> G[不複製 EXIF/GPS/拍攝時間/裝置資訊]
+    G --> C{女兒是否已綁定且唯一？}
     C -- 否，未設定 --> D[系統聯絡人 Picker：只選一人]
     C -- 否，多位候選 --> E[手機本機顯示候選，不上雲]
-    C -- 是 --> F[系統 Photo Picker：只授權一張照片]
-    D --> F
-    E --> F
-    F --> G[手機重新解碼與編碼成新 JPEG]
-    G --> H[不複製 EXIF/GPS/拍攝時間/裝置資訊]
-    H --> I[本機預覽與敏感背景檢查]
+    C -- 是 --> I[本機預覽與敏感背景檢查]
+    D --> I
+    E --> I
     I --> J{LINE 免觸控是否已設定？}
     J -- 否 --> K1[使用者確認照片與收件人]
     J -- 是 --> K2[顯示照片預覽後自動進入 LINE]
@@ -185,6 +186,8 @@ flowchart TD
 |---|---:|---|
 | 本機意圖解析 | ✅ | `CoreTasks.interpret()` 解析 `SHARE_PHOTO`、relation、selection |
 | 單一照片最小存取 | ✅ | Android 13+ 使用 `MediaStore.ACTION_PICK_IMAGES`；舊版用 `ACTION_GET_CONTENT`，不必掃描整本相簿 |
+| LINE 單張圖片分享入口 | ✅ | `ACTION_SEND image/*` 讓 PrivAgent 出現在分享目標；只接受一個 `content://` URI，立即複製清理後不再依賴原始 grant |
+| 不可信分享輸入限制 | ✅ | 拒絕文字、多張 ClipData、`file://`、無法解碼與已知大小超過 40 MiB 的圖片，避免 exported Activity 擴大攻擊面 |
 | 單一聯絡人最小存取 | ✅ | 使用系統 contact picker，只取得使用者選中的 DISPLAY_NAME，不要求讀取整本通訊錄 |
 | 關係綁定留在手機 | ✅ | `RelationBindings` 儲存 relation → name；不送到雲端 |
 | 多位同關係候選本機消歧 | ✅ | 多位「女兒」候選只在手機顯示，雲端不會看到名字 |
@@ -776,8 +779,8 @@ python -m unittest discover -s receiver/tests
 
 | 驗證 | 結果 | 重要覆蓋 |
 |---|---:|---|
-| JVM unit tests | 67／67 | message guard、packet、隱私規則、LINE 純規則、儲存與傳輸 |
-| Android instrumentation | 8／8 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、share Intent、一次性自動化 session、Android ICU regex、加密儲存 |
+| JVM unit tests | 69／69 | message guard、packet、隱私規則、LINE 純規則、儲存與傳輸 |
+| Android instrumentation | 10／10 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、對外／對內 share Intent、單張 `content://` 入口限制、一次性自動化 session、語音手動備援、Android ICU regex、加密儲存 |
 | Android Lint | 0 error；37 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
 | Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |
 

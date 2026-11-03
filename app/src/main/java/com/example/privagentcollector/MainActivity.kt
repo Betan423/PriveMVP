@@ -60,7 +60,7 @@ class MainActivity : Activity() {
         root.addView(supportCard(), cardParams())
         root.addView(AppUi.spacer(this, 12))
         root.addView(TextView(this).apply {
-            text = "PrivAgent 0.4  ·  隱私優先，必要資料才離開手機"
+            text = "PrivAgent ${BuildConfig.VERSION_NAME}  ·  隱私優先，必要資料才離開手機"
             gravity = Gravity.CENTER
             setPadding(0, dp(8), 0, 0)
             AppUi.body(this, 13f)
@@ -84,6 +84,7 @@ class MainActivity : Activity() {
         }
         setContentView(scroll)
         scroll.requestApplyInsets()
+        if (savedInstanceState == null) handleSharedImage(intent)
     }
 
     private fun header(): View = LinearLayout(this).apply {
@@ -138,7 +139,7 @@ class MainActivity : Activity() {
             AppUi.title(this)
         })
         addView(TextView(this@MainActivity).apply {
-            text = "選擇家人與照片後，系統會建立不含 EXIF／GPS 的新副本，再安全交給 LINE。"
+            text = "選擇照片，或在 LINE 對收到的圖片按分享並選 PrivAgent。系統會建立不含 EXIF／GPS 的新副本，再安全轉傳給女兒。"
             AppUi.body(this)
         })
         addView(AppUi.spacer(this@MainActivity, 12))
@@ -315,6 +316,26 @@ class MainActivity : Activity() {
         super.onResume()
         FloatingAssistant.sync(this)
         messagePanel?.renderAuto()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSharedImage(intent)
+    }
+
+    private fun handleSharedImage(incoming: Intent) {
+        if (incoming.action != Intent.ACTION_SEND) return
+        val uri = SharedImageIntake.extract(incoming)
+        // Consume this grant once so configuration recreation cannot repeat the transfer.
+        incoming.action = Intent.ACTION_MAIN
+        incoming.removeExtra(Intent.EXTRA_STREAM)
+        incoming.clipData = null
+        if (uri == null) {
+            message("PrivAgent 只接受從 LINE／分享選單明確選取的一張圖片")
+            return
+        }
+        assistantPanel?.forwardSharedPhoto(uri)
     }
 
     @Deprecated("The photo/contact/speech pickers still use the framework result API.")
