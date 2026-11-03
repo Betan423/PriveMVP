@@ -28,6 +28,8 @@ class LineAutomationRulesTest {
         assertTrue(LineAutomationRules.isSelectedMessageShareControl("分享 (1)"))
         assertFalse(LineAutomationRules.isSelectedMessageShareControl("分享 (2)"))
         assertTrue(LineAutomationRules.isMoreControl("更多"))
+        assertTrue(LineAutomationRules.isMoreControl("顯示更多"))
+        assertTrue(LineAutomationRules.isMoreControl("More options"))
         assertFalse(LineAutomationRules.isMoreControl("更多選項說明"))
         assertTrue(LineAutomationRules.isSafeTargetPoint(540, 900, 1080, 2400))
         assertFalse(LineAutomationRules.isSafeTargetPoint(540, 20, 1080, 2400))

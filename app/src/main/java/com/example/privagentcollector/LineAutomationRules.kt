@@ -25,7 +25,10 @@ object LineAutomationRules {
     private val messageSelectionLabels = setOf(
         "選擇訊息", "選取訊息", "selectmessages", "selectmessage", "メッセージを選択", "메시지선택"
     )
-    private val moreLabels = setOf("更多", "more", "もっと見る", "더보기")
+    private val moreLabels = setOf(
+        "更多", "更多選項", "顯示更多", "查看更多", "more", "moreoptions", "showmore",
+        "もっと見る", "その他", "더보기", "추가옵션"
+    )
 
     /** Ignores presentation-only whitespace and punctuation, but never does fuzzy name matching. */
     fun normalize(value: CharSequence?): String = value?.toString().orEmpty()

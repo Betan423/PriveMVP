@@ -2,6 +2,7 @@ package com.example.privagentcollector
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
@@ -30,7 +31,13 @@ class LineShareAccessibilityService : AccessibilityService() {
 
         /** Called when the voice Activity closes so the already-visible LINE screen is re-checked. */
         fun resumeAfterVoice() {
-            instance.get()?.handler?.postDelayed({ instance.get()?.processActiveWindow() }, 500)
+            val service = instance.get() ?: return
+            service.handler.post {
+                val session = LineAutomationSession.snapshot()
+                if (session?.phase == LineAutomationSession.Phase.CONFIRMED)
+                    service.bringLineToFront()
+                service.handler.postDelayed({ service.processActiveWindow() }, 700L)
+            }
         }
 
         /** Called by the floating bubble; no Activity or broad screen capture is involved. */
@@ -221,14 +228,9 @@ class LineShareAccessibilityService : AccessibilityService() {
                     )
                 }
                 LineChatForwardSession.Phase.FIND_MORE -> {
-                    if (roots.any(::containsShareScreenMarker)) {
-                        if (LineChatForwardSession.advance(
-                                session.id,
-                                LineChatForwardSession.Phase.FIND_MORE,
-                                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
-                            startRecipientAutomation(session.id)
-                        ShareAttempt.CLICKED
-                    } else clickForwardControl(
+                    // The compact quick-share sheet also says "選擇傳送對象". It is not the
+                    // searchable full list, so this phase must always click More before advancing.
+                    clickForwardControl(
                         roots, session.id,
                         LineChatForwardSession.Phase.FIND_MORE,
                         LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN,
@@ -536,9 +538,27 @@ class LineShareAccessibilityService : AccessibilityService() {
             }
             LineAutomationSession.complete(session.id)
             Toast.makeText(this, "已按下 LINE 傳送；請稍後確認聊天中出現照片", Toast.LENGTH_LONG).show()
+            // First foreground return happened after confirmation so this click could run. Bring
+            // LINE forward once more after the click so the user finally remains in LINE instead
+            // of falling back to PrivAgent's confirmation task.
+            handler.postDelayed({ bringLineToFront() }, 450L)
             // LINE has already consumed the URI by this point; keep a short grace period for I/O.
             handler.postDelayed({ PhotoSanitizer.clear(applicationContext) }, 60_000L)
         } finally { send.forEach(::release) }
+    }
+
+    private fun bringLineToFront(): Boolean {
+        val launch = packageManager.getLaunchIntentForPackage(LineShare.PACKAGE_NAME) ?: return false
+        launch.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        return try {
+            startActivity(launch)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun stopSession(message: String) {
