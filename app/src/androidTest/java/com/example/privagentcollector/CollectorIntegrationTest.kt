@@ -3,7 +3,6 @@ package com.example.privagentcollector
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Rect
 import android.media.ExifInterface
 import android.net.Uri
 import android.view.View
@@ -125,17 +124,29 @@ class CollectorIntegrationTest {
         } finally { LineAutomationSession.abort() }
     }
 
-    @Test fun lineChatForwardSessionRequiresOneExplicitImageBeforeRecipientAutomation() {
+    @Test fun lineChatForwardSessionRequiresOneExplicitPointAndOrderedLineStages() {
         LineChatForwardSession.abort()
         val id = LineChatForwardSession.start("LINE 小美")
         try {
-            assertEquals(LineChatForwardSession.Phase.WAIT_IMAGE_TAP,
+            assertEquals(LineChatForwardSession.Phase.WAIT_TARGET_POINT,
                 LineChatForwardSession.snapshot()!!.phase)
             assertNull(LineChatForwardSession.consumeRecipient(id))
-            assertFalse(LineChatForwardSession.selectImage(id, Rect()))
-            assertTrue(LineChatForwardSession.selectImage(id, Rect(100, 300, 700, 1100)))
-            assertEquals(LineChatForwardSession.Phase.FIND_SHARE_CONTROL,
+            assertFalse(LineChatForwardSession.selectPoint(id, 500, 20, 1080, 2400))
+            assertTrue(LineChatForwardSession.selectPoint(id, 500, 900, 1080, 2400))
+            assertEquals(LineChatForwardSession.Phase.FIND_CONTEXT_SHARE,
                 LineChatForwardSession.snapshot()!!.phase)
+            assertFalse(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_MORE,
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_CONTEXT_SHARE,
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE,
+                LineChatForwardSession.Phase.FIND_MORE))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_MORE,
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
             assertEquals("LINE 小美", LineChatForwardSession.recipient(id))
             assertEquals("LINE 小美", LineChatForwardSession.consumeRecipient(id))
             assertNull(LineChatForwardSession.snapshot())

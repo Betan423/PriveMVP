@@ -19,9 +19,9 @@
 本專案目前處理兩個核心情境：
 
 1. **情境一：把圖片發送給女兒**（`SHARE_PHOTO`）
-   - 核心隱私目標：長輩在 LINE 聊天室看到別人傳來的圖片後，按浮動按鈕並親自點一下目標圖片；App 只用 LINE 的語意無障礙節點操作該圖片的分享，不截圖、不取得圖片 bytes／URI，也不把畫面交給雲端 AI。
-   - 現況：已加入60秒一次性「等待點圖」能力，驗證聊天輸入框與圖片節點後，優先點擊目標圖片附近唯一的分享控制，找不到才長按圖片並選唯一「分享」；之後接回既有女兒HMAC選人、「已選 (1)」驗證與最後確認。首頁自行選圖、重新編碼與GPS/EXIF清除的另一條流程仍保留。
-   - 選用免觸控：獨立 AccessibilityService 只監看 LINE package，以固定狀態機做「使用者點圖 → 唯一分享控制 → 分享畫面指紋 → 唯一女兒 → 最後確認 → 各點一次」。任何不確定皆停止。
+   - 核心隱私目標：長輩在 LINE 聊天室看到別人傳來的圖片後，按浮動按鈕並在半透明遮罩上親自點一下目標圖片；遮罩攔截觸控，避免 LINE 先打開圖片。App 不截圖、不取得圖片 bytes／URI，也不把畫面交給雲端 AI。
+   - 現況：已加入60秒一次性選取能力。App 只保存該次點擊座標於記憶體，確認座標位於圖片語意節點後，移除遮罩並在同一座標執行一次750ms長按；接著嚴格依序按唯一「分享」→「分享(1)」→「更多」，再接回女兒HMAC選人、「已選 (1)」驗證與最後確認。
+   - 選用免觸控：獨立 AccessibilityService 只監看 LINE package，以固定狀態機做「遮罩選點 → 同座標長按 → 三階段分享 → 分享畫面指紋 → 唯一女兒 → 最後確認」。任何不確定皆停止。
    - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；真實 LINE 版本仍需逐版校準畫面節點；LINE 無障礙自動化有 Google Play 政策風險。
 
 2. **情境二：收到訊息，判斷是不是詐騙**（`CHECK_MESSAGE`）
@@ -39,11 +39,11 @@
 
 | 成品 | 位置／版本 | 狀態 |
 |---|---|---:|
-| Android 原始碼 | `app/`，功能基準 `94d2e56` | ✅ |
-| 情境一 LINE 完整鏈 | `76ae711` + `ee9263b` | ✅ MVP |
+| Android 原始碼 | `app/`，本文件所在的最新本機 commit | ✅ |
+| 情境一 LINE 完整鏈 | 最新本機 commit（遮罩選點、長按、三階段分享、選人） | ✅ MVP |
 | 正式亮色雙情境 UI | `94d2e56` | ✅ |
-| Debug APK | `D:\PriveMVP\PrivAgent-line-chat-forward-v0.7-debug.apk` | ✅，v2 Debug 簽章 |
-| APK SHA-256 | `5A7C6F8738BA8E55F679799E008219CBB089D5138936F5274197070F83AA0E4C` | ✅ |
+| Debug APK | `D:\PriveMVP\PrivAgent-line-overlay-forward-v0.8.1-debug.apk` | ✅，v2 Debug 簽章 |
+| APK SHA-256 | `E434B457A3068B567894D7C16389C31FAF8114E0AC133CA140D780A4B22866F1` | ✅ |
 | JVM 測試 | 70／70 | ✅ |
 | Android instrumentation | 10／10（Pixel 6 Pro AVD / API 34） | ✅ |
 | Android Lint | 0 error；36 個既有 warning | ✅ 可建置 |
@@ -152,19 +152,23 @@ flowchart TD
     A[長輩停留在含圖片的 LINE 聊天室] --> B[按浮動助理]
     B --> C{唯一女兒與 LINE 名稱已設定？}
     C -- 否 --> X[停止並引導設定]
-    C -- 是 --> D{聊天輸入框與圖片節點可確認？}
+    C -- 是 --> D{聊天輸入框可確認？}
     D -- 否 --> X
-    D -- 是 --> E[60秒等待：朗讀請點一下目標圖片]
-    E --> F[長輩點一下圖片]
-    F --> G{唯一且具圖片語意？}
-    G -- 否 --> X
-    G -- 是 --> H{附近有唯一分享控制？}
-    H -- 是 --> I[語意 ACTION_CLICK]
-    H -- 否 --> J[對圖片 ACTION_LONG_CLICK]
-    J --> K{選單有唯一文字分享？}
+    D -- 是 --> E[顯示半透明全螢幕遮罩並朗讀提示]
+    E --> F[長輩在遮罩點一下圖片]
+    F --> G{座標落在圖片語意節點？}
+    G -- 否 --> E
+    G -- 是 --> H[移除遮罩；同座標執行750ms長按]
+    H --> I{黑色選單有唯一分享？}
+    I -- 否 --> X
+    I -- 是 --> J[按分享]
+    J --> K{選擇訊息有唯一分享1？}
     K -- 否 --> X
-    K -- 是 --> I
-    I --> S[本機節點樹確認 LINE 分享對象畫面]
+    K -- 是 --> L[按分享1]
+    L --> M{快速分享面板有唯一更多？}
+    M -- 否 --> X
+    M -- 是 --> N[按更多]
+    N --> S[本機節點樹確認 LINE 分享對象畫面]
     S --> T[精確比對唯一收件人並點一次]
     T --> U[唯一傳送按鈕 + 收件人仍一致]
     U --> V[語音詢問；只接受明確「確認傳送」]
@@ -177,10 +181,12 @@ flowchart TD
 |---|---:|---|
 | 本機意圖解析 | ✅ | `CoreTasks.interpret()` 解析 `SHARE_PHOTO`、relation、selection |
 | 單一照片最小存取 | ✅ | Android 13+ 使用 `MediaStore.ACTION_PICK_IMAGES`；舊版用 `ACTION_GET_CONTENT`，不必掃描整本相簿 |
-| LINE 聊天浮動入口 | ✅ | 浮動按鈕只在目前前景是含圖片與輸入框的 LINE 聊天頁時啟動；再次按可取消 |
-| 一次性圖片選取 capability | ✅ | `LineChatForwardSession` 只在記憶體存在60秒；長輩必須在期限內親自點一下圖片 |
-| 圖片語意與唯一性 | ✅ | 只接受尺寸足夠的 ImageView／圖片描述節點；文字、小圖示、多圖片容器或未知節點不操作 |
-| 圖片分享操作 | ✅ MVP | 優先選目標圖片附近唯一語意分享控制；否則對圖片執行 `ACTION_LONG_CLICK`，再選唯一文字「分享」；不用固定座標 |
+| LINE 聊天浮動入口 | ✅ | 浮動按鈕只在目前前景是含輸入框的 LINE 聊天頁時啟動；遮罩下方提供明確取消按鈕 |
+| 全螢幕虛擬選取遮罩 | ✅ | 半透明 `TYPE_APPLICATION_OVERLAY` 覆蓋整頁並攔截觸控；長輩點圖片時 LINE 不會收到該次點擊或打開圖片 |
+| 一次性圖片選取 capability | ✅ | `LineChatForwardSession` 只在記憶體存在60秒；只保存使用者該次點擊座標，不保存畫面或圖片 |
+| 圖片語意與位置驗證 | ✅ | 座標必須位於尺寸足夠的 ImageView／圖片描述節點；點到文字、小圖示或不明元件會重新顯示遮罩，不執行長按 |
+| 使用者授權的單點長按 | ✅ MVP | 遮罩移除180ms後，只在使用者親點的同一座標送出一次750ms無障礙手勢；不推算、不搜尋或重試其他座標 |
+| LINE 三階段分享鏈 | ✅ MVP | 固定順序：黑色選單唯一「分享」→「選擇訊息」唯一「分享(1)」→快速面板唯一「更多」→完整分享對象；會搜尋 LINE 所有互動視窗，以支援 PopupWindow／底部面板；每階段5秒逾時且不能跳階 |
 | 聊天圖片零 bytes 存取 | ✅ | 聊天內轉傳不讀取圖片 bytes、URI、檔名、像素或 EXIF，也不建立App副本；由LINE內部轉傳 |
 | 聊天轉傳 EXIF 限制 | 🟡 | 因App不取得圖片，無法重新編碼或驗證LINE持有副本的EXIF；只有首頁自行選圖路徑可保證清除EXIF/GPS |
 | 單一聯絡人最小存取 | ✅ | 使用系統 contact picker，只取得使用者選中的 DISPLAY_NAME，不要求讀取整本通訊錄 |
@@ -225,7 +231,7 @@ flowchart TD
 
 | 層級 | 可看到 | 不應看到 |
 |---|---|---|
-| 手機 App（聊天內轉傳） | 使用者點選圖片節點的 class／description／bounds、收件人關係與名稱 | 圖片 bytes、URI、檔名、像素、EXIF、其他聊天室內容的持久副本 |
+| 手機 App（聊天內轉傳） | 使用者在遮罩點選的一組暫時座標、該位置圖片節點的 class／description／bounds、收件人關係與名稱 | 圖片 bytes、URI、檔名、像素、EXIF、截圖、其他聊天室內容的持久副本 |
 | 手機 App（首頁自行選圖） | 使用者選中的照片、選中的聯絡人名稱、關係、原始 EXIF | 其他相簿照片、其他未選聯絡人 |
 | 暫存目錄 | 新 JPEG 像素、縮圖 | 原始 EXIF、GPS、原始檔案名稱 |
 | Receiver | `recipient_ready`、`photo_ready`、`location_removed`、selection、一次性 token | 圖片 bytes、姓名、電話、LINE ID、原始 URI |
@@ -775,8 +781,8 @@ python -m unittest discover -s receiver/tests
 
 | 驗證 | 結果 | 重要覆蓋 |
 |---|---:|---|
-| JVM unit tests | 70／70 | message guard、packet、隱私規則、LINE 圖片／分享／選人純規則、儲存與傳輸 |
-| Android instrumentation | 10／10 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、聊天圖片與選人兩段一次性 session、語音手動備援、Android ICU regex、加密儲存 |
+| JVM unit tests | 70／70 | message guard、packet、隱私規則、LINE 遮罩座標／三階段分享／選人純規則、儲存與傳輸 |
+| Android instrumentation | 10／10 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、遮罩選點與三階段順序 session、選人 session、語音手動備援、Android ICU regex、加密儲存 |
 | Android Lint | 0 error；36 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
 | Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |
 

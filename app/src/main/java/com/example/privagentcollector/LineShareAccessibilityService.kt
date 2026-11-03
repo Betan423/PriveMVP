@@ -1,6 +1,8 @@
 package com.example.privagentcollector
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
@@ -16,9 +18,9 @@ enum class LineChatForwardStart {
 }
 
 /**
- * A package-scoped, fail-closed LINE helper. It never takes screenshots, records UI text, uses
- * coordinates, or lets an AI choose actions. The only allowed state machine is:
- * per-session HMAC recipient match -> verified Send screen -> spoken confirmation -> one Send click.
+ * A package-scoped, fail-closed LINE helper. It never takes screenshots, records UI text, or lets
+ * an AI choose actions. One coordinate long-press is allowed only after the full-screen overlay
+ * consumes the user's explicit target tap. All later controls are exact semantic-node matches.
  */
 class LineShareAccessibilityService : AccessibilityService() {
     companion object {
@@ -34,6 +36,21 @@ class LineShareAccessibilityService : AccessibilityService() {
         /** Called by the floating bubble; no Activity or broad screen capture is involved. */
         fun beginChatImageForward(): LineChatForwardStart =
             instance.get()?.beginChatImageForwardInternal() ?: LineChatForwardStart.NOT_READY
+
+        /** The overlay has already consumed this tap, so LINE itself has not received it. */
+        fun submitChatImagePoint(x: Int, y: Int): Boolean {
+            val service = instance.get() ?: return false
+            if (LineChatForwardSession.snapshot()?.phase !=
+                LineChatForwardSession.Phase.WAIT_TARGET_POINT) return false
+            service.handler.post { service.handleOverlayPoint(x, y) }
+            return true
+        }
+
+        fun cancelChatImageForward() {
+            instance.get()?.handler?.post {
+                instance.get()?.stopForwardSession("已取消 LINE 圖片選取，沒有轉傳")
+            }
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -41,6 +58,8 @@ class LineShareAccessibilityService : AccessibilityService() {
     private var unknownScreenTimeoutFor = -1L
     private var ignoreEventsUntil = 0L
     private var forwardControlDeadline = 0L
+    private var lastForwardProcessed = 0L
+    private var forwardUiSessionId = -1L
 
     private enum class ShareAttempt { CLICKED, NONE, AMBIGUOUS, FAILED }
 
@@ -81,13 +100,11 @@ class LineShareAccessibilityService : AccessibilityService() {
         }
         val forward = LineChatForwardSession.snapshot()
         if (forward != null) {
-            when (forward.phase) {
-                LineChatForwardSession.Phase.WAIT_IMAGE_TAP ->
-                    if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
-                        event.eventType == AccessibilityEvent.TYPE_VIEW_LONG_CLICKED)
-                        handleChatImageTap(event, forward)
-                LineChatForwardSession.Phase.FIND_SHARE_CONTROL -> processForwardWindow(forward)
-            }
+            if (forward.phase == LineChatForwardSession.Phase.WAIT_TARGET_POINT) return
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastForwardProcessed < 120L) return
+            lastForwardProcessed = now
+            processForwardWindow(forward)
             return
         }
         val now = SystemClock.elapsedRealtime()
@@ -111,113 +128,149 @@ class LineShareAccessibilityService : AccessibilityService() {
         val root = rootInActiveWindow ?: return LineChatForwardStart.NOT_LINE
         try {
             if (root.packageName?.toString() != LineShare.PACKAGE_NAME) return LineChatForwardStart.NOT_LINE
-            if (containsShareScreenMarker(root) || !containsChatComposer(root) ||
-                !containsPlausibleChatImage(root)) return LineChatForwardStart.NOT_LINE_CHAT
+            if (containsShareScreenMarker(root) || !containsChatComposer(root))
+                return LineChatForwardStart.NOT_LINE_CHAT
         } finally { release(root) }
         val id = LineChatForwardSession.start(lineName)
+        forwardUiSessionId = id
         LineAutomationSession.abort()
         FloatingBubbleService.setImageSelectionMode(true)
         Toast.makeText(this, "請點一下要轉傳給女兒的圖片", Toast.LENGTH_LONG).show()
         handler.postDelayed({
-            if (LineChatForwardSession.snapshot()?.id == id) {
+            if (forwardUiSessionId == id) {
                 stopForwardSession("等候選擇圖片逾時，已停止且沒有轉傳")
             }
         }, LineChatForwardSession.TTL_MS + 200L)
         return LineChatForwardStart.STARTED
     }
 
-    private fun handleChatImageTap(event: AccessibilityEvent, session: LineChatForwardSession.Snapshot) {
-        val source = event.source ?: return
-        val candidates = mutableListOf<AccessibilityNodeInfo>()
+    private fun handleOverlayPoint(x: Int, y: Int) {
+        val session = LineChatForwardSession.snapshot() ?: return
+        if (session.phase != LineChatForwardSession.Phase.WAIT_TARGET_POINT) return
+        val root = rootInActiveWindow
         try {
-            collectImageCandidates(source, candidates)
-            when {
-                candidates.isEmpty() -> {
-                    Toast.makeText(this, "這個位置不是可確認的圖片，請再點一次目標圖片", Toast.LENGTH_LONG).show()
-                    return
-                }
-                candidates.size > 1 -> {
-                    stopForwardSession("點選位置包含多張圖片，無法唯一確認，已停止")
-                    return
-                }
+            if (root == null || root.packageName?.toString() != LineShare.PACKAGE_NAME ||
+                containsShareScreenMarker(root) || !containsChatComposer(root)) {
+                stopForwardSession("LINE 聊天畫面已改變，沒有執行長按")
+                return
             }
-            val image = candidates[0]
-            val bounds = Rect().also(image::getBoundsInScreen)
-            if (!LineChatForwardSession.selectImage(session.id, bounds)) return
-            FloatingBubbleService.setImageSelectionMode(false)
-            forwardControlDeadline = SystemClock.elapsedRealtime() + 3_500L
+            if (!containsPlausibleImageAtPoint(root, x, y)) {
+                FloatingBubbleService.setImageSelectionMode(true)
+                Toast.makeText(this, "沒有點到可確認的圖片，請再點一次", Toast.LENGTH_LONG).show()
+                return
+            }
+        } finally { root?.let(::release) }
 
-            val root = rootInActiveWindow
-            if (root != null) try {
-                if (root.packageName?.toString() == LineShare.PACKAGE_NAME) {
-                    when (tryShareControl(root, session.id, bounds, allowSoleAnywhere = false)) {
-                        ShareAttempt.CLICKED -> return
-                        ShareAttempt.AMBIGUOUS -> {
-                            stopForwardSession("圖片附近有多個分享控制，無法唯一確認，已停止")
-                            return
-                        }
-                        ShareAttempt.FAILED -> {
-                            stopForwardSession("LINE 沒有接受圖片分享操作，已停止")
-                            return
-                        }
-                        ShareAttempt.NONE -> Unit
-                    }
-                }
-            } finally { release(root) }
-
-            val longClickable = longClickableAncestor(image)
-            val longClicked = try {
-                longClickable?.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK) == true
-            } finally { longClickable?.let(::release) }
-            // If the ordinary tap already opened LINE's image viewer, its unique semantic Share
-            // control will be found on the next window event. Otherwise long-click opens the menu.
-            handler.postDelayed({ LineChatForwardSession.snapshot()?.let(::processForwardWindow) },
-                if (longClicked) 350L else 500L)
-        } finally {
-            candidates.forEach(::release)
-            release(source)
+        val metrics = resources.displayMetrics
+        if (!LineChatForwardSession.selectPoint(
+                session.id, x, y, metrics.widthPixels, metrics.heightPixels)) {
+            stopForwardSession("點擊位置不在可操作的畫面範圍，已停止")
+            return
         }
+        FloatingBubbleService.setImageSelectionMode(false)
+        armForwardDeadline()
+
+        val path = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
+            // A tiny non-empty stroke remains at the user-selected point and never becomes a swipe.
+            lineTo(x + 0.1f, y + 0.1f)
+        }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0L, 750L))
+            .build()
+        val accepted = dispatchGesture(gesture, object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                handler.postDelayed({
+                    LineChatForwardSession.snapshot()?.takeIf { it.id == session.id }
+                        ?.let(::processForwardWindow)
+                }, 300L)
+            }
+
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                stopForwardSession("LINE 圖片長按被系統取消，沒有轉傳")
+            }
+        }, handler)
+        if (!accepted) stopForwardSession("系統無法執行 LINE 圖片長按，沒有轉傳")
     }
 
     private fun processForwardWindow(session: LineChatForwardSession.Snapshot) {
-        if (session.phase != LineChatForwardSession.Phase.FIND_SHARE_CONTROL) return
-        val root = rootInActiveWindow ?: return
+        if (session.phase == LineChatForwardSession.Phase.WAIT_TARGET_POINT) return
+        val roots = currentLineWindowRoots()
+        if (roots.isEmpty()) return continueForwardOrTimeout(session)
         try {
-            if (root.packageName?.toString() != LineShare.PACKAGE_NAME) return
-            if (containsShareScreenMarker(root)) {
-                startRecipientAutomation(session.id)
+            if (session.phase == LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN) {
+                if (roots.any(::containsShareScreenMarker)) startRecipientAutomation(session.id)
+                else continueForwardOrTimeout(session)
                 return
             }
-            when (tryShareControl(root, session.id, session.imageBounds, allowSoleAnywhere = true)) {
-                ShareAttempt.CLICKED -> return
-                ShareAttempt.AMBIGUOUS -> stopForwardSession("LINE 畫面有多個分享選項，已停止且沒有點擊")
-                ShareAttempt.FAILED -> stopForwardSession("LINE 沒有接受分享操作，已停止")
-                ShareAttempt.NONE -> {
-                    if (SystemClock.elapsedRealtime() >= forwardControlDeadline)
-                        stopForwardSession("找不到這張圖片的唯一分享按鈕，已停止")
-                    else handler.postDelayed({ LineChatForwardSession.snapshot()?.let(::processForwardWindow) }, 300L)
+
+            val attempt = when (session.phase) {
+                LineChatForwardSession.Phase.FIND_CONTEXT_SHARE -> clickForwardControl(
+                    roots, session.id,
+                    LineChatForwardSession.Phase.FIND_CONTEXT_SHARE,
+                    LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE,
+                    LineAutomationRules::isMessageShareControl
+                )
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE -> {
+                    if (!roots.any(::containsMessageSelectionMarker)) ShareAttempt.NONE
+                    else clickForwardControl(
+                        roots, session.id,
+                        LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE,
+                        LineChatForwardSession.Phase.FIND_MORE,
+                        LineAutomationRules::isSelectedMessageShareControl
+                    )
                 }
+                LineChatForwardSession.Phase.FIND_MORE -> {
+                    if (roots.any(::containsShareScreenMarker)) {
+                        if (LineChatForwardSession.advance(
+                                session.id,
+                                LineChatForwardSession.Phase.FIND_MORE,
+                                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
+                            startRecipientAutomation(session.id)
+                        ShareAttempt.CLICKED
+                    } else clickForwardControl(
+                        roots, session.id,
+                        LineChatForwardSession.Phase.FIND_MORE,
+                        LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN,
+                        LineAutomationRules::isMoreControl
+                    )
+                }
+                LineChatForwardSession.Phase.WAIT_TARGET_POINT,
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN -> ShareAttempt.NONE
             }
-        } finally { release(root) }
+            when (attempt) {
+                ShareAttempt.CLICKED -> Unit
+                ShareAttempt.AMBIGUOUS ->
+                    stopForwardSession("目前 LINE 階段有多個相同按鈕，已停止且沒有繼續點擊")
+                ShareAttempt.FAILED -> stopForwardSession("LINE 沒有接受目前的分享操作，已停止")
+                ShareAttempt.NONE -> continueForwardOrTimeout(session)
+            }
+        } finally { roots.forEach(::release) }
     }
 
-    private fun tryShareControl(
-        root: AccessibilityNodeInfo,
+    private fun clickForwardControl(
+        roots: List<AccessibilityNodeInfo>,
         sessionId: Long,
-        target: Rect?,
-        allowSoleAnywhere: Boolean
+        from: LineChatForwardSession.Phase,
+        to: LineChatForwardSession.Phase,
+        predicate: (CharSequence?) -> Boolean
     ): ShareAttempt {
-        val textControls = actionNodes(root) { node ->
-            node.isVisibleToUser && LineAutomationRules.isMessageShareControl(node.text)
-        }
-        val controls = if (textControls.isNotEmpty()) textControls else actionNodes(root) { node ->
-            node.isVisibleToUser && LineAutomationRules.isMessageShareControl(node.contentDescription)
-        }
+        val textControls = distinctActionNodes(roots.flatMap { root ->
+            actionNodes(root) { node -> node.isVisibleToUser && predicate(node.text) }
+        })
+        val controls = if (textControls.isNotEmpty()) textControls else distinctActionNodes(roots.flatMap { root ->
+            actionNodes(root) { node -> node.isVisibleToUser && predicate(node.contentDescription) }
+        })
         try {
-            val selected = chooseShareControl(controls, target, allowSoleAnywhere)
-            if (selected == null) return if (controls.isEmpty()) ShareAttempt.NONE else ShareAttempt.AMBIGUOUS
-            if (!selected.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return ShareAttempt.FAILED
-            startRecipientAutomation(sessionId)
+            if (controls.isEmpty()) return ShareAttempt.NONE
+            if (controls.size != 1) return ShareAttempt.AMBIGUOUS
+            if (!LineChatForwardSession.advance(sessionId, from, to)) return ShareAttempt.FAILED
+            if (!controls[0].performAction(AccessibilityNodeInfo.ACTION_CLICK)) return ShareAttempt.FAILED
+            armForwardDeadline()
+            handler.postDelayed({
+                LineChatForwardSession.snapshot()?.takeIf { it.id == sessionId }
+                    ?.let(::processForwardWindow)
+            }, 350L)
             return ShareAttempt.CLICKED
         } finally {
             controls.forEach(::release)
@@ -225,24 +278,76 @@ class LineShareAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun chooseShareControl(
-        controls: List<AccessibilityNodeInfo>,
-        target: Rect?,
-        allowSoleAnywhere: Boolean
-    ): AccessibilityNodeInfo? {
-        if (controls.size == 1 && allowSoleAnywhere) return controls[0]
-        if (target == null) return null
-        val margin = (96 * resources.displayMetrics.density).toInt()
-        val nearby = Rect(target).apply { inset(-margin, -margin) }
-        val matches = controls.filter { node ->
+    /** Deduplicates the same actionable rectangle if LINE exposes it through two window roots. */
+    private fun distinctActionNodes(nodes: List<AccessibilityNodeInfo>): List<AccessibilityNodeInfo> {
+        val unique = linkedMapOf<String, AccessibilityNodeInfo>()
+        nodes.forEach { node ->
             val rect = Rect().also(node::getBoundsInScreen)
-            Rect.intersects(nearby, rect) || nearby.contains(rect.centerX(), rect.centerY())
+            val key = "${rect.left},${rect.top},${rect.right},${rect.bottom}:${node.viewIdResourceName}"
+            if (unique.putIfAbsent(key, node) != null) release(node)
         }
-        return matches.singleOrNull()
+        return unique.values.toList()
+    }
+
+    /**
+     * LINE renders the black long-press menu and quick-share sheet as independent interactive
+     * windows on some versions. Searching only rootInActiveWindow sees the chat but misses those
+     * controls, so every LINE-owned window root is inspected and released after each pass.
+     */
+    private fun currentLineWindowRoots(): List<AccessibilityNodeInfo> {
+        val result = mutableListOf<AccessibilityNodeInfo>()
+        val seenWindowIds = mutableSetOf<Int>()
+        windows.forEach { window ->
+            if (!seenWindowIds.add(window.id)) return@forEach
+            val root = window.root ?: return@forEach
+            if (root.packageName?.toString() == LineShare.PACKAGE_NAME) result += root
+            else release(root)
+        }
+        if (result.isEmpty()) {
+            val active = rootInActiveWindow
+            if (active != null) {
+                if (active.packageName?.toString() == LineShare.PACKAGE_NAME) result += active
+                else release(active)
+            }
+        }
+        return result
+    }
+
+    private fun containsMessageSelectionMarker(root: AccessibilityNodeInfo): Boolean {
+        var found = false
+        walk(root) { node ->
+            if (node.isVisibleToUser &&
+                (LineAutomationRules.isMessageSelectionScreenMarker(node.text) ||
+                    LineAutomationRules.isMessageSelectionScreenMarker(node.contentDescription))) found = true
+        }
+        return found
+    }
+
+    private fun armForwardDeadline() {
+        forwardControlDeadline = SystemClock.elapsedRealtime() + 5_000L
+    }
+
+    private fun continueForwardOrTimeout(session: LineChatForwardSession.Snapshot) {
+        if (SystemClock.elapsedRealtime() >= forwardControlDeadline) {
+            val message = when (session.phase) {
+                LineChatForwardSession.Phase.FIND_CONTEXT_SHARE -> "找不到長按選單中的唯一「分享」按鈕，已停止"
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE -> "找不到「選擇訊息」底部的「分享(1)」，已停止"
+                LineChatForwardSession.Phase.FIND_MORE -> "找不到快速分享面板中的唯一「更多」，已停止"
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN -> "LINE 沒有開啟「選擇傳送對象」畫面，已停止"
+                LineChatForwardSession.Phase.WAIT_TARGET_POINT -> "等候圖片位置逾時，已停止"
+            }
+            stopForwardSession(message)
+            return
+        }
+        handler.postDelayed({
+            LineChatForwardSession.snapshot()?.takeIf { it.id == session.id }
+                ?.let(::processForwardWindow)
+        }, 250L)
     }
 
     private fun startRecipientAutomation(forwardId: Long) {
         val recipient = LineChatForwardSession.consumeRecipient(forwardId) ?: return
+        forwardUiSessionId = -1L
         FloatingBubbleService.setImageSelectionMode(false)
         LineAutomationSession.start(recipient)
         handler.postDelayed(::processActiveWindow, 500L)
@@ -259,7 +364,9 @@ class LineShareAccessibilityService : AccessibilityService() {
 
     private fun stopForwardSession(message: String) {
         forwardControlDeadline = 0L
-        if (LineChatForwardSession.abort()) {
+        val hadUi = forwardUiSessionId >= 0L
+        forwardUiSessionId = -1L
+        if (LineChatForwardSession.abort() || hadUi) {
             FloatingBubbleService.setImageSelectionMode(false)
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
@@ -271,53 +378,17 @@ class LineShareAccessibilityService : AccessibilityService() {
         return found
     }
 
-    private fun containsPlausibleChatImage(root: AccessibilityNodeInfo): Boolean {
+    private fun containsPlausibleImageAtPoint(root: AccessibilityNodeInfo, x: Int, y: Int): Boolean {
         var found = false
-        walk(root) { node -> if (isPlausibleImageNode(node)) found = true }
-        return found
-    }
-
-    private fun collectImageCandidates(source: AccessibilityNodeInfo, result: MutableList<AccessibilityNodeInfo>) {
-        val byBounds = linkedMapOf<String, AccessibilityNodeInfo>()
-        fun add(node: AccessibilityNodeInfo) {
-            if (!isPlausibleImageNode(node)) return
+        walk(root) { node ->
+            if (found || !node.isVisibleToUser || !node.isEnabled) return@walk
             val rect = Rect().also(node::getBoundsInScreen)
-            val key = "${rect.left},${rect.top},${rect.right},${rect.bottom}"
-            val copy = copy(node)
-            byBounds.putIfAbsent(key, copy)?.let { release(copy) }
+            val metrics = resources.displayMetrics
+            if (rect.contains(x, y) && LineAutomationRules.isPlausibleChatImage(
+                    node.className, node.text, node.contentDescription,
+                    rect.width(), rect.height(), metrics.widthPixels, metrics.heightPixels)) found = true
         }
-        walk(source, ::add)
-        var parent = source.parent
-        repeat(4) {
-            val value = parent ?: return@repeat
-            add(value)
-            parent = value.parent
-            release(value)
-        }
-        result += byBounds.values
-    }
-
-    private fun isPlausibleImageNode(node: AccessibilityNodeInfo): Boolean {
-        if (!node.isVisibleToUser || !node.isEnabled) return false
-        val rect = Rect().also(node::getBoundsInScreen)
-        val metrics = resources.displayMetrics
-        return LineAutomationRules.isPlausibleChatImage(
-            node.className, node.text, node.contentDescription,
-            rect.width(), rect.height(), metrics.widthPixels, metrics.heightPixels
-        )
-    }
-
-    private fun longClickableAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        var current: AccessibilityNodeInfo? = copy(node)
-        repeat(6) {
-            val value = current ?: return null
-            if (value.isEnabled && value.actionList.any { it.id == AccessibilityNodeInfo.ACTION_LONG_CLICK }) return value
-            val parent = value.parent
-            release(value)
-            current = parent
-        }
-        current?.let(::release)
-        return null
+        return found
     }
 
     private fun processActiveWindow() {
@@ -561,7 +632,8 @@ class LineShareAccessibilityService : AccessibilityService() {
         var current: AccessibilityNodeInfo? = copy(node)
         repeat(6) {
             val value = current ?: return null
-            if (value.isClickable && value.isEnabled) return value
+            if (value.isEnabled && (value.isClickable ||
+                    value.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK })) return value
             val parent = value.parent
             release(value)
             current = parent

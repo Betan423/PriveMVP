@@ -22,6 +22,10 @@ object LineAutomationRules {
         "取消", "不要傳送", "不要傳", "先不要", "不傳送", "停止"
     )
     private val messageShareLabels = setOf("分享", "share", "シェア", "共有", "공유")
+    private val messageSelectionLabels = setOf(
+        "選擇訊息", "選取訊息", "selectmessages", "selectmessage", "メッセージを選択", "메시지선택"
+    )
+    private val moreLabels = setOf("更多", "more", "もっと見る", "더보기")
 
     /** Ignores presentation-only whitespace and punctuation, but never does fuzzy name matching. */
     fun normalize(value: CharSequence?): String = value?.toString().orEmpty()
@@ -34,6 +38,24 @@ object LineAutomationRules {
     fun isSendControl(value: CharSequence?): Boolean = normalize(value) in sendLabels
 
     fun isMessageShareControl(value: CharSequence?): Boolean = normalize(value) in messageShareLabels
+
+    fun isMessageSelectionScreenMarker(value: CharSequence?): Boolean =
+        normalize(value) in messageSelectionLabels
+
+    fun isSelectedMessageShareControl(value: CharSequence?): Boolean {
+        val normalized = normalize(value)
+        return messageShareLabels.any { normalized == "${it}1" }
+    }
+
+    fun isMoreControl(value: CharSequence?): Boolean = normalize(value) in moreLabels
+
+    /** Rejects status/navigation-edge taps and obviously invalid display coordinates. */
+    fun isSafeTargetPoint(x: Int, y: Int, screenWidth: Int, screenHeight: Int): Boolean {
+        if (screenWidth <= 0 || screenHeight <= 0) return false
+        val topGuard = screenHeight / 25
+        val bottomGuard = screenHeight / 18
+        return x in 0 until screenWidth && y in topGuard until (screenHeight - bottomGuard)
+    }
 
     fun isPlausibleChatImage(
         className: CharSequence?,

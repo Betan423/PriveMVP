@@ -24,6 +24,14 @@ class LineAutomationRulesTest {
         assertTrue(LineAutomationRules.isMessageShareControl("分享"))
         assertTrue(LineAutomationRules.isMessageShareControl("Share"))
         assertFalse(LineAutomationRules.isMessageShareControl("分享對象"))
+        assertTrue(LineAutomationRules.isMessageSelectionScreenMarker("選擇訊息"))
+        assertTrue(LineAutomationRules.isSelectedMessageShareControl("分享 (1)"))
+        assertFalse(LineAutomationRules.isSelectedMessageShareControl("分享 (2)"))
+        assertTrue(LineAutomationRules.isMoreControl("更多"))
+        assertFalse(LineAutomationRules.isMoreControl("更多選項說明"))
+        assertTrue(LineAutomationRules.isSafeTargetPoint(540, 900, 1080, 2400))
+        assertFalse(LineAutomationRules.isSafeTargetPoint(540, 20, 1080, 2400))
+        assertFalse(LineAutomationRules.isSafeTargetPoint(1080, 900, 1080, 2400))
         assertTrue(LineAutomationRules.isPlausibleChatImage(
             "android.widget.ImageView", null, "照片", 500, 600, 1080, 2400))
         assertFalse(LineAutomationRules.isPlausibleChatImage(

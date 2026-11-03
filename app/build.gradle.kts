@@ -23,8 +23,8 @@ android {
         applicationId = "com.example.privagentcollector"
         minSdk = 28
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.7"
+        versionCode = 9
+        versionName = "0.8.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "ASSIST_BASE_URL", kotlinString(buildSetting("privagent.assistUrl", "PRIVAGENT_ASSIST_URL")))
         buildConfigField("String", "ASSIST_TOKEN", kotlinString(buildSetting("privagent.assistToken", "PRIVAGENT_ASSIST_TOKEN")))

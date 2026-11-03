@@ -410,7 +410,7 @@ class AssistantPanel(
             else -> "目前未啟用。"
         }
         val builder = dialog().setTitle("LINE 免觸控分享")
-            .setMessage("$status\n\n啟用後，只有在你主動要求分享照片後的 2 分鐘內，服務才會讀取 LINE 的可見畫面元件。名稱會立即轉成每次任務不同金鑰的 HMAC 做精確比對；找不到時最多往下搜尋 24 頁。它不截圖、不保存或上傳畫面、不用座標亂點；真正送出前一定會再問，只有聽到「確認傳送」或明確按下確認按鈕才傳送。若同名、頁面不動、畫面改版、彈窗或按鈕不唯一，就停止。第一次語音確認會即時詢問麥克風權限。\n\nHMAC 是降低明文留存風險，不代表服務比對當下完全看不到文字。首次啟用是 Android 安全限制，必須由本人或家屬在系統設定手動開啟一次。")
+            .setMessage("$status\n\n啟用後，只有在你主動要求分享照片後的 2 分鐘內，服務才會讀取 LINE 的可見畫面元件。點浮動按鈕後，App 會用一層半透明遮罩接住你親自點圖片的位置，該次點擊不會傳給 LINE；遮罩移除後只在同一位置執行一次長按。後續只會依序點唯一的『分享』、『分享(1)』、『更多』，再以每次任務不同金鑰的 HMAC 精確比對唯一收件人；找不到時最多往下搜尋 24 頁。它不截圖、不保存或上傳畫面，也不會自行猜測其他座標；真正送出前一定會再問。若同名、頁面不動、畫面改版、彈窗或按鈕不唯一，就停止。第一次語音確認會即時詢問麥克風權限。\n\nHMAC 是降低明文留存風險，不代表服務比對當下完全看不到文字。首次啟用是 Android 安全限制，必須由本人或家屬在系統設定手動開啟一次。")
             .setPositiveButton(if (consented) "開啟系統設定" else "同意並前往設定") { _, _ ->
                 LineAutomationSettings.setConsented(activity, true)
                 try { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }

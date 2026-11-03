@@ -1,7 +1,6 @@
 package com.example.privagentcollector
 
 import android.content.Context
-import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -32,14 +31,27 @@ object LineAutomationSettings {
 }
 
 /**
- * Short-lived capability used before LINE opens its recipient screen. The user must first tap the
- * floating button and then one image; only that image's semantic node may lead to a Share action.
+ * Short-lived capability used before LINE opens its recipient screen. The full-screen overlay
+ * consumes one explicit user tap, then this ordered state machine allows exactly one long-press
+ * and the three LINE controls demonstrated by the supported UI: Share -> Share (1) -> More.
  */
 object LineChatForwardSession {
     const val TTL_MS = 60_000L
 
-    enum class Phase { WAIT_IMAGE_TAP, FIND_SHARE_CONTROL }
-    data class Snapshot(val id: Long, val phase: Phase, val imageBounds: Rect?, val startedElapsed: Long)
+    enum class Phase {
+        WAIT_TARGET_POINT,
+        FIND_CONTEXT_SHARE,
+        FIND_SELECTED_MESSAGE_SHARE,
+        FIND_MORE,
+        WAIT_RECIPIENT_SCREEN
+    }
+    data class Snapshot(
+        val id: Long,
+        val phase: Phase,
+        val targetX: Int?,
+        val targetY: Int?,
+        val startedElapsed: Long
+    )
     private data class Active(val snapshot: Snapshot, val recipient: String)
 
     private var nextId = 1L
@@ -50,7 +62,10 @@ object LineChatForwardSession {
         require(recipient.isNotBlank())
         active = null
         val id = nextId++
-        active = Active(Snapshot(id, Phase.WAIT_IMAGE_TAP, null, SystemClock.elapsedRealtime()), recipient.trim())
+        active = Active(
+            Snapshot(id, Phase.WAIT_TARGET_POINT, null, null, SystemClock.elapsedRealtime()),
+            recipient.trim()
+        )
         expiryHandler.postDelayed({ expire(id) }, TTL_MS + 100L)
         return id
     }
@@ -61,13 +76,31 @@ object LineChatForwardSession {
             active = null
             return null
         }
-        return value.snapshot.copy(imageBounds = value.snapshot.imageBounds?.let(::Rect))
+        return value.snapshot
     }
 
-    @Synchronized fun selectImage(id: Long, bounds: Rect): Boolean {
+    @Synchronized fun selectPoint(
+        id: Long,
+        x: Int,
+        y: Int,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Boolean {
         val value = active ?: return false
-        if (value.snapshot.id != id || value.snapshot.phase != Phase.WAIT_IMAGE_TAP || bounds.isEmpty) return false
-        active = value.copy(snapshot = value.snapshot.copy(phase = Phase.FIND_SHARE_CONTROL, imageBounds = Rect(bounds)))
+        if (value.snapshot.id != id || value.snapshot.phase != Phase.WAIT_TARGET_POINT ||
+            !LineAutomationRules.isSafeTargetPoint(x, y, screenWidth, screenHeight)) return false
+        active = value.copy(snapshot = value.snapshot.copy(
+            phase = Phase.FIND_CONTEXT_SHARE,
+            targetX = x,
+            targetY = y
+        ))
+        return true
+    }
+
+    @Synchronized fun advance(id: Long, from: Phase, to: Phase): Boolean {
+        val value = active ?: return false
+        if (value.snapshot.id != id || value.snapshot.phase != from) return false
+        active = value.copy(snapshot = value.snapshot.copy(phase = to))
         return true
     }
 
@@ -76,7 +109,7 @@ object LineChatForwardSession {
 
     @Synchronized fun consumeRecipient(id: Long): String? {
         val value = active ?: return null
-        if (value.snapshot.id != id || value.snapshot.phase != Phase.FIND_SHARE_CONTROL) return null
+        if (value.snapshot.id != id || value.snapshot.phase != Phase.WAIT_RECIPIENT_SCREEN) return null
         active = null
         return value.recipient
     }
