@@ -298,6 +298,15 @@ JVM 測試涵蓋加密 round trip、nonce、篡改與錯誤金鑰、記錄上限
 .\gradlew.bat :app:testDebugUnitTest --tests "com.example.privagentcollector.PrivacyAdversarialTest" --console=plain
 ```
 
+### 公開簡訊資料集實測
+
+可下載 UCI 的正常／垃圾英文簡訊，以及 FBS 約14K筆匿名化中文真實 spam，在本機批次送入正式 `MessageGuard`。原始資料不提交 Git，也不送到 AI Proxy；報告只保存統計與匿名反例 ID。實測方法、混淆矩陣、資料偏移與限制見 [`docs/EXTERNAL_SMS_DATASET_EVALUATION.md`](docs/EXTERNAL_SMS_DATASET_EVALUATION.md)。
+
+```powershell
+.\scripts\fetch_sms_benchmarks.ps1
+.\gradlew.bat :app:testDebugUnitTest --tests "com.example.privagentcollector.ExternalSmsDatasetEvaluationTest" --console=plain
+```
+
 實機驗收：Android 9／12／14／16 分別檢查首次拒絕權限、
 Android 14 只選部分照片、撤銷同意、通知／畫面啟停、匯出取消、
 儲存空間不足、快速停止再開始、重新開啟 App 與大量事件情境。

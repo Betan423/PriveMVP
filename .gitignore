@@ -36,6 +36,7 @@ receiver/data/*
 
 # Generated archives and document working files
 *.zip
+privacy-sms-datasets/
 ~$*.docx
 ~$*.xlsx
 ~$*.pptx

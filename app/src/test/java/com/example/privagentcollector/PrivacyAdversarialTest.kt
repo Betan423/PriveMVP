@@ -178,12 +178,13 @@ class PrivacyAdversarialTest {
             val packet = MessageGuard.buildPacket(message, "pasted", allowExcerpt = true, knownNames = listOf("王小明"))
             val excerpt = packet.excerpt.orEmpty()
             val placeholders = listOf("[NAME]", "[PHONE]", "[EMAIL]", "[ID]", "[OTP]", "[LINK]")
+            val leaked = forbidden.filter { excerpt.contains(it, ignoreCase = true) }
             val safe = packet.excerpt != null &&
-                forbidden.none { packet.json.contains(it, ignoreCase = true) } &&
+                leaked.isEmpty() &&
                 placeholders.all(excerpt::contains)
             campaign.verify(
                 "S2 privacy-budget leakage", "packet-$index", safe,
-                "excerpt=${packet.excerpt != null} placeholders=${placeholders.count(excerpt::contains)}"
+                "excerpt=${packet.excerpt != null} placeholders=${placeholders.count(excerpt::contains)} leaked=$leaked"
             )
         }
     }

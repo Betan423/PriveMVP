@@ -44,9 +44,10 @@
 | 正式亮色雙情境 UI | `94d2e56` | ✅ |
 | Debug APK | `D:\PriveMVP\PrivAgent-line-overlay-forward-v0.8.2-debug.apk` | ✅，v2 Debug 簽章 |
 | APK SHA-256 | `15E80A72168934338F536EF2C40765CC6C80448A676FF51795D95923C8F33F1F` | ✅ |
-| JVM 測試 | 71／71 | ✅ |
+| JVM 測試 | 72／72（含19,648筆公開簡訊離線評估） | ✅ |
 | Android instrumentation | 11／11（Pixel 6 Pro AVD / API 34） | ✅ |
 | 生成式隱私紅隊基準 | 2,921／2,921；0 個基準後反例 | ✅ 初版，固定 seed 4232026 |
+| 公開簡訊資料集基準 | UCI 5,574筆＋FBS 14,074筆 | ✅ 離線執行；結果與限制見專屬報告 |
 | Android Lint | 0 error；36 個既有 warning | ✅ 可建置 |
 
 ---
@@ -785,7 +786,7 @@ python -m unittest discover -s receiver/tests
 
 | 驗證 | 結果 | 重要覆蓋 |
 |---|---:|---|
-| JVM unit tests | 71／71 | message guard、packet、隱私規則、LINE 遮罩座標／三階段分享／選人純規則、儲存與傳輸、2,921項生成式隱私 campaign |
+| JVM unit tests | 72／72 | message guard、packet、隱私規則、LINE 遮罩座標／三階段分享／選人純規則、儲存與傳輸、2,921項生成式 campaign、19,648筆公開簡訊離線 benchmark |
 | Android instrumentation | 11／11 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、遮罩選點與三階段順序 session、25種 phase pair 窮舉、選人 session、語音手動備援、Android ICU regex、加密儲存 |
 | Android Lint | 0 error；36 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
 | Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |

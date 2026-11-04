@@ -77,7 +77,7 @@
 
 完整回歸結果：
 
-- JVM unit tests：71／71。
+- JVM unit tests：72／72（包含另行下載後執行的公開簡訊資料集評估；沒有外部資料時該項會跳過）。
 - Android instrumentation：11／11。
 - Android Lint：0 errors、36 warnings。
 - 初版生成式隱私檢查：2,921／2,921，0 個基準後反例。
