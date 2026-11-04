@@ -5,7 +5,10 @@ param(
     [string]$DataDirectory = "",
     [string]$PythonExecutable = "",
     # Gemini proxy base URL, or "off" for local rules only.
-    [string]$PlannerUrl = "http://127.0.0.1:8000"
+    [string]$PlannerUrl = "http://127.0.0.1:8000",
+    # Local Ollama used by accuracy-first raw-message mode, or "off" to disable it.
+    [string]$LocalRawAiUrl = "http://127.0.0.1:11434",
+    [string]$LocalRawAiModel = "qwen3.5:9b"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,7 +29,8 @@ if ([string]::IsNullOrWhiteSpace($PythonExecutable)) {
 
 Push-Location $ProjectRoot
 try {
-    & $PythonExecutable -m receiver.server --host $BindAddress --port $Port --data-dir $DataDirectory --planner-url $PlannerUrl
+    & $PythonExecutable -m receiver.server --host $BindAddress --port $Port --data-dir $DataDirectory `
+        --planner-url $PlannerUrl --local-raw-ai-url $LocalRawAiUrl --local-raw-ai-model $LocalRawAiModel
     if ($LASTEXITCODE -ne 0) {
         throw "Receiver failed, exit code: $LASTEXITCODE"
     }

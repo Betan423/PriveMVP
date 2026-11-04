@@ -310,7 +310,8 @@ object MessageGuard {
         "IMPERSONATION_FAMILY" to "自稱家人或換了號碼",
         "IMPERSONATION_OFFICIAL" to "自稱警察或政府機關", "IMPERSONATION_SUPPORT" to "自稱客服或銀行",
         "OFFERS_REWARD" to "提到中獎或保證獲利", "REMOTE_CONTROL" to "要求遠端控制手機",
-        "CONTEXT_INSUFFICIENT" to "內容太少，無法判斷", "NO_STRONG_SIGNAL" to "沒有發現明顯詐騙特徵"
+        "CONTEXT_INSUFFICIENT" to "內容太少，無法判斷", "NO_STRONG_SIGNAL" to "沒有發現明顯詐騙特徵",
+        "AI_SCAM_PATTERN" to "本機 AI 辨識到整體話術疑似詐騙"
     )
     private val factText = listOf<Pair<String, (Facts) -> Boolean>>(
         "要求轉帳或付款" to { it.asksTransfer }, "索取驗證碼或密碼" to { it.requestsSecret },

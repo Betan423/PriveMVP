@@ -3,7 +3,7 @@
 Android 9（API 28）以上的隱私優先生活助理。compileSdk / targetSdk 36。
 產品首頁採正式亮色雙情境介面，只呈現「安心傳送照片」與「詐騙訊息檢查」。過去的原始研究蒐集與手機救援模組仍保留於程式庫供研究驗證，但不再顯示或啟動於產品 UI。
 
-兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。手機端先做政策判斷、照片清理或訊息去識別化；只有使用者同意雲端時，才把代號與風險特徵經電腦 Receiver 交給雲端 AI（Gemini proxy）。
+兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。情境二預設使用準確率較高的電腦端本機Qwen：每次手動送出前明確告知原始訊息會進入使用者自己的電腦，但不送雲端。關閉精準模式後，仍可使用原本的手機去識別化特徵＋Gemini隱私路徑或完全手機本機規則。
 
 ## Repository 導覽
 
@@ -60,7 +60,7 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 | 情境 | 手機做什麼 | 會送到雲端的內容（需同意） | 停下或詢問 |
 | --- | --- | --- | --- |
 | 分享照片 | 長輩停留在含有圖片的 LINE 聊天室，按浮動「助理」後會出現半透明的全螢幕選取遮罩。長輩點一下目標圖片，該次點擊由遮罩攔截、不會打開圖片；遮罩移除後，專用無障礙服務只在同一座標長按一次，再依序點擊唯一「分享」→「分享(1)」→「更多」，最後沿用女兒 HMAC 選人與確認 | 聊天內轉傳路徑不呼叫雲端，也不取得圖片 bytes、URI 或 EXIF；只有 LINE 本身處理圖片。App 只短暫使用使用者點擊座標與 LINE 可見語意節點 | 必須已設定唯一女兒與 LINE 名稱，且聊天頁有輸入框。點擊位置必須落在可確認的圖片節點內；任何階段按鈕、收件人或送出按鈕不唯一就停止；60 秒未完成也停止 |
-| 可疑訊息 | 見下節 | 遮蔽後的風險特徵 | 見下節 |
+| 可疑訊息 | 見下節 | 預設只送到自己電腦的本機Qwen；選用Gemini時只送遮蔽特徵 | 見下節 |
 
 「設定家人」把女兒、兒子等關係對應到通訊錄裡的人，只存在這支手機（系統聯絡人挑選器，不需通訊錄權限）。
 在「設定家人」選擇關係後，可使用「設定並立即分享照片」或「立即分享照片」，不必返回首頁重走流程。LINE 未安裝時會引導安裝，也可由使用者明確選擇改用其他 App。
@@ -95,21 +95,23 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 App 首頁「情境 02｜詐騙訊息檢查」：
 
 1. 貼上訊息，或按「從目前的通知選一則」（需先開啟通知存取；銀行／驗證器等敏感 App 的通知不列出）。
-2. 手機本機遮蔽電話、帳號、驗證碼、網址、Email、身分證、稱呼前姓名與通訊錄姓名（已授權聯絡人權限時），並抽出風險特徵；網址只在手機分級成官方／短網址／可疑／無法辨識，封包只送類別值 `link_kind`，網址本身不出手機。
-3. 勾選「同意使用雲端 AI 判讀」時，先顯示「確認要傳送的內容」，按「傳送」才送到 Receiver；未勾選則只在手機本機判讀，不連網。
-4. 結果以三級顯示：高風險／需要核實／資訊不足，不會顯示「安全」。文字由 App 依 reason code 套固定措辭；雲端只能提高、不能降低本機判定的風險。
+2. 預設勾選「電腦端本機 AI 精準判讀」；每次手動檢查前再次告知原始訊息會傳到使用者自己的Receiver，再交給本機Ollama/Qwen，不經Gemini。模型同時評估詐騙證據與正常／反詐語境，允許完整語境修正關鍵字規則。
+3. 關閉精準模式後，手機才改走既有隱私路徑：遮蔽電話、帳號、驗證碼、網址、Email、身分證與姓名，只送風險特徵；也可完全關閉雲端而只用手機規則。
+4. 結果仍只顯示高風險／需要核實／資訊不足，不宣稱「安全」。所有文字由App固定reason code產生，AI不能輸出或執行任意UI指令。
 
 雲端封包使用情境二 v3 契約：每次產生一次性 nonce 與簽發時間，Receiver 會阻擋過期、時鐘異常與重播；可揭露欄位（含 `link_kind`）與摘錄限制由 `receiver/policies/check_message_privacy_policy.json` 的可執行隱私預算控制。
 
 勾選「自動檢查新進來的通知」後，每則新通知會在背景自動檢查（需通知存取權）：
 
 - 略過常駐／進度／來電通知、群組摘要、敏感 App 與排除清單內的 App；同一則訊息被聊天 App 重新發布只檢查一次。
-- 沒有逐則確認畫面，所以一律不送摘錄；同意雲端時只送特徵 packet。
+- 精準模式啟用時，通知原文會送到使用者電腦上的本機Qwen；關閉時才依既有設定只送特徵packet。敏感App與排除清單仍一律不處理。
 - 只有「高風險」會跳出「可疑訊息提醒」通知，其餘結果只列在 App 的「最近自動檢查」（最近 10 則，只存在記憶體）。
 
-電腦端（Linux 範例；Receiver 預設 8080，Gemini proxy 8000）：
+電腦端（精準模式需先啟動Ollama；Receiver預設8080；只有隱私雲端模式才另需Gemini proxy 8000）：
 
 ```bash
+ollama serve
+# 另一終端第一次執行：ollama pull qwen3.5:9b
 cd ~/Documents/gemini-proxymeow && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port 8000
 cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
 ```
@@ -118,7 +120,7 @@ cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
 
 沒有手機時可用 `python3 -m receiver.phone_sim` 模擬手機端；契約、流程與限制見 [receiver/README.md](receiver/README.md)。
 
-情境二的威脅模型、技術取捨與評估方法見 [docs/CHECK_MESSAGE_PRIVACY.md](docs/CHECK_MESSAGE_PRIVACY.md)。
+準確率優先的本機Qwen架構與跨資料集結果見 [docs/LOCAL_ACCURACY_MODE.md](docs/LOCAL_ACCURACY_MODE.md)；原隱私模式的威脅模型與技術取捨見 [docs/CHECK_MESSAGE_PRIVACY.md](docs/CHECK_MESSAGE_PRIVACY.md)。
 
 ## 目前可以取得的資料
 
@@ -298,7 +300,23 @@ JVM 測試涵蓋加密 round trip、nonce、篡改與錯誤金鑰、記錄上限
 .\gradlew.bat :app:testDebugUnitTest --tests "com.example.privagentcollector.PrivacyAdversarialTest" --console=plain
 ```
 
-### 公開簡訊資料集實測
+### 台灣繁中訊息資料集實測（目前主要基準）
+
+目前主要以MediaTek Research的TS-Bench台灣華語安全配對資料，以及Cofacts真實LINE訊息資料進行情境二評估。TS-Bench已完成98筆詐騙／金融誘騙與98筆安全困難負例；Cofacts已依資料使用者授權完成5,000筆詐騙與5,000筆非詐騙高信度子集實測。原文只在repository外的本機資料目錄處理，不送AI Proxy，報告只保存統計與匿名反例ID。方法、結果及Cofacts授權重現步驟見 [`docs/TAIWAN_MESSAGE_DATASET_EVALUATION.md`](docs/TAIWAN_MESSAGE_DATASET_EVALUATION.md)。
+
+另以Cofacts固定種子平衡抽樣200筆完成A／B／C初測：A本機規則Recall 22%／Specificity 96%；B隱私特徵＋本機Qwen為57%／27%；C隱私特徵＋遮蔽摘錄＋本機Qwen為74%／46%。C明顯增加攔截，但誤報仍高，尚不應直接作為強制警報。20筆一批、快取及prompt injection防禦方式見 [`docs/PRIVACY_ABC_AI_EVALUATION.md`](docs/PRIVACY_ABC_AI_EVALUATION.md)。
+
+準確率優先實驗另外使用8,600則Cofacts train、400則dev與1,000則held-out test，再以完全不同來源的TS-Bench做跨資料集驗證。Cofacts字元／融合模型在同來源可達94%以上、但跨來源約50%，因此未採用；最終採用的原文Qwen雙分數模式在TS-Bench達Accuracy 80.10%、Recall 84.69%、Specificity 75.51%，相較原規則Accuracy 61.22%有明顯提升。方法與限制見 [`docs/LOCAL_ACCURACY_MODE.md`](docs/LOCAL_ACCURACY_MODE.md)。
+
+```powershell
+.\scripts\fetch_tw_message_benchmarks.ps1
+.\gradlew.bat :app:testDebugUnitTest --tests "com.example.privagentcollector.TaiwanMessageDatasetEvaluationTest" --console=plain
+python .\scripts\privacy_abc_evaluation.py --per-class 100 --batch-size 20
+python .\scripts\optimize_local_scam_classifier.py
+python .\scripts\evaluate_local_accuracy_cross_domain.py
+```
+
+### 英文／簡體中文公開簡訊補充基準
 
 可下載 UCI 的正常／垃圾英文簡訊，以及 FBS 約14K筆匿名化中文真實 spam，在本機批次送入正式 `MessageGuard`。原始資料不提交 Git，也不送到 AI Proxy；報告只保存統計與匿名反例 ID。實測方法、混淆矩陣、資料偏移與限制見 [`docs/EXTERNAL_SMS_DATASET_EVALUATION.md`](docs/EXTERNAL_SMS_DATASET_EVALUATION.md)。
 

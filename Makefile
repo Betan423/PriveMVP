@@ -6,6 +6,8 @@ PROXY_DIR   ?= gemini-proxy
 PROXY_PY    := $(PROXY_DIR)/.venv/bin/python
 PROXY_VENV  := $(PROXY_DIR)/.venv/.installed
 PROXY_PORT  ?= 8000
+LOCAL_AI_URL ?= http://127.0.0.1:11434
+LOCAL_AI_MODEL ?= qwen3.5:9b
 PORT        ?= 8080
 PUBLIC_PORT ?= 8081
 LOCAL_PROPS := local.properties
@@ -83,16 +85,18 @@ proxy: $(PROXY_VENV) ## 啟動 Gemini proxy（127.0.0.1:8000）
 	cd $(PROXY_DIR) && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port $(PROXY_PORT)
 
 receiver: ## 啟動 Receiver，只接受本機連線（給 phone_sim 或 adb reverse）
-	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT)
+	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT) \
+		--local-raw-ai-url $(LOCAL_AI_URL) --local-raw-ai-model $(LOCAL_AI_MODEL)
 
 receiver-lan: ## 對區網開放的 Receiver，必須給存取碼：make receiver-lan TOKEN=xxx
 	@test -n "$(TOKEN)" || { echo "區網模式請設定存取碼：make receiver-lan TOKEN=xxx"; exit 1; }
 	@echo "手機 App 填：http://$$(hostname -I | awk '{print $$1}'):$(PORT)，存取碼同 TOKEN"
 	PRIVAGENT_API_TOKEN=$(TOKEN) $(PYTHON) -m receiver.server --host 0.0.0.0 --port $(PORT) \
-		--data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT)
+		--data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT) \
+		--local-raw-ai-url $(LOCAL_AI_URL) --local-raw-ai-model $(LOCAL_AI_MODEL)
 
 receiver-rules: ## 不接 AI、只用規則判斷的 Receiver
-	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off
+	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off --local-raw-ai-url off
 
 # ---- 對網際網路開放（反向代理 / tunnel） ----
 # 存取碼與網址寫在 local.properties（已被 .gitignore 排除），make apk 時會包進 APK。
@@ -105,7 +109,7 @@ public-token: ## 產生公開用的存取碼（已有就沿用），寫進 local
 public: public-token ## 只開放 AI 端點的 Receiver（127.0.0.1:8081，必須帶存取碼、每分鐘 30 次）
 	PRIVAGENT_API_TOKEN="$$(sed -n 's/^privagent.assistToken=//p' $(LOCAL_PROPS))" $(PYTHON) -m receiver.server \
 		--assist-only --host 127.0.0.1 --port $(PUBLIC_PORT) --data-dir $(DATA_DIR) \
-		--planner-url http://127.0.0.1:$(PROXY_PORT)
+		--planner-url http://127.0.0.1:$(PROXY_PORT) --local-raw-ai-url off
 
 tunnel: ## 用 Cloudflare Tunnel 把 make public 開到網際網路，會印出 https://….trycloudflare.com
 	@test -x "$(CLOUDFLARED)" || { echo "找不到 cloudflared，請先安裝：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"; exit 1; }

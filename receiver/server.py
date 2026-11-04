@@ -39,6 +39,7 @@ from .contracts import (
     validate_transmission_mode,
 )
 from .demo_feed import DemoFeed, phone_steps
+from .local_accuracy import LocalAccuracyEngine, RAW_PATH, ollama_scorer, parse_raw_request
 from .storage import ReceiverStorage
 
 DEMO_PAGE = Path(__file__).resolve().parent / "demo_page.html"
@@ -87,6 +88,7 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         assist_only: bool = False,
         rate_limiter: RateLimiter | None = None,
         demo_feed: DemoFeed | None = None,
+        local_accuracy: LocalAccuracyEngine | None = None,
     ) -> None:
         if assist_only and not api_token:
             raise ValueError("Assist-only (public) mode requires an API token.")
@@ -101,6 +103,7 @@ class ReceiverHTTPServer(ThreadingHTTPServer):
         self.assist_only = assist_only
         self.rate_limiter = rate_limiter
         self.demo_feed = demo_feed
+        self.local_accuracy = local_accuracy
         assistant.feed = demo_feed
 
 
@@ -322,7 +325,7 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
         if target.path == DEMO_SANDBOX_PATH:
             self._handle_sandbox()
             return
-        if target.path in (ASSIST_PATH, PLAN_PATH):
+        if target.path in (ASSIST_PATH, PLAN_PATH, RAW_PATH):
             feed = self.server.demo_feed  # type: ignore[attr-defined]
             try:
                 self._handle_assist(target.path)
@@ -330,7 +333,7 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
                 # Show only the gate that stopped it; a rejected packet may hold values that must not be displayed.
                 if feed is not None:
                     feed.add({"kind": "rejected", "origin": "phone",
-                              "intent": "CHECK_MESSAGE" if target.path == ASSIST_PATH else "PLAN",
+                              "intent": "CHECK_MESSAGE" if target.path in {ASSIST_PATH, RAW_PATH} else "PLAN",
                               "code": error.code, "status": error.status, "message": error.message})
                 raise
             return
@@ -401,7 +404,14 @@ class ReceiverRequestHandler(BaseHTTPRequestHandler):
         assistant = self.server.assistant  # type: ignore[attr-defined]
         # The stage demo shows the request exactly as received, once it has passed every gate below.
         wire = self._wire(body) if self.server.demo_feed is not None else None  # type: ignore[attr-defined]
-        if path == ASSIST_PATH:
+        if path == RAW_PATH:
+            engine = self.server.local_accuracy  # type: ignore[attr-defined]
+            if engine is None:
+                raise ReceiverError("LOCAL_AI_DISABLED", "Local raw-message AI is disabled.", status=503)
+            request = parse_raw_request(body)
+            self.server.replay_guard.accept(request)  # type: ignore[attr-defined]
+            self._send_json(HTTPStatus.OK, engine.assess(request))
+        elif path == ASSIST_PATH:
             packet = parse_packet(body)
             self.server.replay_guard.accept(packet)  # type: ignore[attr-defined]
             self._send_json(HTTPStatus.OK, assistant.assess(packet, wire=wire))
@@ -540,13 +550,15 @@ def create_server(
     assist_only: bool = False,
     rate_per_minute: int = 0,
     demo_feed: bool = False,
+    local_raw_scorer: Callable[[str], tuple[int, int]] | None = None,
 ) -> ReceiverHTTPServer:
     root = Path(data_dir) if data_dir is not None else Path(__file__).resolve().parent / "data"
     storage = ReceiverStorage(root, max_body_bytes=max_body_bytes, max_line_bytes=max_line_bytes)
     assistant = MessageAssistant(storage.data_dir / "assist_audit.ndjson", planner)
     return ReceiverHTTPServer((host, port), storage, assistant, RequestReplayGuard(), api_token or None,
                               assist_only, RateLimiter(rate_per_minute) if rate_per_minute > 0 else None,
-                              DemoFeed() if demo_feed else None)
+                              DemoFeed() if demo_feed else None,
+                              LocalAccuracyEngine(local_raw_scorer) if local_raw_scorer is not None else None)
 
 
 def main() -> None:
@@ -562,6 +574,10 @@ def main() -> None:
         help=f"Gemini proxy base URL, or 'off' to use local rules only (default: {DEFAULT_PLANNER_URL})",
     )
     parser.add_argument("--planner-timeout", type=float, default=DEFAULT_PLANNER_TIMEOUT)
+    parser.add_argument("--local-raw-ai-url", default=os.environ.get("PRIVAGENT_LOCAL_AI_URL", "http://127.0.0.1:11434"),
+                        help="Local Ollama base URL for accuracy-first raw-message checks, or 'off'")
+    parser.add_argument("--local-raw-ai-model", default=os.environ.get("PRIVAGENT_LOCAL_AI_MODEL", "qwen3.5:9b"))
+    parser.add_argument("--local-raw-ai-timeout", type=float, default=60.0)
     parser.add_argument(
         "--assist-only",
         action="store_true",
@@ -586,6 +602,8 @@ def main() -> None:
         parser.error("--demo-feed cannot be used with --assist-only")
     rate = args.rate_limit if args.rate_limit is not None else (DEFAULT_PUBLIC_RATE if args.assist_only else 0)
     planner = None if args.planner_url == "off" else gemini_proxy_planner(args.planner_url, args.planner_timeout)
+    local_raw = None if args.local_raw_ai_url == "off" else ollama_scorer(
+        args.local_raw_ai_url, args.local_raw_ai_model, args.local_raw_ai_timeout)
     server = create_server(
         args.host,
         args.port,
@@ -597,11 +615,13 @@ def main() -> None:
         assist_only=args.assist_only,
         rate_per_minute=rate,
         demo_feed=args.demo_feed,
+        local_raw_scorer=local_raw,
     )
     address, port = server.server_address[:2]
     print(f"PrivAgent Receiver API v{API_VERSION} listening on http://{address}:{port}", flush=True)
     print(f"Data directory: {server.storage.data_dir}", flush=True)
     print(f"Planner: {'local rules only' if planner is None else args.planner_url}", flush=True)
+    print(f"Local raw AI: {'disabled' if local_raw is None else args.local_raw_ai_url + ' (' + args.local_raw_ai_model + ')'}", flush=True)
     print(f"Assist API token: {'required' if server.api_token else 'not set (development only)'}", flush=True)
     if args.assist_only:
         print(f"Public mode: only /health and /api/v1/assist/* are served, at most {rate} requests/minute", flush=True)

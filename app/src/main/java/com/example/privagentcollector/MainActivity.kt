@@ -191,7 +191,7 @@ class MainActivity : Activity() {
             AppUi.title(this)
         })
         addView(TextView(this@MainActivity).apply {
-            text = "貼上訊息或從通知選取。姓名、電話、帳號、驗證碼與網址會先在手機遮蔽，再進行風險判讀。"
+            text = "貼上訊息或從通知選取。可用電腦端本機 AI 精準判讀，也可關閉後改用手機遮蔽特徵模式。"
             AppUi.body(this)
         })
         addView(AppUi.spacer(this@MainActivity, 10))

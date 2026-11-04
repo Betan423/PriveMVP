@@ -2,7 +2,7 @@
 
 這個模組是 Android Collector 的本機 HTTP Receiver，只使用 Python 標準函式庫。它接收、驗證並原子保存 UTF-8 NDJSON，支援冪等重送、查詢、下載，以及提供情境判斷使用的 latest-context。
 
-原始資料傳輸沒有登入、TLS、匿名化或隱私轉換；可疑訊息判讀只接收手機端遮蔽後的 packet。只可在你控制的電腦與受控私人網路測試，不可直接暴露到網際網路。
+原始資料傳輸沒有登入、TLS、匿名化或隱私轉換。可疑訊息的隱私端點只收遮蔽packet；另有明確選用的本機精準端點會接收原文並交給同機Ollama。只可在你控制的電腦與受控私人網路測試，不可直接暴露到網際網路。
 
 ## 啟動
 
@@ -103,6 +103,7 @@ curl.exe -X POST `
 | GET | `/api/v1/transmissions/{id}/download` | 下載原始 NDJSON bytes |
 | GET | `/api/v1/context/latest?sessionId=...&limitPerSource=100` | 取得同一 live session 的最新來源內容 |
 | POST | `/api/v1/assist/check-message` | 可疑訊息判讀：收手機端 planner packet，回風險等級（見下節） |
+| POST | `/api/v1/assist/check-message-accurate` | 準確率優先：收單則原文，交給同機Qwen雙分數判讀；不寫入稽核或磁碟 |
 
 latest-context 規則：
 
@@ -116,6 +117,10 @@ latest-context 規則：
 Receiver 沒有 WebSocket／SSE。Dashboard 是瀏覽器刷新；後續情境判斷服務應固定攜帶 session 並輪詢 latest-context。
 
 ## 可疑訊息判讀（CHECK_MESSAGE）
+
+App預設可選用 `/api/v1/assist/check-message-accurate`：原文最多3,000字，必須帶一次性nonce與簽發時間；Receiver用Ollama `qwen3.5:9b`輸出詐騙與正常語境雙分數。若Ollama未啟動、逾時或格式錯誤，Android自動退回手機規則。以 `--local-raw-ai-url off` 可完全停用。準確率與跨資料集限制見 [`docs/LOCAL_ACCURACY_MODE.md`](../docs/LOCAL_ACCURACY_MODE.md)。
+
+以下則是原本的隱私特徵端點：
 
 ```text
 手機：使用者選定一則訊息

@@ -59,6 +59,7 @@ class MessageCheckPanel(
     private val onAutoResult: () -> Unit = { ui { renderAuto() } }
     private val input: EditText
     private val pickButton: Button
+    private val accuracyBox: CheckBox
     private val cloudBox: CheckBox
     private val excerptBox: CheckBox
     private val tokenInput: EditText
@@ -76,11 +77,11 @@ class MessageCheckPanel(
         }
         if (showHeader) {
             label("詐騙訊息檢查", 21f).let { AppUi.title(it, 21f) }
-            label("選一則通知或貼上訊息。手機會先遮蔽敏感內容，只把風險特徵交給電腦與雲端 AI；原文不會離開手機。")
+            label("選一則通知或貼上訊息。精準模式會把原始訊息交給您電腦上的本機 AI，不會送到雲端；也可關閉後改用隱私特徵模式。")
                 .let { AppUi.body(it) }
         }
         autoBox = CheckBox(activity).apply {
-            text = "自動檢查新進來的通知（高風險時跳出提醒；只送特徵，不送摘錄）"
+            text = "自動檢查新進來的通知（高風險時跳出提醒；依下方選擇的判讀模式）"
             isChecked = AssistConfig.autoCheck(activity)
             AppUi.checkbox(this)
             setOnCheckedChangeListener { _, checked -> setAuto(checked) }
@@ -107,6 +108,12 @@ class MessageCheckPanel(
             setOnClickListener { pickNotification() }
             root.addView(this)
         }
+        accuracyBox = CheckBox(activity).apply {
+            text = "使用電腦端本機 AI 精準判讀（會傳送原始訊息；不送雲端）"
+            isChecked = AssistConfig.rawAccuracy(activity)
+            AppUi.checkbox(this)
+            root.addView(this)
+        }
         cloudBox = CheckBox(activity).apply {
             text = "同意使用雲端 AI 判讀（只送遮蔽後的特徵）"
             isChecked = AssistConfig.cloudConsent(activity)
@@ -121,6 +128,13 @@ class MessageCheckPanel(
             AppUi.checkbox(this)
             root.addView(this)
         }
+        accuracyBox.setOnCheckedChangeListener { _, checked ->
+            cloudBox.isEnabled = !checked
+            excerptBox.isEnabled = !checked
+            saveOptions()
+        }
+        cloudBox.isEnabled = !accuracyBox.isChecked
+        excerptBox.isEnabled = !accuracyBox.isChecked
         tokenInput = EditText(activity).apply {
             hint = "電腦接收端存取碼（沒有設定可留空）"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -149,14 +163,18 @@ class MessageCheckPanel(
     }
 
     private fun saveOptions() =
-        AssistConfig.save(activity, tokenInput.text.toString(), cloudBox.isChecked, excerptBox.isChecked)
+        AssistConfig.save(activity, tokenInput.text.toString(), cloudBox.isChecked, excerptBox.isChecked,
+            accuracyBox.isChecked)
 
     fun refreshConnectionSettings() {
         tokenInput.setText(AssistConfig.prefs(activity).getString("token", "").orEmpty())
     }
 
     private fun setAuto(enabled: Boolean) {
-        if (enabled && cloudBox.isChecked && endpoint() == null) { autoBox.isChecked = false; return }
+        if (enabled && (cloudBox.isChecked || accuracyBox.isChecked) && endpoint() == null) {
+            autoBox.isChecked = false
+            return
+        }
         saveOptions()
         AssistConfig.setAutoCheck(activity, enabled)
         if (enabled && android.os.Build.VERSION.SDK_INT >= 33 &&
@@ -222,11 +240,13 @@ class MessageCheckPanel(
         if (sending || preparing) return
         val text = input.text.toString().trim()
         if (text.isEmpty()) { toast("請先貼上或選一則訊息"); return }
+        val accurate = accuracyBox.isChecked
         val cloud = cloudBox.isChecked
-        val baseUrl = if (cloud) endpoint() ?: return else ""
-        AssistConfig.save(activity, tokenInput.text.toString(), cloud, excerptBox.isChecked)
+        val baseUrl = if (cloud || accurate) endpoint() ?: return else ""
+        AssistConfig.save(activity, tokenInput.text.toString(), cloud, excerptBox.isChecked, accurate)
         preparing = true
-        publish("正在遮蔽與分析…", Color.DKGRAY, "", done = false)
+        publish(if (accurate) "正在準備本機 AI 判讀…" else "正在遮蔽與分析…",
+            Color.DKGRAY, "", done = false)
         val sourceKind = if (fromNotification) "notification" else "pasted"
         val allowExcerpt = excerptBox.isChecked
         Thread({
@@ -237,11 +257,27 @@ class MessageCheckPanel(
                 val packet = MessageGuard.buildPacket(text, sourceKind, allowExcerpt, names)
                 ui {
                     try {
-                        if (!cloud) { send("", packet, false); return@ui }
+                        if (accurate) {
+                            AlertDialog.Builder(activity).setTitle("確認使用本機精準判讀")
+                                .setMessage("這則原始訊息會傳到 $baseUrl，並交給該電腦上的本機 Qwen 分析；不會送到 Gemini。")
+                                .setPositiveButton("開始判讀") { _, _ ->
+                                    send(baseUrl, packet, false, true, text, sourceKind)
+                                }
+                                .setNegativeButton("改用手機規則") { _, _ ->
+                                    send("", packet, false, false, text, sourceKind)
+                                }
+                                .setOnCancelListener {
+                                    preparing = false
+                                    publish("已取消，沒有傳送任何資料", Color.DKGRAY, "", done = true)
+                                }
+                                .show()
+                            return@ui
+                        }
+                        if (!cloud) { send("", packet, false, false, text, sourceKind); return@ui }
                         AlertDialog.Builder(activity).setTitle("確認要傳送的內容")
                             .setMessage("只會把下列內容傳到 $baseUrl，再交給雲端 AI：\n\n${MessageGuard.describe(packet)}")
-                            .setPositiveButton("傳送") { _, _ -> send(baseUrl, packet, true) }
-                            .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false) }
+                            .setPositiveButton("傳送") { _, _ -> send(baseUrl, packet, true, false, text, sourceKind) }
+                            .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false, false, text, sourceKind) }
                             .setOnCancelListener {
                                 preparing = false
                                 publish("已取消，沒有傳送任何資料", Color.DKGRAY, "", done = true)
@@ -257,14 +293,17 @@ class MessageCheckPanel(
         }, "message-check").start()
     }
 
-    private fun send(baseUrl: String, packet: MessageGuard.Packet, cloud: Boolean) {
+    private fun send(baseUrl: String, packet: MessageGuard.Packet, cloud: Boolean, accurate: Boolean,
+                     original: String, sourceKind: String) {
         preparing = false
         sending = true
-        publish(if (cloud) "已送出，等待判讀（約 5–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
+        publish(if (cloud || accurate) "已送出，等待判讀（約 2–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
         val token = tokenInput.text.toString().trim().ifBlank { AssistConfig.token(activity) }
         Thread({
             try {
-                val outcome = AssistClient.check(baseUrl, token, packet, cloud)
+                val outcome = if (accurate)
+                    AssistClient.checkAccurate(baseUrl, token, original, sourceKind, packet)
+                else AssistClient.check(baseUrl, token, packet, cloud)
                 val text = buildString {
                     append(MessageGuard.advice.getValue(outcome.level))
                     for (code in outcome.reasonCodes) MessageGuard.reasonText[code]?.let { append("\n・").append(it) }

@@ -26,15 +26,18 @@ object AssistConfig {
     fun cloudConsent(context: Context) = prefs(context).getBoolean("cloud_consent", false)
     fun allowExcerpt(context: Context) = prefs(context).getBoolean("allow_excerpt", false)
     fun autoCheck(context: Context) = prefs(context).getBoolean("auto_check", false)
+    fun rawAccuracy(context: Context) = prefs(context).getBoolean("raw_accuracy", true)
     fun setAutoCheck(context: Context, enabled: Boolean) { prefs(context).edit().putBoolean("auto_check", enabled).apply() }
-    fun save(context: Context, token: String, cloudConsent: Boolean, allowExcerpt: Boolean) {
+    fun save(context: Context, token: String, cloudConsent: Boolean, allowExcerpt: Boolean,
+             rawAccuracy: Boolean = rawAccuracy(context)) {
         prefs(context).edit().putString("token", token.trim()).putBoolean("cloud_consent", cloudConsent)
-            .putBoolean("allow_excerpt", allowExcerpt).apply()
+            .putBoolean("allow_excerpt", allowExcerpt).putBoolean("raw_accuracy", rawAccuracy).apply()
     }
 }
 
 object AssistClient {
     private const val PATH = "/api/v1/assist/check-message"
+    private const val RAW_PATH = "/api/v1/assist/check-message-accurate"
     private const val PLAN_PATH = "/api/v1/assist/plan"
     private const val CONNECT_TIMEOUT_MS = 5_000
     // The Gemini proxy takes 5–15 s; the Receiver itself gives up on it at 45 s.
@@ -65,6 +68,34 @@ object AssistClient {
             AssistOutcome(local.level, local.reasonCodes, "手機本機規則（連不到電腦接收端）")
         } catch (_: Exception) {
             AssistOutcome(local.level, local.reasonCodes, "手機本機規則（傳送失敗）")
+        }
+    }
+
+    /** Accuracy-first mode: raw text goes only to the configured computer Receiver and local Qwen. */
+    fun checkAccurate(
+        baseUrl: String,
+        token: String,
+        original: String,
+        sourceKind: String,
+        packet: MessageGuard.Packet
+    ): AssistOutcome {
+        val local = MessageGuard.assess(packet.facts)
+        val body = JSONObject()
+            .put("schema", "privagent.check_message_raw.v1")
+            .put("task_id_alias", packet.alias)
+            .put("request_nonce", packet.requestNonce)
+            .put("issued_at_ms", packet.issuedAtMs)
+            .put("message", original.take(3000))
+            .put("source_kind", sourceKind)
+            .toString()
+        return try {
+            parse(post(baseUrl, RAW_PATH, token, body), packet.alias)
+        } catch (e: AssistRejected) {
+            AssistOutcome(local.level, local.reasonCodes, "手機本機規則（${e.message}）")
+        } catch (_: IOException) {
+            AssistOutcome(local.level, local.reasonCodes, "手機本機規則（連不到電腦端本機 AI）")
+        } catch (_: Exception) {
+            AssistOutcome(local.level, local.reasonCodes, "手機本機規則（本機 AI 判讀失敗）")
         }
     }
 
@@ -158,8 +189,11 @@ object AssistClient {
         // Only codes the phone has fixed wording for are shown; the model never writes UI text.
         val codes = (0 until codesJson.length()).map { codesJson.optString(it) }.filter { it in MessageGuard.reasonText }
         val planner = json.optJSONObject("planner")
-        val source = if (planner?.optString("kind") == "GEMINI_PROXY") "雲端 AI（Gemini），只收到遮蔽後的特徵"
-            else "電腦端規則（${fallbackText[planner?.optString("fallback_reason")] ?: "AI 暫時無法使用"}）"
+        val source = when {
+            json.optString("engine") == "LOCAL_QWEN_RAW" -> "電腦端本機 AI（Qwen，使用原始訊息）"
+            planner?.optString("kind") == "GEMINI_PROXY" -> "雲端 AI（Gemini），只收到遮蔽後的特徵"
+            else -> "電腦端規則（${fallbackText[planner?.optString("fallback_reason")] ?: "AI 暫時無法使用"}）"
+        }
         return AssistOutcome(level, codes, source)
     }
 

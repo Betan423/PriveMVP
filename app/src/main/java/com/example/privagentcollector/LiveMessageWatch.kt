@@ -79,7 +79,9 @@ object LiveMessageWatch {
         if (!AssistConfig.autoCheck(context)) return
         val cloud = AssistConfig.cloudConsent(context)
         val packet = MessageGuard.buildPacket(body, "notification", allowExcerpt = false)
-        val outcome = AssistClient.check(AssistConfig.baseUrl(context), AssistConfig.token(context), packet, cloud)
+        val outcome = if (AssistConfig.rawAccuracy(context))
+            AssistClient.checkAccurate(AssistConfig.baseUrl(context), AssistConfig.token(context), body, "notification", packet)
+        else AssistClient.check(AssistConfig.baseUrl(context), AssistConfig.token(context), packet, cloud)
         val appLabel = try {
             context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(packageName, 0)).toString()
         } catch (_: Exception) { packageName }
