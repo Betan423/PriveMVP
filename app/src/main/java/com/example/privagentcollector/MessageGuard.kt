@@ -140,7 +140,7 @@ object MessageGuard {
     private val secretWords = Regex(
         // "簡訊收到的6碼", "手機剛收到的數字", "點數序號": the code asked for without naming it.
         "(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證|(簡訊|手機|電話).{0,6}(收到|傳來|裡|上)的?(數字|代碼|[0-9一二三四五六七八九十]?碼)" +
-            "|點數.{0,6}序號|序號.{0,6}(給我|回傳|傳給))"
+            "|點數.{0,6}序號|序號.{0,6}(給我|回傳|傳給)|銀行帳號|帳戶資料|帳號密碼|帳密|末三碼|安全碼|有效期限|個資|個人資料)"
     )
     // A fact check is excused from the quoted scam only when it also passes a verdict on it.
     private val factCheckVerdict = Regex(
@@ -149,27 +149,59 @@ object MessageGuard {
     private val requestVerbs = Regex("(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
     // Explicit [^\n] matches Python's dot behaviour and avoids another platform-specific flag.
     private val credentialPhishing = Regex("(帳戶|帳號|會員)[^\n]{0,12}(驗證|登入|解鎖)[^\n]{0,20}(輸入|填寫)[^\n]{0,6}(資料|個資)")
-    private val asksTransfer = Regex("(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉(到|至).{0,6}(帳|戶|銀行)|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數)")
-    private val urgency = Regex("(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|停權|凍結|處分|逾期|最後機會)")
+    // Round 4 (165 / bank / fact-checker phrasings): borrowing, advance fees, "operate the ATM /
+    // online banking", 解除分期 and 監管 moves are money movement too. Keep in sync with phone_sim.py.
+    private val asksTransfer = Regex(
+        "(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉(到|至).{0,6}(帳|戶|銀行)|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數" +
+            "|借我|借.{0,4}(錢|萬|塊)|周轉|操作(網銀|網路銀行|提款機)|解除分期|分期付款設定|試轉|沖帳|存款交給|監管程序" +
+            "|(繳|付|交|墊).{0,4}(保證金|公證金|手續費|關稅|違約金|制服費|訓練費|代購費|會員費))"
+    )
+    private val urgency = Regex("(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|今日內|小時內|停權|凍結|處分|逾期|最後機會|名額有限)")
     private val offersReward = Regex("(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)")
     private val remoteControl = Regex("(?i)(遠端控制|遠端軟體|遠端協助|遠端桌面|螢幕分享|螢幕共享|控制碼|AnyDesk|TeamViewer|QuickSupport|AirDroid)")
-    private val financialPromise = Regex("(保證獲利|高報酬|穩賺|零風險|老師帶單|投資群組|內線消息|翻倍獲利)")
-    private val accountThreat = Regex("((帳戶|帳號|會員).{0,12}(異常|凍結|停用|停權|鎖定|被盜)|扣款失敗|交易失敗|驗證失敗)")
-    private val contactChange = Regex("(換(了)?(新)?(手機)?號碼|這是我的新號碼|加(我|新的?)(LINE|line)|改用.{0,8}(聯絡|帳號))")
-    private val antiScamContext = Regex("(警方|警政署|165|反詐騙|反詐).{0,12}(提醒|呼籲|宣導|表示)")
+    private val financialPromise = Regex("(保證獲利|高報酬|高回報|穩賺|零風險|老師帶單|投資群組|內線消息|翻倍獲利|飆股群|VIP群|保證追回)")
+    // Pressure comes as a state ("帳戶異常"), an accusation ("涉嫌洗錢", "重複扣款") or a conditional
+    // consequence ("否則停權", "逾期將移送"); the last demands money without a request verb.
+    private val accountThreat = Regex(
+        "((帳戶|帳號|會員|卡片|信用卡|網銀|訂單|交易|合約|健保卡|LINE帳號|資產|存款).{0,12}" +
+            "(異常|凍結|停用|停權|鎖定|被盜|暫停|封鎖|停止使用|關閉|被冒用|遭冒用)" +
+            "|扣款失敗|交易失敗|驗證失敗|涉嫌洗錢|涉及洗錢|涉嫌.{0,4}(詐欺|詐騙|刑案)|人頭帳戶|被逮捕|遭逮捕|法律責任|信用瑕疵" +
+            "|身分遭冒用|證件遭冒用|被冒用涉案|強制執行|移送法辦|重複扣款|誤設|升級VIP|VIP會員|每月.{0,4}扣款|自動扣款" +
+            "|(否則|不然|逾期|若未|如未|若不|如不|未於|將會|就會).{0,10}(停權|停用|凍結|停話|停卡|罰款|罰鍰|法律|起訴|移送|註銷|失效|取消|處分|逮捕|關閉|影響信用))"
+    )
+    private val contactChange = Regex(
+        "(換(了)?(新)?(手機)?號碼|這是我的新號碼|加(我|新的?)(LINE|line)|加LINE|加賴|改用.{0,8}(聯絡|帳號|LINE|line)" +
+            "|手機(壞|當機|摔壞|掉了|遺失|不見|故障)|跳過平台|私下(交易|付款|匯款|聯絡))"
+    )
+    // Organisations that warn ("國稅局提醒…勿點連結") and verdict endings ("…就是詐騙") are anti-scam
+    // context like a 165 header; a live request in the same message still overrides it below.
+    private val antiScamContext = Regex(
+        "((警方|警政署|165|反詐騙|反詐|國稅局|健保署|勞保局|監理|台電|郵局|中華郵政|電信|銀行).{0,12}(提醒|呼籲|宣導|表示|不會)" +
+            "|(就是|都是|皆是|均為|即為|一定是|必為|係|屬於?)詐騙|詐騙(手法|話術|集團))"
+    )
     private val factCheckContext = Regex("(事實查核|查核結果|謠言|假消息|不實訊息|網傳|新聞報導|媒體報導|轉傳內容|有人收到)")
     private val directRequest = Regex(
-        "((請|麻煩|務必|記得|幫我|需要你|立刻|立即|趕快).{0,32}" +
-            "(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉(到|至).{0,6}(帳|戶|銀行)|轉入|把錢|付款|支付|繳費|繳納|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|" +
+        "((請|麻煩|務必|記得|幫我|需要你|需先|須先|必須|要先|請先|立刻|立即|趕快).{0,32}" +
+            "(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉(到|至).{0,6}(帳|戶|銀行)|轉入|把錢|付款|支付|繳費|繳納|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我|加LINE|加賴" +
+            "|操作|解除|取消|交給|退回|借我|繳|付)|" +
             "(轉帳|匯款|先匯|匯錢|轉錢|付款|支付|繳費|繳納).{0,8}(給我|給我們|過來|到|至|帳戶|帳號)|" +
+            // "先匯款才保留名額", "需付保證金才能上班": payment as the condition for something.
+            "(先|需|須|要)(匯款|轉帳|付款|付清|匯|繳|付|儲值).{0,10}(才|方能|否則)|" +
+            "(借我|先借).{0,6}([0-9一二三四五六七八九十百千萬]|\\[AMOUNT\\]|塊|元)|" +
             "(加入.{0,8}(投資|群組)|老師帶單|私訊.{0,8}(領取|獲利)))"
     )
+    // "請至繳費機繳納", "可至超商繳費": self-service payment, not a transfer to the sender.
+    private val selfServicePayment = Regex("(至|到|於|在|用)?.{0,4}(繳費機|繳費站|臨櫃|櫃檯|超商|便利商店|官方App|App內).{0,6}(繳費|繳納|付款|儲值)")
     private val clickAction = Regex("(點擊|點選|點|開啟|登入|進入|查看|上).{0,12}(\\[LINK\\]|\\[OFFICIAL_URL\\]|\\[SHORT_URL\\]|\\[SUSPICIOUS_URL\\])")
     private val contactAction = Regex("(回電|聯絡|回覆|加我|加入.{0,6}(LINE|line|群組)|私訊)")
     private val noticeContext = Regex("(通知|公告|提醒|帳單|繳費單|包裹|訂單|交易紀錄)")
     private val impersonation = listOf(
         "family" to Regex("(我是(你的?)?(家人|兒子|女兒|孫子|孫女|媳婦|女婿)|換(了)?(新)?(手機)?號碼)"),
-        "official" to Regex("(我是.{0,6}(警察|檢察官|法官|法院|偵查員|書記官|機構人員|公務員|政府)|警察局|檢察署|地檢署|刑事局|警局|調查局|健保署|國稅局|勞保局|監理站|法務部)"),
+        "official" to Regex(
+            "(我是.{0,6}(警察|檢察官|法官|法院|偵查員|書記官|機構人員|公務員|政府)|警察局|檢察署|地檢署|刑事局|警局|調查局|健保署|國稅局|勞保局|監理站|法務部" +
+                // 假檢警 signature phrases (165): the script names them, no genuine caller does.
+                "|偵查不公開|監管帳戶|法院監管|法院公文|公證金|定時回報|證明清白|涉嫌洗錢|涉及洗錢|人頭帳戶)"
+        ),
         "support" to Regex("(我是.{0,6}(客服|銀行|專員|電信)|客服人員)")
     )
     private val vague = Regex("(細節還沒|還沒有說明|稍後說明|之後再說|晚點再說)")
@@ -298,7 +330,7 @@ object MessageGuard {
             if (factCheckVerdict.containsMatchIn(unquoted)) detectionText = unquoted
         }
         val actionWasNegated = negatedAction.containsMatchIn(detectionText)
-        val withoutNegation = reportedRequest.replace(negatedAction.replace(detectionText, ""), "")
+        val withoutNegation = selfServicePayment.replace(reportedRequest.replace(negatedAction.replace(detectionText, ""), ""), "")
         val core = filler.replace(redacted, "").trim()
         val asksForTransfer = asksTransfer.containsMatchIn(withoutNegation)
         val asksForSecret = (secretWords.containsMatchIn(withoutNegation) && requestVerbs.containsMatchIn(withoutNegation)) ||
@@ -384,11 +416,16 @@ object MessageGuard {
         val riskyLink = f.hasLink && f.linkKind != "known_official"
         val safeContext = f.antiScamContext || f.factCheckContext || f.messageStance in setOf("warning", "report")
         val direct = f.directRequest && !safeContext
+        // A threat turns any money, secret, link, impersonation or request in the same message into a
+        // demand; a payment with a change of channel is the fake-friend / off-platform shape.
+        val coerced = f.accountThreat && !safeContext
         if ((direct && (f.asksTransfer || f.requestsSecret || f.requestsRemoteControl)) ||
             f.linkKind == "suspicious" ||
             (direct && riskyLink && (f.urgency || f.offersReward || impersonating)) ||
             (direct && impersonating && (f.urgency || f.contactChange)) ||
-            (direct && f.financialPromise)) return Assessment(Level.HIGH, codes)
+            (direct && f.financialPromise) ||
+            (coerced && (direct || f.asksTransfer || f.requestsSecret || f.requestsRemoteControl || riskyLink || impersonating)) ||
+            (f.asksTransfer && f.contactChange && !safeContext)) return Assessment(Level.HIGH, codes)
         if (!f.contextSufficient) return Assessment(Level.INSUFFICIENT, codes + "CONTEXT_INSUFFICIENT")
         val riskSignal = f.asksTransfer || f.requestsSecret || f.urgency || f.hasLink || f.offersReward ||
             f.requestsRemoteControl || impersonating || f.financialPromise || f.accountThreat || f.contactChange
