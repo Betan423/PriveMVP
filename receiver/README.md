@@ -125,7 +125,7 @@ Receiver 沒有 WebSocket／SSE。Dashboard 是瀏覽器刷新；後續情境判
 Receiver：POST /api/v1/assist/check-message
   → 嚴格契約驗證（未知欄位、缺雲端同意一律拒絕）
   → 禁用值掃描：命中即 422，不呼叫 AI
-  → 本機規則分級 + Gemini proxy（/generate，每次無狀態）
+  → 本機規則分級 + AI 後端（/generate，每次無狀態；Gemini、Claude 或本機 Ollama）
   → AI 回應只能是白名單 sop_id／risk_level／reason_codes，否則改用規則結果
   → AI 只能提高、不能降低規則判定的風險
   → 稽核寫入 data/assist_audit.ndjson（只有決策、reason codes 與 packet SHA-256，不含摘錄）
@@ -136,11 +136,11 @@ Receiver：POST /api/v1/assist/check-message
 
 ### 啟動 demo
 
-Receiver 預設 8080；Gemini proxy 使用 8000。
+Receiver 預設 8080；AI 後端使用 8000。
 
 ```bash
-# 1. Gemini proxy（另一個專案）
-cd ~/Documents/gemini-proxymeow && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port 8000
+# 1. AI 後端（在專案根目錄；AI=gemini|claude|local，Key 讀 .env）
+make proxy AI=gemini
 # 2. Receiver；--planner-url off 則只用本機規則
 python -m receiver.server --port 8080 --planner-url http://127.0.0.1:8000
 # 3. 手機端模擬器：單則訊息或 v5 資料集某個環境的 32 則訊息
@@ -201,7 +201,7 @@ make message-eval
 
 - 遮蔽與特徵抽取是關鍵字／正規表示式規則；對 v5 訊息模板的分級結果只代表規則與模板一致，不是獨立評測。
 - 正規表示式無法辨識所有人名（只處理稱呼前的姓名與手機已知的聯絡人姓名），所以摘錄預設不送。
-- Gemini proxy 走網頁版帳號，不是正式 API；回應時間實測約 5–11 秒，可能因帳號狀態失效。失效時自動改用本機規則。
+- AI 後端可選 Gemini API、Claude API 或本機 Ollama（`gemini-proxy/official_api.py`）；Key 錯誤、配額用完、拒答、逾時或 Ollama 沒開，都會自動改用本機規則。
 - AI 可提高風險等級，因此可能比規則更保守（例如把只有物流連結的訊息判成高風險）。
 
 ### 情境二評測證據
