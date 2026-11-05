@@ -88,6 +88,8 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 
 此能力是為高齡／行動不便者的輔助流程；若要透過 Google Play 發布，須另外完成 Accessibility API 聲明、醒目揭露與政策資格審查。若未啟用專用服務，原本的 Android `ACTION_SEND` 手動 LINE 分享仍可使用。
 
+情境一三版本比較：`make share-compare` 對 576 筆分享照片任務各建立 Raw（整支手機 Context）、Masked（固定欄位遮蔽與假名化，不做任務白名單）與 Task-Minimal（政策引擎實際送出的封包）三個版本，輸出每版本的欄位值數、位元組數、直接識別值數、非任務區段數、跨任務可連結數與必要條件保留率。方法與結果見 [docs/SHARE_PHOTO_THREE_VERSION_COMPARISON.md](docs/SHARE_PHOTO_THREE_VERSION_COMPARISON.md)。
+
 資料集層級的政策引擎與評測：`make core-eval` 把 1,728 筆核心任務逐筆做出 ALLOW／ASK／LOCAL／STOP 決策，輸出 `derived_tasks.csv`、`packets.jsonl`、`summary.json`（每項指標附分子、分母與失敗清單）、`failures.json`、`manifest.json`（輸入與輸出 SHA-256、重跑指令）。細節見 [receiver/README.md](receiver/README.md)。
 
 ## 可疑訊息檢查 demo

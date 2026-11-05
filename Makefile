@@ -31,6 +31,7 @@ MESSAGE_MUTATION_SEEDS := receiver/eval/check_message_mutation_seeds.json
 APK         := app/build/outputs/apk/debug/app-debug.apk
 EVAL_OUT    ?= receiver/data/core_eval
 MESSAGE_EVAL_OUT ?= receiver/data/message_eval
+SHARE_COMPARE_OUT ?= receiver/data/share_photo_compare
 
 # 有本機離線工具鏈（JDK 17 + SDK + Gradle 快取）就用它；否則沿用系統的 JAVA_HOME / ANDROID_HOME。
 TOOLCHAIN   ?= $(HOME)/.cache/privagent-toolchain
@@ -47,7 +48,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval golden check-services ip
+        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval share-compare golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -149,6 +150,10 @@ privacy-score-eval: ## 情境二：遮罩後Qwen雙分數校準、保留集驗�
 core-eval: ## 1,728 筆核心任務跑政策引擎並輸出證據檔（隱私指標任一不為 0 會失敗）
 	$(PYTHON) -m receiver.core_eval --dataset "$(DATASET)" --out $(EVAL_OUT)
 	@echo "證據檔：$(EVAL_OUT)/（summary.json、derived_tasks.csv、packets.jsonl、failures.json、manifest.json）"
+
+share-compare: ## 情境一：576 筆分享照片任務的 Raw／Masked／Task-Minimal 三版本比較
+	$(PYTHON) -m receiver.share_photo_compare --dataset "$(DATASET)" --out $(SHARE_COMPARE_OUT)
+	@echo "證據檔：$(SHARE_COMPARE_OUT)/（comparison.json、pairs.jsonl、manifest.json）"
 
 golden: ## 改了 receiver/core_tasks.py 或 phone_sim.py 後，重新產生 Android 的對照測試資料
 	$(PYTHON) -m receiver.gen_core_golden --dataset "$(DATASET)"
