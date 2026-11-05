@@ -68,11 +68,21 @@ class InferenceAttackEvalTests(unittest.TestCase):
         high_excerpt = self._attack("facts_and_excerpt", "text")["accuracy_by_expected_level"]["high"]
         self.assertEqual(high_facts, high_excerpt)
 
-    def test_no_phone_is_uniquely_identified(self) -> None:
-        for view in iae.VIEWS:
+    def test_no_phone_is_uniquely_identified_from_packets(self) -> None:
+        for view in ("facts_only", "facts_and_excerpt"):
             acc = self.result["cross_message_accumulation"][view]
             self.assertEqual(acc["environments_uniquely_identified"], 0)
             self.assertGreaterEqual(acc["min_environment_k"], 2)
+
+    def test_raw_text_is_the_baseline_everything_leaks(self) -> None:
+        raw = self.result["cross_message_accumulation"]["raw_text"]
+        self.assertEqual(raw["environments_uniquely_identified"], raw["environments"])
+        self.assertEqual(self._attack("raw_text", "text")["accuracy"], 1.0)
+        self.assertEqual(self._attack("raw_text", "template_id")["accuracy"], 1.0)
+        leaks = self.result["messages_with_direct_identifier_visible"]
+        self.assertGreater(leaks["raw_text"], 0)
+        self.assertEqual(leaks["facts_and_excerpt"], 0)
+        self.assertEqual(leaks["facts_only"], 0)
 
     def test_equivalence_classes_are_consistent(self) -> None:
         classes = self.result["equivalence_classes"]["facts_only"]

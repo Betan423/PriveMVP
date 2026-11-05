@@ -29,15 +29,17 @@ import csv
 import hashlib
 import json
 import math
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
+from .assistant import forbidden_hits
 from .phone_sim import build_packet, extract_facts
 
 FOLDS = 4
 RANDOM_FIELDS = ("task_id_alias", "request_nonce", "issued_at_ms")
-VIEWS = ("facts_only", "facts_and_excerpt")
+VIEWS = ("raw_text", "facts_and_excerpt", "facts_only")
 TARGETS = ("template_id", "text", "expected_level")
 
 
@@ -67,14 +69,26 @@ def _load_messages(dataset_path: Path) -> list[dict[str, Any]]:
                 "message_id": message["message_id"],
                 "template_id": message["template_id"],
                 "text": message["text"],
-                "views": {"facts_only": _signature(facts),
-                          "facts_and_excerpt": _signature({**facts, "redacted_excerpt": excerpt})},
+                # The raw-text attacker reads the message; for family guessing he only has to ignore the numbers.
+                "lookup": {"raw_text": re.sub(r"\d+", "#", message["text"])},
+                "views": {"raw_text": message["text"],
+                          "facts_and_excerpt": _signature({**facts, "redacted_excerpt": excerpt}),
+                          "facts_only": _signature(facts)},
             })
     return rows
 
 
 def lookup_attack(rows: list[dict[str, Any]], view: str, target: str) -> dict[str, Any]:
     """Leave-environments-out: guess the most common target value seen with the same signature."""
+    if view == "raw_text" and target == "text":
+        n = len(rows)
+        return {"target": target, "view": view, "folds": 0, "accuracy": 1.0, "correct": n, "denominator": n,
+                "unseen_signatures_in_test": 0, "majority_class_baseline": round(
+                    collections.Counter(r[target] for r in rows).most_common(1)[0][1] / n, 4),
+                "distinct_targets": len({r[target] for r in rows}),
+                "accuracy_by_expected_level": {level: f"{c}/{c}" for level, c in sorted(
+                    collections.Counter(r["expected_level"] for r in rows).items())},
+                "note": "the attacker holds the text; nothing to infer"}
     correct = 0
     unseen = 0
     by_level: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0])
@@ -83,13 +97,13 @@ def lookup_attack(rows: list[dict[str, Any]], view: str, target: str) -> dict[st
         overall: collections.Counter[str] = collections.Counter()
         for row in rows:
             if row["fold"] != fold:
-                table[row["views"][view]][row[target]] += 1
+                table[row["lookup"].get(view, row["views"][view])][row[target]] += 1
                 overall[row[target]] += 1
         fallback = overall.most_common(1)[0][0]
         for row in rows:
             if row["fold"] != fold:
                 continue
-            seen = table.get(row["views"][view])
+            seen = table.get(row["lookup"].get(view, row["views"][view]))
             if seen is None:
                 unseen += 1
             guess = seen.most_common(1)[0][0] if seen else fallback
@@ -198,6 +212,11 @@ def run(dataset_path: Path, catalog_path: Path, out: Path) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
 
     attacks = [lookup_attack(rows, view, target) for view in VIEWS for target in TARGETS]
+    identifier_leaks = {
+        "raw_text": sum(1 for r in rows if forbidden_hits({"text": r["text"]})),
+        "facts_and_excerpt": sum(1 for r in rows if forbidden_hits({"excerpt": json.loads(r["views"]["facts_and_excerpt"])["redacted_excerpt"] or ""})),
+        "facts_only": 0,
+    }
     classes_summary: dict[str, Any] = {}
     all_classes: list[dict[str, Any]] = []
     for view in VIEWS:
@@ -216,11 +235,14 @@ def run(dataset_path: Path, catalog_path: Path, out: Path) -> dict[str, Any]:
         "distinct_texts": len({r["text"] for r in rows}),
         "fact_fields": len(json.loads(rows[0]["views"]["facts_only"])),
         "attacker_view": {
+            "raw_text": "the message as it sits on the phone, nothing masked and nothing dropped (what an agent gets "
+                        "when the app forwards the notification)",
             "facts_only": "packet facts as sent by default (no excerpt); task_id_alias, request_nonce and issued_at_ms "
                           "are fresh per send and carry nothing about the message",
             "facts_and_excerpt": "facts plus the redacted excerpt the user can opt in to (dropped on high risk)",
         },
         "inference_attacks": attacks,
+        "messages_with_direct_identifier_visible": identifier_leaks,
         "equivalence_classes": classes_summary,
         "cross_message_accumulation": {view: cross_message_accumulation(rows, view) for view in VIEWS},
         "packet_fields": packet_field_audit(rows),

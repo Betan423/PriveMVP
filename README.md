@@ -90,7 +90,7 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 
 資料集層級的政策引擎與評測：`make core-eval` 把 1,728 筆核心任務逐筆做出 ALLOW／ASK／LOCAL／STOP 決策，輸出 `derived_tasks.csv`、`packets.jsonl`、`summary.json`（每項指標附分子、分母與失敗清單）、`failures.json`、`manifest.json`（輸入與輸出 SHA-256、重跑指令）。細節見 [receiver/README.md](receiver/README.md)。
 
-情境二推回攻擊：`make inference-attack` 讓攻擊者只拿到 6,144 則訊息的封包特徵（14 個布林、6 個列舉值），在其他手機環境上建表後推回模板家族、原文與手機身分，並量測每種特徵組合的等價類大小 k。只看封包時風險等級 100% 可推回（這是封包的用途）、家族 61.5%、原文 16.7%、最小 k=64、192 支手機沒有一支被唯一指認；開啟摘錄後家族 100%、原文 56.3%。方法與結果見 [docs/CHECK_MESSAGE_INFERENCE_ATTACK.md](docs/CHECK_MESSAGE_INFERENCE_ATTACK.md)。
+情境二推回攻擊：`make inference-attack` 讓攻擊者只拿到 6,144 則訊息的封包特徵（14 個布林、6 個列舉值），在其他手機環境上建表後推回模板家族、原文與手機身分，並量測每種特徵組合的等價類大小 k。原文不遮蔽時原文 100%、2,688 則看得到電話或帳號、192 支手機全被唯一指認；只看封包時風險等級 100% 可推回（這是封包的用途）、家族 61.5%、原文 16.7%、最小 k=64、沒有一支手機被唯一指認；開啟摘錄後家族 100%、原文 56.3%。方法與結果見 [docs/CHECK_MESSAGE_INFERENCE_ATTACK.md](docs/CHECK_MESSAGE_INFERENCE_ATTACK.md)。
 
 ## 可疑訊息檢查 demo
 
