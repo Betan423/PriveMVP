@@ -280,6 +280,30 @@
       "expected_facts": {"link_kind": "suspicious"},
       "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["evil", "xyz"]
+    },
+    {
+      "id": "remote_tool_by_name_is_high",
+      "text": "我是客服，請下載 AnyDesk 並把號碼告訴我，我幫您處理退款",
+      "expected_level": "high",
+      "expected_facts": {"requests_remote_control": true, "impersonation": "support"},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "navigation_transfer_verb_is_not_money",
+      "text": "請轉到設定頁面開啟通知權限",
+      "expected_level": "low_signal",
+      "expected_facts": {"asks_transfer": false},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "topup_instruction_is_not_a_direct_request",
+      "text": "停車費請於 App 內儲值後使用",
+      "expected_level": "caution",
+      "expected_facts": {"direct_request": false},
+      "redaction_contains": [],
+      "redaction_excludes": []
     }
   ]
 }

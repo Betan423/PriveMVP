@@ -540,6 +540,25 @@ class AntiScamFramingTests(unittest.TestCase):
         '我是檢察官，你的帳戶涉案，請立刻把錢轉到監管帳戶',
     )
     DEFANGED_LINKS = ('請點 evil。xyz/login 補填資料', '請點 evil[.]xyz/login 補填資料')
+    REMOTE_TOOLS = ('我是客服，請下載 AnyDesk 並把號碼告訴我，我幫您處理退款', '請安裝 TeamViewer 開啟螢幕共享，我協助您操作網銀')
+    # Everyday messages that share a verb with the scams above must not become high.
+    BENIGN = ('請轉到設定頁面開啟通知權限', '停車費請於 App 內儲值後使用', '您的手機號碼已完成變更',
+              '訂單序號 A123，請回覆是否收到', '要驗證嗎？不用的話就直接登入', '媽，我把錢放在抽屜了')
+
+    def test_remote_tool_names_are_remote_control(self) -> None:
+        for text in self.REMOTE_TOOLS:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertTrue(facts["requests_remote_control"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+
+    def test_everyday_messages_sharing_a_verb_stay_below_high(self) -> None:
+        for text in self.BENIGN:
+            self.assertNotEqual("high", rule_assessment(phone_sim.extract_facts(text, "pasted"))[0], text)
+
+    def test_role_after_organisation_name_is_impersonation(self) -> None:
+        self.assertEqual("support", phone_sim.extract_facts("我是玉山銀行客服，請提供驗證碼", "pasted")["impersonation"])
+        self.assertEqual("official", phone_sim.extract_facts("我是刑事局偵查員，您的帳戶涉及洗錢", "pasted")["impersonation"])
+        self.assertEqual("family", phone_sim.extract_facts("我是你女兒，晚上回家吃飯", "pasted")["impersonation"])
 
     def test_quoted_scam_without_verdict_stays_high(self) -> None:
         for text in self.QUOTED_SCAMS:
