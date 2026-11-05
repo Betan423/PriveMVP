@@ -155,7 +155,7 @@ python -m receiver.phone_sim --message "王小明您好，明天下午三點集�
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --environment 1
 # 遮蔽檢查：全部 6,144 則訊息組成的 packet 是否仍含禁用值（不送出）
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --scan-only
-# 完整情境二證據：6,144 則合成訊息、27 個紅隊案例、140 個變形攻擊、3 個 Agent 邊界攻擊
+# 完整情境二證據：6,144 則合成訊息、35 個紅隊案例、150 個變形攻擊、3 個 Agent 邊界攻擊
 make message-eval
 ```
 
@@ -221,7 +221,7 @@ make message-eval
 - `summary.json`：每項指標的失敗數、分母、失敗率與失敗 ID；同時列出 32 個模板家族結果。
 - `message_results.csv`：6,144 則訊息的模板、預期／實際風險與 reason codes，不含訊息文字。
 - `attack_results.csv`：拆字、零寬字元、否定詞、提示注入等紅隊案例結果，不含攻擊文字。
-- `mutation_results.csv`：由 10 個種子、14 種分隔／符號手法產生的 140 個變形攻擊結果，不含變形後文字。
+- `mutation_results.csv`：由 10 個種子、14 種分隔／符號手法產生的 150 個變形攻擊結果，不含變形後文字。
 - `failures.json`：非零失敗清單；全部通過時是空物件。
 - `manifest.json`：三個輸入、評測程式與輸出檔的 SHA-256，以及重跑指令。
 

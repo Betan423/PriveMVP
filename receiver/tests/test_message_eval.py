@@ -48,7 +48,7 @@ class MessageEvaluationTests(unittest.TestCase):
 
             self.assertEqual(summary["messages"], 3)
             self.assertTrue(all(metric["failures"] == 0 for metric in summary["metrics"].values()))
-            self.assertEqual(summary["metrics"]["mutation_attack_failure"]["denominator"], 14)
+            self.assertEqual(summary["metrics"]["mutation_attack_failure"]["denominator"], 15)
             self.assertEqual(json.loads((out / "failures.json").read_text(encoding="utf-8")), {})
             for name in ("message_results.csv", "attack_results.csv", "mutation_results.csv", "summary.json", "manifest.json"):
                 self.assertTrue((out / name).is_file(), name)

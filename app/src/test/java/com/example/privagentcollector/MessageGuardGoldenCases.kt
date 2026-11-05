@@ -132,4 +132,11 @@ internal val goldenCases = listOf(
         Golden("轉傳內容：媽，我換號碼了，急用錢，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18", "轉傳內容:媽,我換號碼了,急用錢,請轉帳到 [BANK_ACCOUNT]", "1000001", "family", "none", "high", "ASKS_TRANSFER,CONTACT_CHANGE,IMPERSONATION_FAMILY"),
         Golden("165反詐騙提醒：如有人要求您匯款至安全帳戶，請勿照做並撥打165", "165反詐騙提醒:如有人要求您匯款至安全帳戶,請勿照做並撥打165", "0000001", "none", "none", "low_signal", "ANTI_SCAM_CONTEXT"),
         Golden("事實查核：網傳「您的帳戶異常，請立即匯款到安全帳戶」是假消息", "事實查核:網傳「您的帳戶異常,請立即匯款到安全帳戶」是假消息", "0000001", "none", "none", "low_signal", "FACT_CHECK_CONTEXT"),
+        Golden("網傳「您的帳戶異常，請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18」", "網傳「您的帳戶異常,請立即匯款到安全帳戶 [BANK_ACCOUNT]」", "1010001", "none", "none", "high", "ASKS_TRANSFER,URGENCY,ACCOUNT_THREAT"),
+        Golden("请立即转账到账户 SYN_ACCOUNT_PRIVATE_0001_18，否则冻结", "请立即转账到账户 [BANK_ACCOUNT],否则冻结", "1010001", "none", "none", "high", "ASKS_TRANSFER,URGENCY"),
+        Golden("請立即匯....款到帳戶 SYN_ACCOUNT_PRIVATE_0001_18，否則停權", "請立即匯....款到帳戶 [BANK_ACCOUNT],否則停權", "1010001", "none", "none", "high", "ASKS_TRANSFER,URGENCY"),
+        Golden("我是客服，請把簡訊收到的6碼回傳給我", "我是客服,請把簡訊收到的6碼回傳給我", "0100001", "support", "none", "high", "REQUESTS_SECRET,IMPERSONATION_SUPPORT"),
+        Golden("媽，我換號碼了，匯錢給我 SYN_ACCOUNT_PRIVATE_0001_18", "媽,我換號碼了,匯錢給我 [BANK_ACCOUNT]", "1000001", "family", "none", "high", "ASKS_TRANSFER,CONTACT_CHANGE,IMPERSONATION_FAMILY"),
+        Golden("請點 evil。xyz/login 補填資料", "請點 [SUSPICIOUS_URL] 補填資料", "0001001", "none", "suspicious", "high", "HAS_LINK,LINK_SUSPICIOUS"),
+        Golden("請點 evil[.]xyz/login 補填資料", "請點 [SUSPICIOUS_URL] 補填資料", "0001001", "none", "suspicious", "high", "HAS_LINK,LINK_SUSPICIOUS"),
 )

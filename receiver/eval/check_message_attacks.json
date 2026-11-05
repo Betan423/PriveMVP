@@ -216,6 +216,70 @@
       "expected_facts": {"anti_scam_context": true, "direct_request": false, "message_stance": "warning"},
       "redaction_contains": [],
       "redaction_excludes": []
+    },
+    {
+      "id": "quoted_scam_without_verdict_is_high",
+      "text": "網傳「您的帳戶異常，請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18」",
+      "expected_level": "high",
+      "expected_facts": {"fact_check_context": false, "direct_request": true},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "simplified_chinese_transfer_is_high",
+      "text": "请立即转账到账户 SYN_ACCOUNT_PRIVATE_0001_18，否则冻结",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true, "urgency": true},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "simplified_chinese_otp_is_high",
+      "text": "我是客服，请提供验证码 123456",
+      "expected_level": "high",
+      "expected_facts": {"requests_secret": true, "impersonation": "support"},
+      "redaction_contains": [],
+      "redaction_excludes": ["123456"]
+    },
+    {
+      "id": "long_symbol_run_inside_keyword",
+      "text": "請立即匯....款到帳戶 SYN_ACCOUNT_PRIVATE_0001_18，否則停權",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "unnamed_sms_code_is_a_secret",
+      "text": "我是客服，請把簡訊收到的6碼回傳給我",
+      "expected_level": "high",
+      "expected_facts": {"requests_secret": true, "direct_request": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "colloquial_transfer_verb_is_high",
+      "text": "媽，我換號碼了，匯錢給我 SYN_ACCOUNT_PRIVATE_0001_18",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true, "impersonation": "family"},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "ideographic_dot_link_is_suspicious",
+      "text": "請點 evil。xyz/login 補填資料",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
+      "redaction_excludes": ["evil", "xyz"]
+    },
+    {
+      "id": "defanged_dot_link_is_suspicious",
+      "text": "請點 evil[.]xyz/login 補填資料",
+      "expected_level": "high",
+      "expected_facts": {"link_kind": "suspicious"},
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
+      "redaction_excludes": ["evil", "xyz"]
     }
   ]
 }

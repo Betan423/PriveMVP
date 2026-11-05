@@ -516,7 +516,49 @@ class AntiScamFramingTests(unittest.TestCase):
         '165反詐騙提醒：如有人要求您匯款至安全帳戶，請勿照做並撥打165',
         '新聞報導：詐騙集團假冒檢察官要求民眾匯款至安全帳戶，請勿聽信',
         '事實查核：網傳「您的帳戶異常，請立即匯款到安全帳戶」是假消息',
+        '165反詐騙提醒：假冒檢察官的詐騙增加，若接到來電要求匯款請直接掛斷',
     )
+    # Wrapping the whole scam in quotes after a "fact check" header passes no verdict on it.
+    QUOTED_SCAMS = (
+        '事實查核：「媽，我換號碼了，急用錢，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18」',
+        '網傳「您的帳戶異常，請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18」',
+        '詐騙集團要求您匯款至安全帳戶是假的，請改匯到我們的監管帳戶 SYN_ACCOUNT_PRIVATE_0001_18',
+    )
+    # Same scam, spelled around the patterns: variant characters, long symbol runs, unnamed codes.
+    OBFUSCATED = (
+        '請立即匯....款到帳戶 SYN_ACCOUNT_PRIVATE_0001_18，否則停權',
+        '请立即转账到账户 SYN_ACCOUNT_PRIVATE_0001_18，否则冻结',
+        '我是客服，请提供验证码 123456',
+        '我是客服，請提供驗証碼 123456',
+        '請立即滙款到帳戶 SYN_ACCOUNT_PRIVATE_0001_18，否則停權',
+        '媽，是我，急用錢，先匯五萬給我 SYN_ACCOUNT_PRIVATE_0001_18',
+        '媽，我換號碼了，匯錢給我 SYN_ACCOUNT_PRIVATE_0001_18',
+        '我是你兒子，手機壞了，趕快轉錢過來',
+        '我是客服，請把簡訊收到的6碼回傳給我',
+        '我是銀行專員，請把手機剛收到的數字唸給我',
+        '我是客服，請幫我買遊戲點數並把序號給我',
+        '我是檢察官，你的帳戶涉案，請立刻把錢轉到監管帳戶',
+    )
+    DEFANGED_LINKS = ('請點 evil。xyz/login 補填資料', '請點 evil[.]xyz/login 補填資料')
+
+    def test_quoted_scam_without_verdict_stays_high(self) -> None:
+        for text in self.QUOTED_SCAMS:
+            self.assertEqual("high", rule_assessment(phone_sim.extract_facts(text, "pasted"))[0], text)
+
+    def test_obfuscated_spellings_stay_high(self) -> None:
+        for text in self.OBFUSCATED:
+            self.assertEqual("high", rule_assessment(phone_sim.extract_facts(text, "pasted"))[0], text)
+
+    def test_defanged_links_are_graded(self) -> None:
+        for text in self.DEFANGED_LINKS:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertEqual("suspicious", facts["link_kind"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+            self.assertNotIn("evil", phone_sim.redact(text))
+
+    def test_excerpt_keeps_the_senders_spelling(self) -> None:
+        # Folding is for detection only: the readable excerpt must not be rewritten.
+        self.assertIn("请立即转账", phone_sim.redact("请立即转账到账户 SYN_ACCOUNT_PRIVATE_0001_18"))
 
     def test_scam_behind_warning_header_stays_high(self) -> None:
         for text in self.SCAMS:

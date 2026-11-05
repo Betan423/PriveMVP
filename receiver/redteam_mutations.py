@@ -27,6 +27,7 @@ SEPARATORS = {
     "middle_dot": "·",
     "bullet": "•",
     "emoji": "💸",
+    "dot_run": "....",
 }
 
 

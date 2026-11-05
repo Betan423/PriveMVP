@@ -137,11 +137,19 @@ object MessageGuard {
     )
     // A fact check quotes the scam it debunks; only the quoted text is excused, not the whole message.
     private val quotedSpan = Regex("[「『“\"][^」』”\"]{1,120}[」』”\"]")
-    private val secretWords = Regex("(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)")
+    private val secretWords = Regex(
+        // "簡訊收到的6碼", "手機剛收到的數字", "點數序號": the code asked for without naming it.
+        "(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證|(簡訊|手機|電話).{0,6}(收到|傳來|裡|上)的?(數字|代碼|[0-9一二三四五六七八九十]?碼)" +
+            "|點數.{0,6}序號|序號.{0,6}(給我|回傳|傳給))"
+    )
+    // A fact check is excused from the quoted scam only when it also passes a verdict on it.
+    private val factCheckVerdict = Regex(
+        "(假消息|假訊息|假新聞|不實|謠言|是假的|詐騙(手法|訊息|簡訊|話術|集團)|澄清|查證|闢謠|駁斥|勿轉傳|勿信|勿相信|別上當|勿照做|勿理會)"
+    )
     private val requestVerbs = Regex("(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
     // Explicit [^\n] matches Python's dot behaviour and avoids another platform-specific flag.
     private val credentialPhishing = Regex("(帳戶|帳號|會員)[^\n]{0,12}(驗證|登入|解鎖)[^\n]{0,20}(輸入|填寫)[^\n]{0,6}(資料|個資)")
-    private val asksTransfer = Regex("(轉帳|匯款|先匯|匯到|付款|支付|繳費|繳納|ATM|轉入|儲值)")
+    private val asksTransfer = Regex("(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉到|轉至|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數)")
     private val urgency = Regex("(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|停權|凍結|處分|逾期|最後機會)")
     private val offersReward = Regex("(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)")
     private val remoteControl = Regex("(遠端控制|遠端軟體|遠端協助|螢幕分享|控制碼)")
@@ -152,8 +160,8 @@ object MessageGuard {
     private val factCheckContext = Regex("(事實查核|查核結果|謠言|假消息|不實訊息|網傳|新聞報導|媒體報導|轉傳內容|有人收到)")
     private val directRequest = Regex(
         "((請|麻煩|務必|記得|幫我|需要你|立刻|立即|趕快).{0,32}" +
-            "(轉帳|匯款|付款|支付|繳費|繳納|提供|告訴|輸入|回覆|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|" +
-            "(轉帳|匯款|付款|支付|繳費|繳納).{0,8}(給我|給我們|到|至|帳戶|帳號)|" +
+            "(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉到|轉至|轉入|把錢|付款|支付|繳費|繳納|儲值|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|" +
+            "(轉帳|匯款|先匯|匯錢|轉錢|付款|支付|繳費|繳納).{0,8}(給我|給我們|過來|到|至|帳戶|帳號)|" +
             "(加入.{0,8}(投資|群組)|老師帶單|私訊.{0,8}(領取|獲利)))"
     )
     private val clickAction = Regex("(點擊|點選|點|開啟|登入|進入|查看|上).{0,12}(\\[LINK\\]|\\[OFFICIAL_URL\\]|\\[SHORT_URL\\]|\\[SUSPICIOUS_URL\\])")
@@ -172,9 +180,17 @@ object MessageGuard {
     // Formatting controls can be inserted inside identifiers or scam keywords to evade matching.
     // They carry no meaning for CHECK_MESSAGE; keep this range in sync with receiver/phone_sim.py.
     private val invisibleFormatControls = Regex("[\u200b-\u200f\u202a-\u202e\u2060-\u206f\uFEFF]")
+    // "evil。xyz", "evil[.]xyz": a defanged or ideographic dot between two host labels is still a link
+    // to a reader who retypes it. Only fires between ASCII label characters, never inside a sentence.
+    private val defangedDot = Regex("""(?i)(?<=[a-z0-9])(?:。|\[\.]|\(\.\)|\{\.}|\[dot]|\(dot\))(?=[a-z0-9])""")
+    // Simplified or variant characters spell the same scam ("请立即转账", "滙款"). The detection view
+    // is folded to the traditional forms the patterns use; keep the pairs identical to phone_sim.py.
+    private val variantChars: Map<Char, Char> =
+        "转轉 账帳 帐帳 汇匯 滙匯 验驗 证證 証證 码碼 马馬 点點 击擊 链鏈 录錄 冻凍 结結 权權 银銀 还還 给給 请請 务務 费費 缴繳 现現 线線 个個 这這 备備 护護 签簽 领領 奖獎 询詢 机機 网網 户戶 异異 处處 罚罰 输輸 发發 时時 间間 开開 关關 没沒 儿兒 妈媽 换換 电電 话話 号號 远遠 软軟 协協 装裝 载載 认認 则則 紧緊 单單 币幣 补補 贴貼 讯訊 简簡 传傳".split(' ').associate { it[0] to it[1] }
+    private fun foldVariants(text: String): String = buildString(text.length) { for (c in text) append(variantChars[c] ?: c) }
     private val detectionWhitespace = Regex("\\s+")
     private val hanGap = Regex(
-        "(?<=[\\x{3400}-\\x{9fff}])(?:[^\\w\\x{3400}-\\x{9fff}\\[\\]，。！？,!?;；:：]|_){1,3}" +
+        "(?<=[\\x{3400}-\\x{9fff}])(?:[^\\w\\x{3400}-\\x{9fff}\\[\\]，。！？,!?;；:：]|_){1,8}" +
             "(?=[\\x{3400}-\\x{9fff}])"
     )
 
@@ -191,7 +207,7 @@ object MessageGuard {
             }
         }
         val normalized = separatorControls.replace(Normalizer.normalize(clean, Normalizer.Form.NFKC), " ")
-        return invisibleFormatControls.replace(normalized, "")
+        return defangedDot.replace(invisibleFormatControls.replace(normalized, ""), ".")
     }
 
     private fun codePoints(text: String) = text.codePointCount(0, text.length)
@@ -265,14 +281,22 @@ object MessageGuard {
     internal fun classifyLinks(links: List<String>): String =
         links.map(::classifyLink).maxByOrNull { linkKinds.indexOf(it) } ?: "none"
 
+    /** Compact, variant-folded text that the feature patterns run on; never shown or sent. */
+    private fun detectionView(redacted: String): String =
+        foldVariants(detectionWhitespace.replace(hanGap.replace(redacted, ""), ""))
+
     fun extractFacts(original: String, sourceKind: String): Facts {
         val (redacted, links) = redactCollectingLinks(original)
         // Feature matching uses a compact view so spacing cannot hide "匯 款" or "驗 證 碼".
         // The redacted excerpt keeps its original readable spacing.
-        var detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        var detectionText = detectionView(redacted)
         val factCheckFraming = factCheckContext.containsMatchIn(detectionText)
-        // Quote marks sit between Han characters, so drop the quoted scam before hanGap eats the marks.
-        if (factCheckFraming) detectionText = detectionWhitespace.replace(hanGap.replace(quotedSpan.replace(redacted, ""), ""), "")
+        if (factCheckFraming) {
+            // Quote marks sit between Han characters, so drop the quoted scam before hanGap eats the
+            // marks; and only when the text around the quotes actually passes a verdict on it.
+            val unquoted = detectionView(quotedSpan.replace(redacted, ""))
+            if (factCheckVerdict.containsMatchIn(unquoted)) detectionText = unquoted
+        }
         val actionWasNegated = negatedAction.containsMatchIn(detectionText)
         val withoutNegation = reportedRequest.replace(negatedAction.replace(detectionText, ""), "")
         val core = filler.replace(redacted, "").trim()

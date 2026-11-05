@@ -35,6 +35,12 @@ CLIENT_POLICY_VERSION = "phone-msg-4"
 # before both redaction and feature extraction. Keep this range in sync with
 # MessageGuard.kt and receiver/assistant.py.
 INVISIBLE_FORMAT_CONTROLS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
+# "evil。xyz", "evil[.]xyz": a defanged or ideographic dot between two host labels is still a link
+# to a reader who retypes it. Only fires between ASCII label characters, never inside a sentence.
+DEFANGED_DOT = re.compile(r"(?i)(?<=[a-z0-9])(?:。|\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\))(?=[a-z0-9])")
+# Simplified or variant characters spell the same scam ("请立即转账", "滙款"). The detection view
+# is folded to the traditional forms the patterns use; the readable excerpt is left as written.
+VARIANT_CHARS = str.maketrans({pair[0]: pair[1] for pair in "转轉 账帳 帐帳 汇匯 滙匯 验驗 证證 証證 码碼 马馬 点點 击擊 链鏈 录錄 冻凍 结結 权權 银銀 还還 给給 请請 务務 费費 缴繳 现現 线線 个個 这這 备備 护護 签簽 领領 奖獎 询詢 机機 网網 户戶 异異 处處 罚罰 输輸 发發 时時 间間 开開 关關 没沒 儿兒 妈媽 换換 电電 话話 号號 远遠 软軟 协協 装裝 载載 认認 则則 紧緊 单單 币幣 补補 贴貼 讯訊 简簡 传傳".split()})
 
 SYNTHETIC_KINDS = {
     "ACCOUNT": "[BANK_ACCOUNT]", "OTP": "[OTP_CODE]", "NAME": "[NAME]", "PHONE": "[PHONE_NUMBER]",
@@ -182,11 +188,14 @@ REPORTED_REQUEST = re.compile(
 # A fact check quotes the scam it debunks. Only that quoted text is excused; a request outside the
 # quotes is still a live request, so "【網傳】請立即匯款到…" cannot launder itself as a report.
 QUOTED_SPAN = re.compile(r"[「『“\"][^」』”\"]{1,120}[」』”\"]")
-SECRET_WORDS = re.compile(r"(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)", re.I)
+SECRET_WORDS = re.compile(
+    # "簡訊收到的6碼", "手機剛收到的數字", "點數序號": the code asked for without naming it.
+    r"(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證|(簡訊|手機|電話).{0,6}(收到|傳來|裡|上)的?(數字|代碼|[0-9一二三四五六七八九十]?碼)"
+    r"|點數.{0,6}序號|序號.{0,6}(給我|回傳|傳給))", re.I)
 REQUEST_VERBS = re.compile(r"(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
 CREDENTIAL_PHISHING = re.compile(r"(帳戶|帳號|會員).{0,12}(驗證|登入|解鎖).{0,20}(輸入|填寫).{0,6}(資料|個資)")
 PATTERNS = {
-    "asks_transfer": re.compile(r"(轉帳|匯款|先匯|匯到|付款|支付|繳費|繳納|ATM|轉入|儲值)"),
+    "asks_transfer": re.compile(r"(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉到|轉至|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數)"),
     "urgency": re.compile(r"(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|停權|凍結|處分|逾期|最後機會)"),
     "offers_reward": re.compile(r"(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)"),
     "requests_remote_control": re.compile(r"(遠端控制|遠端軟體|遠端協助|螢幕分享|控制碼)"),
@@ -198,8 +207,8 @@ ANTI_SCAM_CONTEXT = re.compile(r"(警方|警政署|165|反詐騙|反詐).{0,12}(
 FACT_CHECK_CONTEXT = re.compile(r"(事實查核|查核結果|謠言|假消息|不實訊息|網傳|新聞報導|媒體報導|轉傳內容|有人收到)")
 DIRECT_REQUEST = re.compile(
     r"((請|麻煩|務必|記得|幫我|需要你|立刻|立即|趕快).{0,32}"
-    r"(轉帳|匯款|付款|支付|繳費|繳納|提供|告訴|輸入|回覆|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|"
-    r"(轉帳|匯款|付款|支付|繳費|繳納).{0,8}(給我|給我們|到|至|帳戶|帳號)|"
+    r"(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉到|轉至|轉入|把錢|付款|支付|繳費|繳納|儲值|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|"
+    r"(轉帳|匯款|先匯|匯錢|轉錢|付款|支付|繳費|繳納).{0,8}(給我|給我們|過來|到|至|帳戶|帳號)|"
     r"(加入.{0,8}(投資|群組)|老師帶單|私訊.{0,8}(領取|獲利)))"
 )
 CLICK_ACTION = re.compile(r"(點擊|點選|點|開啟|登入|進入|查看|上).{0,12}(\[LINK\]|\[OFFICIAL_URL\]|\[SHORT_URL\]|\[SUSPICIOUS_URL\])")
@@ -212,10 +221,15 @@ IMPERSONATION = (
 )
 VAGUE = re.compile(r"(細節還沒|還沒有說明|稍後說明|之後再說|晚點再說)")
 FILLER = re.compile(r"^(這是虛構訊息。|虛構測試內容：|虛構\w*通知：)")
-# Remove short punctuation/symbol gaps only when they sit inside a Han phrase. Sentence delimiters
-# remain boundaries, while attacks such as 轉-帳、驗💸證💸碼 and 客／服 become detectable.
+# Remove punctuation/symbol gaps only when they sit inside a Han phrase. Sentence delimiters
+# remain boundaries, while attacks such as 轉-帳、驗💸證💸碼、匯....款 and 客／服 become detectable.
 HAN_GAP = re.compile(
-    r"(?<=[\u3400-\u9fff])(?:[^\w\u3400-\u9fff\[\]，。！？,!?;；:：]|_){1,3}(?=[\u3400-\u9fff])"
+    r"(?<=[\u3400-\u9fff])(?:[^\w\u3400-\u9fff\[\]，。！？,!?;；:：]|_){1,8}(?=[\u3400-\u9fff])"
+)
+# A fact check is excused from the quoted scam only when it also passes a verdict on it; a scam
+# that merely wraps itself in 「」 after a "網傳" header is still a live request.
+FACT_CHECK_VERDICT = re.compile(
+    r"(假消息|假訊息|假新聞|不實|謠言|是假的|詐騙(手法|訊息|簡訊|話術|集團)|澄清|查證|闢謠|駁斥|勿轉傳|勿信|勿相信|別上當|勿照做|勿理會)"
 )
 
 ADVICE = {
@@ -257,7 +271,7 @@ def _redact_collecting_links(text: str, known_names: tuple[str, ...] = ()) -> tu
     classification sees exactly the links that became [LINK] (never an email already redacted)."""
     # U+001C..U+001F count as whitespace in Python but not Java; map them to spaces on both sides.
     text = re.sub(r"[\x1c-\x1f]", " ", unicodedata.normalize("NFKC", text))
-    text = INVISIBLE_FORMAT_CONTROLS.sub("", text)
+    text = DEFANGED_DOT.sub(".", INVISIBLE_FORMAT_CONTROLS.sub("", text))
     for name in sorted((n for n in known_names if n), key=len, reverse=True):
         normalized_name = INVISIBLE_FORMAT_CONTROLS.sub("", unicodedata.normalize("NFKC", name))
         text = text.replace(normalized_name, "[NAME]")
@@ -283,15 +297,23 @@ def redact(text: str, known_names: tuple[str, ...] = ()) -> str:
     return _redact_collecting_links(text, known_names)[0]
 
 
+def _detection_view(redacted: str) -> str:
+    """Compact, variant-folded text that the feature patterns run on; never shown or sent."""
+    return re.sub(r"\s+", "", HAN_GAP.sub("", redacted)).translate(VARIANT_CHARS)
+
+
 def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     redacted, links = _redact_collecting_links(original)
     # Detection uses a compact view so harmless spacing cannot hide phrases such as
     # "匯 款" or "驗 證 碼". The optional excerpt remains readable and unchanged.
-    detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", redacted))
+    detection_text = _detection_view(redacted)
     fact_check_framing = bool(FACT_CHECK_CONTEXT.search(detection_text))
     if fact_check_framing:
-        # Quote marks sit between Han characters, so drop the quoted scam before HAN_GAP eats the marks.
-        detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", QUOTED_SPAN.sub("", redacted)))
+        # Quote marks sit between Han characters, so drop the quoted scam before HAN_GAP eats the
+        # marks; and only when the text around the quotes actually passes a verdict on it.
+        unquoted = _detection_view(QUOTED_SPAN.sub("", redacted))
+        if FACT_CHECK_VERDICT.search(unquoted):
+            detection_text = unquoted
     action_negated = bool(NEGATED_ACTION.search(detection_text))
     without_negation = REPORTED_REQUEST.sub("", NEGATED_ACTION.sub("", detection_text))
     facts: dict[str, Any] = {key: bool(pattern.search(without_negation)) for key, pattern in PATTERNS.items()}
