@@ -139,4 +139,9 @@ internal val goldenCases = listOf(
         Golden("媽，我換號碼了，匯錢給我 SYN_ACCOUNT_PRIVATE_0001_18", "媽,我換號碼了,匯錢給我 [BANK_ACCOUNT]", "1000001", "family", "none", "high", "ASKS_TRANSFER,CONTACT_CHANGE,IMPERSONATION_FAMILY"),
         Golden("請點 evil。xyz/login 補填資料", "請點 [SUSPICIOUS_URL] 補填資料", "0001001", "none", "suspicious", "high", "HAS_LINK,LINK_SUSPICIOUS"),
         Golden("請點 evil[.]xyz/login 補填資料", "請點 [SUSPICIOUS_URL] 補填資料", "0001001", "none", "suspicious", "high", "HAS_LINK,LINK_SUSPICIOUS"),
+        Golden("我是客服，請下載 AnyDesk 並把號碼告訴我，我幫您處理退款", "我是客服,請下載 AnyDesk 並把號碼告訴我,我幫您處理退款", "0000011", "support", "none", "high", "REMOTE_CONTROL,IMPERSONATION_SUPPORT"),
+        Golden("請轉到設定頁面開啟通知權限", "請轉到設定頁面開啟通知權限", "0000001", "none", "none", "low_signal", "NO_STRONG_SIGNAL"),
+        Golden("停車費請於 App 內儲值後使用", "停車費請於 App 內儲值後使用", "1000001", "none", "none", "caution", "ASKS_TRANSFER"),
+        Golden("我是玉山銀行客服，請提供驗證碼", "我是玉山銀行客服,請提供驗證碼", "0100001", "support", "none", "high", "REQUESTS_SECRET,IMPERSONATION_SUPPORT"),
+        Golden("我是刑事局偵查員，您的帳戶涉及洗錢，請立刻把錢轉到監管帳戶", "我是刑事局偵查員,您的帳戶涉及洗錢,請立刻把錢轉到監管帳戶", "1010001", "official", "none", "high", "ASKS_TRANSFER,URGENCY,IMPERSONATION_OFFICIAL"),
 )

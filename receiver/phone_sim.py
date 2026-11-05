@@ -195,10 +195,10 @@ SECRET_WORDS = re.compile(
 REQUEST_VERBS = re.compile(r"(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
 CREDENTIAL_PHISHING = re.compile(r"(帳戶|帳號|會員).{0,12}(驗證|登入|解鎖).{0,20}(輸入|填寫).{0,6}(資料|個資)")
 PATTERNS = {
-    "asks_transfer": re.compile(r"(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉到|轉至|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數)"),
+    "asks_transfer": re.compile(r"(轉帳|匯款|先匯|匯到|匯至|匯錢|匯過|轉錢|轉過|轉(到|至).{0,6}(帳|戶|銀行)|把錢|付款|支付|繳費|繳納|ATM|轉入|儲值|買.{0,4}點數)"),
     "urgency": re.compile(r"(立即|立刻|馬上|盡快|趕快|緊急|否則|限時|今天內|停權|凍結|處分|逾期|最後機會)"),
     "offers_reward": re.compile(r"(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)"),
-    "requests_remote_control": re.compile(r"(遠端控制|遠端軟體|遠端協助|螢幕分享|控制碼)"),
+    "requests_remote_control": re.compile(r"(?i)(遠端控制|遠端軟體|遠端協助|遠端桌面|螢幕分享|螢幕共享|控制碼|AnyDesk|TeamViewer|QuickSupport|AirDroid)"),
 }
 FINANCIAL_PROMISE = re.compile(r"(保證獲利|高報酬|穩賺|零風險|老師帶單|投資群組|內線消息|翻倍獲利)")
 ACCOUNT_THREAT = re.compile(r"((帳戶|帳號|會員).{0,12}(異常|凍結|停用|停權|鎖定|被盜)|扣款失敗|交易失敗|驗證失敗)")
@@ -207,17 +207,19 @@ ANTI_SCAM_CONTEXT = re.compile(r"(警方|警政署|165|反詐騙|反詐).{0,12}(
 FACT_CHECK_CONTEXT = re.compile(r"(事實查核|查核結果|謠言|假消息|不實訊息|網傳|新聞報導|媒體報導|轉傳內容|有人收到)")
 DIRECT_REQUEST = re.compile(
     r"((請|麻煩|務必|記得|幫我|需要你|立刻|立即|趕快).{0,32}"
-    r"(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉到|轉至|轉入|把錢|付款|支付|繳費|繳納|儲值|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|"
+    r"(轉帳|匯款|匯到|匯至|匯錢|轉錢|轉(到|至).{0,6}(帳|戶|銀行)|轉入|把錢|付款|支付|繳費|繳納|買.{0,4}點數|提供|告訴|輸入|回覆|回傳|唸給|念給|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|"
     r"(轉帳|匯款|先匯|匯錢|轉錢|付款|支付|繳費|繳納).{0,8}(給我|給我們|過來|到|至|帳戶|帳號)|"
     r"(加入.{0,8}(投資|群組)|老師帶單|私訊.{0,8}(領取|獲利)))"
 )
 CLICK_ACTION = re.compile(r"(點擊|點選|點|開啟|登入|進入|查看|上).{0,12}(\[LINK\]|\[OFFICIAL_URL\]|\[SHORT_URL\]|\[SUSPICIOUS_URL\])")
 CONTACT_ACTION = re.compile(r"(回電|聯絡|回覆|加我|加入.{0,6}(LINE|line|群組)|私訊)")
 NOTICE_CONTEXT = re.compile(r"(通知|公告|提醒|帳單|繳費單|包裹|訂單|交易紀錄)")
+# "我是玉山銀行客服", "我是刑事局偵查員": the role may sit a few characters after 我是. Keep in sync
+# with MessageGuard.kt.
 IMPERSONATION = (
     ("family", re.compile(r"(我是(你的?)?(家人|兒子|女兒|孫子|孫女|媳婦|女婿)|換(了)?(新)?(手機)?號碼)")),
-    ("official", re.compile(r"(我是(警察|檢察官|法官|法院|機構人員|公務員|政府)|警察局|檢察署|地檢署)")),
-    ("support", re.compile(r"(我是(客服|銀行|專員|電信)|客服人員)")),
+    ("official", re.compile(r"(我是.{0,6}(警察|檢察官|法官|法院|偵查員|書記官|機構人員|公務員|政府)|警察局|檢察署|地檢署|刑事局|警局|調查局|健保署|國稅局|勞保局|監理站|法務部)")),
+    ("support", re.compile(r"(我是.{0,6}(客服|銀行|專員|電信)|客服人員)")),
 )
 VAGUE = re.compile(r"(細節還沒|還沒有說明|稍後說明|之後再說|晚點再說)")
 FILLER = re.compile(r"^(這是虛構訊息。|虛構測試內容：|虛構\w*通知：)")

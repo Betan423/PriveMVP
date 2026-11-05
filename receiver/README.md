@@ -155,7 +155,7 @@ python -m receiver.phone_sim --message "王小明您好，明天下午三點集�
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --environment 1
 # 遮蔽檢查：全部 6,144 則訊息組成的 packet 是否仍含禁用值（不送出）
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --scan-only
-# 完整情境二證據：6,144 則合成訊息、35 個紅隊案例、150 個變形攻擊、3 個 Agent 邊界攻擊
+# 完整情境二證據：6,144 則合成訊息、38 個紅隊案例、150 個變形攻擊、3 個 Agent 邊界攻擊
 make message-eval
 ```
 
