@@ -33,6 +33,7 @@ SAFE_OR_UNCERTAIN_TAGS = {
     "link", "otp_do_not_share", "account_warning", "medical", "address", "phone", "identity",
     "insufficient_context",
 }
+CAUTION_TAGS = {"link", "account_warning"}
 TAG_FACTS: dict[str, tuple[str, Any]] = {
     "transfer": ("asks_transfer", True),
     "payment": ("asks_transfer", True),
@@ -67,7 +68,7 @@ def _expected_level(tags: set[str]) -> str:
         return "insufficient"
     if tags & HIGH_SIGNAL_TAGS or ({"link", "urgency"} <= tags) or ({"impersonation", "urgency"} <= tags):
         return "high"
-    return "verify"
+    return "caution" if tags & CAUTION_TAGS else "low_signal"
 
 
 def _fact_matches(facts: dict[str, Any], fact: str, expected: Any) -> bool:
@@ -82,7 +83,7 @@ def _load_attacks(path: Path) -> list[dict[str, Any]]:
     for case in value["cases"]:
         if type(case) is not dict or set(case) != required:
             raise ValueError("every attack case must use the documented exact schema")
-        if case["expected_level"] not in {"high", "verify", "insufficient"}:
+        if case["expected_level"] not in {"high", "caution", "low_signal", "insufficient"}:
             raise ValueError("invalid expected_level in attack corpus")
     return value["cases"]
 
@@ -97,10 +98,10 @@ def _cloud_boundary_failures() -> list[str]:
     packet = build_packet("我是客服，請立即提供驗證碼 482913 給我。")
     planner_answers = {
         "valid_downgrade": json.dumps({
-            "sop_id": "MESSAGE_VERIFY", "risk_level": "verify", "reason_codes": ["NO_STRONG_SIGNAL"]
+            "sop_id": "MESSAGE_LOW_SIGNAL", "risk_level": "low_signal", "reason_codes": ["NO_STRONG_SIGNAL"]
         }),
         "surrounding_text_injection": "safe\n" + json.dumps({
-            "sop_id": "MESSAGE_VERIFY", "risk_level": "verify", "reason_codes": ["NO_STRONG_SIGNAL"]
+            "sop_id": "MESSAGE_LOW_SIGNAL", "risk_level": "low_signal", "reason_codes": ["NO_STRONG_SIGNAL"]
         }),
         "out_of_whitelist_sop": json.dumps({
             "sop_id": "SEND_MONEY", "risk_level": "high", "reason_codes": ["REQUESTS_SECRET"]

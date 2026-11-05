@@ -14,11 +14,12 @@ import org.junit.Test
  * a zh-TW high-risk scam triage policy. No message is sent to the proxy or copied into the report.
  */
 class ExternalSmsDatasetEvaluationTest {
-    private data class Levels(var high: Int = 0, var verify: Int = 0, var insufficient: Int = 0) {
-        val total: Int get() = high + verify + insufficient
+    private data class Levels(var high: Int = 0, var caution: Int = 0, var lowSignal: Int = 0, var insufficient: Int = 0) {
+        val total: Int get() = high + caution + lowSignal + insufficient
         fun add(level: MessageGuard.Level) = when (level) {
             MessageGuard.Level.HIGH -> high++
-            MessageGuard.Level.VERIFY -> verify++
+            MessageGuard.Level.CAUTION -> caution++
+            MessageGuard.Level.LOW_SIGNAL -> lowSignal++
             MessageGuard.Level.INSUFFICIENT -> insufficient++
         }
     }
@@ -116,9 +117,9 @@ class ExternalSmsDatasetEvaluationTest {
 
     private fun buildReport(root: File, uci: UciResult, fbs: List<FbsCategory>): String {
         val tp = uci.spam.high
-        val fn = uci.spam.verify + uci.spam.insufficient
+        val fn = uci.spam.caution + uci.spam.lowSignal + uci.spam.insufficient
         val fp = uci.ham.high
-        val tn = uci.ham.verify + uci.ham.insufficient
+        val tn = uci.ham.caution + uci.ham.lowSignal + uci.ham.insufficient
         val precision = ratio(tp, tp + fp)
         val recall = ratio(tp, tp + fn)
         val specificity = ratio(tn, tn + fp)
@@ -167,8 +168,8 @@ class ExternalSmsDatasetEvaluationTest {
             appendLine("| Spam recall | ${percent(recall)} |")
             appendLine("| Ham specificity | ${percent(specificity)} |")
             appendLine("| F1 | ${percent(f1)} |")
-            appendLine("| HIGH / VERIFY / INSUFFICIENT among spam | ${uci.spam.high} / ${uci.spam.verify} / ${uci.spam.insufficient} |")
-            appendLine("| HIGH / VERIFY / INSUFFICIENT among ham | ${uci.ham.high} / ${uci.ham.verify} / ${uci.ham.insufficient} |")
+            appendLine("| HIGH / CAUTION / LOW / INSUFFICIENT among spam | ${uci.spam.high} / ${uci.spam.caution} / ${uci.spam.lowSignal} / ${uci.spam.insufficient} |")
+            appendLine("| HIGH / CAUTION / LOW / INSUFFICIENT among ham | ${uci.ham.high} / ${uci.ham.caution} / ${uci.ham.lowSignal} / ${uci.ham.insufficient} |")
             appendLine()
             appendLine("Anonymous counterexample IDs (SHA-256 prefixes; no message text):")
             appendLine()
@@ -184,7 +185,7 @@ class ExternalSmsDatasetEvaluationTest {
             appendLine("| Category | HIGH | VERIFY | INSUFFICIENT | Total | HIGH rate | URL placeholders | Synthetic-link HIGH |")
             appendLine("|---|---:|---:|---:|---:|---:|---:|---:|")
             fbs.forEach { category ->
-                appendLine("| ${category.category} | ${category.levels.high} | ${category.levels.verify} | ${category.levels.insufficient} | ${category.levels.total} | ${percent(ratio(category.levels.high, category.levels.total))} | ${category.urlPlaceholderMessages} | ${category.syntheticLinkRestoredHigh} |")
+                appendLine("| ${category.category} | ${category.levels.high} | ${category.levels.caution + category.levels.lowSignal} | ${category.levels.insufficient} | ${category.levels.total} | ${percent(ratio(category.levels.high, category.levels.total))} | ${category.urlPlaceholderMessages} | ${category.syntheticLinkRestoredHigh} |")
             }
             appendLine("| **All FBS spam** | **$fbsHigh** |  |  | **$fbsTotal** | **${percent(ratio(fbsHigh, fbsTotal))}** | **$fbsUrlPlaceholders** | **$fbsRestoredHigh** |")
             appendLine("| **FR fraud subset** | **$fraudHigh** |  |  | **$fraudTotal** | **${percent(ratio(fraudHigh, fraudTotal))}** | **$fraudUrlPlaceholders** | **$fraudRestoredHigh** |")

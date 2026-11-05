@@ -177,7 +177,7 @@ class PrivacyAdversarialTest {
             }
             val packet = MessageGuard.buildPacket(message, "pasted", allowExcerpt = true, knownNames = listOf("王小明"))
             val excerpt = packet.excerpt.orEmpty()
-            val placeholders = listOf("[NAME]", "[PHONE]", "[EMAIL]", "[ID]", "[OTP]", "[LINK]")
+            val placeholders = listOf("[NAME]", "[PHONE_NUMBER]", "[EMAIL]", "[NATIONAL_ID]", "[OTP_CODE]", "[LINK]")
             val leaked = forbidden.filter { excerpt.contains(it, ignoreCase = true) }
             val safe = packet.excerpt != null &&
                 leaked.isEmpty() &&

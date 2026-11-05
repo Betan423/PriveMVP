@@ -14,7 +14,7 @@
       "text": "請立即匯​款到 SYN_ACCOUNT_PRIVATE_ATTACK。",
       "expected_level": "high",
       "expected_facts": {"asks_transfer": true},
-      "redaction_contains": ["[ACCOUNT]"],
+      "redaction_contains": ["[BANK_ACCOUNT]"],
       "redaction_excludes": ["SYN_ACCOUNT", "​"]
     },
     {
@@ -30,21 +30,21 @@
       "text": "我是客⁠服，請提供驗證碼 A7B9C2。",
       "expected_level": "high",
       "expected_facts": {"requests_secret": true, "impersonation": "support"},
-      "redaction_contains": ["[OTP]"],
+      "redaction_contains": ["[OTP_CODE]"],
       "redaction_excludes": ["A7B9C2", "⁠"]
     },
     {
       "id": "zero_width_phone",
       "text": "聯絡電話 0912​345678，明天下午見。",
-      "expected_level": "verify",
+      "expected_level": "low_signal",
       "expected_facts": {"context_sufficient": true},
-      "redaction_contains": ["[PHONE]"],
+      "redaction_contains": ["[PHONE_NUMBER]"],
       "redaction_excludes": ["0912", "345678", "​"]
     },
     {
       "id": "zero_width_url",
       "text": "請查看 https://exa⁠mple.invalid/status 後自行核對來源。",
-      "expected_level": "verify",
+      "expected_level": "caution",
       "expected_facts": {"has_link": true},
       "redaction_contains": ["[LINK]"],
       "redaction_excludes": ["https://", "example", "⁠"]
@@ -52,7 +52,7 @@
     {
       "id": "negated_otp_is_not_request",
       "text": "一次性驗 證 碼 123456，請 勿 告 訴任何人。",
-      "expected_level": "verify",
+      "expected_level": "low_signal",
       "expected_facts": {"requests_secret": false},
       "redaction_contains": ["[NUMBER]"],
       "redaction_excludes": ["123456"]
@@ -84,17 +84,17 @@
     {
       "id": "official_link_with_urgency_is_not_high",
       "text": "您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未領取將退回。",
-      "expected_level": "verify",
+      "expected_level": "caution",
       "expected_facts": {"has_link": true, "link_kind": "known_official", "urgency": true},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[OFFICIAL_URL]"],
       "redaction_excludes": ["post.gov.tw", "https"]
     },
     {
       "id": "official_bank_link_with_support_claim_is_not_high",
       "text": "我是銀行客服，帳單明細請至 https://www.esunbank.com.tw/ 的官方網站查看。",
-      "expected_level": "verify",
+      "expected_level": "caution",
       "expected_facts": {"has_link": true, "link_kind": "known_official", "impersonation": "support"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[OFFICIAL_URL]"],
       "redaction_excludes": ["esunbank"]
     },
     {
@@ -102,7 +102,7 @@
       "text": "您的包裹已到，請上 https://post.gov.tw.verify.cc/track 查詢。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["verify.cc"]
     },
     {
@@ -110,7 +110,7 @@
       "text": "反詐騙中心通知：請至 https://165-gov.com/report 回報。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["165-gov"]
     },
     {
@@ -118,7 +118,7 @@
       "text": "您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious", "urgency": false},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["xyz"]
     },
     {
@@ -126,7 +126,7 @@
       "text": "請點 http://203.0.113.9/login 查看。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["203.0.113.9"]
     },
     {
@@ -134,7 +134,7 @@
       "text": "請點 https://xn--fiq228c.com/x 查看。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["xn--"]
     },
     {
@@ -150,15 +150,15 @@
       "text": "您的包裹已到，請點 https://reurl.cc/abc 補填，今天內未處理將退回。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "shortener", "urgency": true},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SHORT_URL]"],
       "redaction_excludes": ["reurl"]
     },
     {
       "id": "shortener_alone_stays_verify",
       "text": "活動照片放在 https://reurl.cc/abc 這裡，有空看看。",
-      "expected_level": "verify",
+      "expected_level": "caution",
       "expected_facts": {"link_kind": "shortener"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SHORT_URL]"],
       "redaction_excludes": ["reurl"]
     },
     {
@@ -166,7 +166,7 @@
       "text": "官方公告 https://www.gov.tw 另見 https://promo.bad.xyz/go 。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["bad.xyz", "gov.tw"]
     },
     {
@@ -174,7 +174,7 @@
       "text": "請上 https://post.gov.tw\u200b.verify.cc/track 查詢。",
       "expected_level": "high",
       "expected_facts": {"link_kind": "suspicious"},
-      "redaction_contains": ["[LINK]"],
+      "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["verify.cc"]
     }
   ]

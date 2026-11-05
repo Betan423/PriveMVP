@@ -4,11 +4,11 @@ param(
     [int]$Port = 8080,
     [string]$DataDirectory = "",
     [string]$PythonExecutable = "",
-    # Gemini proxy base URL, or "off" for local rules only.
-    [string]$PlannerUrl = "http://127.0.0.1:8000",
-    # Local Ollama used by accuracy-first raw-message mode, or "off" to disable it.
-    [string]$LocalRawAiUrl = "http://127.0.0.1:11434",
-    [string]$LocalRawAiModel = "qwen3.5:9b"
+    # Optional real cloud proxy. Local Qwen is used by default to simulate it.
+    [string]$PlannerUrl = "off",
+    # Local Ollama receives only the privacy-filtered packet, never the raw message.
+    [string]$PrivacyAiUrl = "http://127.0.0.1:11434",
+    [string]$PrivacyAiModel = "qwen3.5:9b"
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,7 +30,7 @@ if ([string]::IsNullOrWhiteSpace($PythonExecutable)) {
 Push-Location $ProjectRoot
 try {
     & $PythonExecutable -m receiver.server --host $BindAddress --port $Port --data-dir $DataDirectory `
-        --planner-url $PlannerUrl --local-raw-ai-url $LocalRawAiUrl --local-raw-ai-model $LocalRawAiModel
+        --planner-url $PlannerUrl --privacy-ai-url $PrivacyAiUrl --privacy-ai-model $PrivacyAiModel
     if ($LASTEXITCODE -ne 0) {
         throw "Receiver failed, exit code: $LASTEXITCODE"
     }

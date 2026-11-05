@@ -14,6 +14,7 @@ model's compact classification array and token counters, keyed by prompt SHA-256
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import math
@@ -277,17 +278,35 @@ def _dataset_default() -> Path:
     return root / "cofacts-prepared" / "cofacts-benchmark.jsonl"
 
 
-def _select_samples(path: Path, per_class: int, seed: str) -> tuple[list[Sample], str]:
+def _select_samples(path: Path, per_class: int, seed: str,
+                    dataset_kind: str = "auto") -> tuple[list[Sample], str, str]:
     if not path.is_file():
-        raise FileNotFoundError(f"Prepared Cofacts dataset not found: {path}")
+        raise FileNotFoundError(f"Dataset not found: {path}")
     dataset_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+    kind = ("ts-bench" if path.suffix.lower() == ".csv" else "cofacts") if dataset_kind == "auto" else dataset_kind
     groups: dict[str, list[dict[str, str]]] = {"scam": [], "non_scam": []}
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            row = json.loads(line)
-            label = row.get("label")
-            if label in groups and isinstance(row.get("text"), str) and isinstance(row.get("id_hash"), str):
-                groups[label].append(row)
+    if kind == "ts-bench":
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            for row in csv.DictReader(handle):
+                row_id = int(row["id"])
+                label = "scam" if 1 <= row_id <= 98 else "non_scam" if 201 <= row_id <= 298 else None
+                if label is not None:
+                    groups[label].append({
+                        "label": label,
+                        "text": row["message"],
+                        "id_hash": hashlib.sha256(f"ts-bench:{row_id}".encode()).hexdigest()[:16],
+                    })
+        dataset_name = "TS-Bench scam/safe cross-domain subset"
+    elif kind == "cofacts":
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                row = json.loads(line)
+                label = row.get("label")
+                if label in groups and isinstance(row.get("text"), str) and isinstance(row.get("id_hash"), str):
+                    groups[label].append(row)
+        dataset_name = "Cofacts high-confidence subset"
+    else:
+        raise ValueError(f"Unsupported dataset kind: {kind}")
     selected: list[dict[str, str]] = []
     for label, rows in groups.items():
         rows.sort(key=lambda row: hashlib.sha256((seed + ":" + row["id_hash"]).encode()).hexdigest())
@@ -300,7 +319,7 @@ def _select_samples(path: Path, per_class: int, seed: str) -> tuple[list[Sample]
         facts = extract_facts(row["text"], "pasted")
         local_level, _ = rule_assessment(facts)
         samples.append(Sample(row["id_hash"], row["label"], row["text"], facts, local_level))
-    return samples, dataset_hash
+    return samples, dataset_hash, dataset_name
 
 
 def _batches(values: list[Sample], size: int) -> Iterable[list[Sample]]:
@@ -357,13 +376,14 @@ def _write_reports(
     seed: str,
     model: str,
     batch_size: int,
+    dataset_name: str,
 ) -> None:
     report_dir.mkdir(parents=True, exist_ok=True)
     stages = {stage: _counts(samples, values) for stage, values in predictions.items()}
     result = {
         "schema": SCHEMA,
         "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "dataset": {"sha256": dataset_hash, "rows": len(samples), "seed": seed,
+        "dataset": {"name": dataset_name, "sha256": dataset_hash, "rows": len(samples), "seed": seed,
                     "scam": sum(s.label == "scam" for s in samples),
                     "non_scam": sum(s.label == "non_scam" for s in samples)},
         "model": model,
@@ -382,7 +402,7 @@ def _write_reports(
     lines = [
         "# CHECK_MESSAGE A/B/C 隱私與 AI 對照實測",
         "",
-        f"- 樣本：Cofacts 高信度子集 {len(samples)} 則（詐騙 {result['dataset']['scam']}／非詐騙 {result['dataset']['non_scam']}）",
+        f"- 樣本：{dataset_name} {len(samples)} 則（詐騙 {result['dataset']['scam']}／非詐騙 {result['dataset']['non_scam']}）",
         f"- 選樣：`seed={seed}`；資料集 SHA-256 `{dataset_hash}`",
         f"- AI：本機 Ollama `{model}`；批次大小 {batch_size}",
         "- 判定門檻：只有 `high` 算攔截；`verify` 與 `insufficient` 均算未攔截",
@@ -434,7 +454,9 @@ def _write_reports(
 
 
 def run(args: argparse.Namespace) -> int:
-    samples, dataset_hash = _select_samples(args.dataset, args.per_class, args.seed)
+    samples, dataset_hash, dataset_name = _select_samples(
+        args.dataset, args.per_class, args.seed, args.dataset_kind
+    )
     predictions: dict[str, list[str]] = {"A": [sample.local_level for sample in samples]}
     usages = {"B": Usage(), "C": Usage()}
     for variant in ("B", "C"):
@@ -465,6 +487,7 @@ def run(args: argparse.Namespace) -> int:
         seed=args.seed,
         model=args.model,
         batch_size=args.batch_size,
+        dataset_name=dataset_name,
     )
     print(f"report={args.report_dir / 'report.md'}")
     return 0
@@ -473,6 +496,7 @@ def run(args: argparse.Namespace) -> int:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=_dataset_default())
+    parser.add_argument("--dataset-kind", choices=("auto", "cofacts", "ts-bench"), default="auto")
     parser.add_argument("--per-class", type=int, default=100, help="Deterministic rows per label")
     parser.add_argument("--batch-size", type=int, default=20)
     parser.add_argument("--seed", default="20261104-abc-v1")

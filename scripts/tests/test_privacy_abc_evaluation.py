@@ -1,10 +1,13 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.privacy_abc_evaluation import (
     Sample,
     _counts,
     _merge_floor,
+    _select_samples,
     build_batch_prompt,
     parse_ai_levels,
 )
@@ -52,6 +55,21 @@ class PrivacyAbcEvaluationTest(unittest.TestCase):
         samples = [self.sample("請匯款", "scam"), self.sample("今晚一起吃飯", "non_scam")]
         counts = _counts(samples, ["high", "verify"])
         self.assertEqual((counts.tp, counts.fn, counts.fp, counts.tn), (1, 0, 0, 1))
+
+    def test_ts_bench_loader_uses_only_scam_and_matched_safe_ranges(self) -> None:
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent) as temp:
+            path = Path(temp) / "TSB400.csv"
+            path.write_text(
+                "id,message,label,split\n"
+                "1,請加入投資群組,x,test\n"
+                "99,醫療不實資訊,x,test\n"
+                "201,今晚一起吃飯,x,test\n"
+                "299,政治訊息,x,test\n",
+                encoding="utf-8",
+            )
+            samples, _digest, name = _select_samples(path, 1, "seed", "ts-bench")
+        self.assertEqual({sample.label for sample in samples}, {"scam", "non_scam"})
+        self.assertIn("TS-Bench", name)
 
 
 if __name__ == "__main__":

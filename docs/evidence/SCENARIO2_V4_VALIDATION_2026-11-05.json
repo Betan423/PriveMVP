@@ -1,0 +1,64 @@
+{
+  "schema": "privagent.validation_snapshot.v1",
+  "created_at": "2026-11-05T12:02:00+08:00",
+  "scope": "scenario-2 privacy packet v4 and Android integration",
+  "automated_tests": {
+    "android_jvm": {"passed": 75, "failed": 0, "errors": 0, "skipped": 0},
+    "receiver_python": {"passed": 87, "failed": 0, "execution": "six modules in isolated processes"},
+    "evaluation_scripts": {"passed": 14, "failed": 0},
+    "android_lint": {"errors": 0, "warnings": 37},
+    "android_debug_build": "passed"
+  },
+  "apk": {
+    "path": "app/build/outputs/apk/debug/app-debug.apk",
+    "bytes": 7469085,
+    "sha256": "0F68E6C6E52A8D372F5814E399DFFB63AFA966D7CF1006711203DB719FC62D69"
+  },
+  "privacy_score_evaluation": {
+    "model": "qwen3.5:9b",
+    "raw_text_sent_to_ai": false,
+    "cofacts_sha256": "898723929b91cd675d40ac9a8bec6da56bb4020dc0ff2fd600aaf91dc5486bef",
+    "seed": "20261104-privacy-score-v1",
+    "dev_rows": 400,
+    "held_out_test_rows": 1000,
+    "selected_on_dev": {
+      "risk_min": 2,
+      "benign_max": 1,
+      "semantic_risk_min": 2,
+      "semantic_benign_max": 0,
+      "min_margin": 0,
+      "intent_for_evidence": false
+    },
+    "cofacts_held_out_high": {
+      "tp": 162, "fn": 338, "fp": 90, "tn": 410,
+      "accuracy": 0.572, "precision": 0.6428571429, "recall": 0.324,
+      "specificity": 0.82, "f1": 0.4308510638
+    },
+    "cofacts_held_out_high_plus_caution_triage": {
+      "tp": 346, "fn": 154, "fp": 284, "tn": 216,
+      "accuracy": 0.562, "precision": 0.5492063492, "recall": 0.692,
+      "specificity": 0.432, "f1": 0.6123893805
+    },
+    "ts_bench_high_diagnostic_only": {
+      "rows": 196, "tp": 50, "fn": 48, "fp": 12, "tn": 86,
+      "accuracy": 0.693877551, "precision": 0.8064516129, "recall": 0.5102040816,
+      "specificity": 0.8775510204, "f1": 0.625,
+      "warning": "TS-Bench was seen during development and is not a blind test"
+    }
+  },
+  "synthetic_privacy_red_team": {
+    "messages": {"checked": 6144, "identifier_leaks": 0, "contract_rejections": 0},
+    "expected_high": {"checked": 2112, "missed": 0, "unnecessary_excerpts": 0},
+    "safe_or_uncertain": {"checked": 4032, "false_high": 0},
+    "hand_authored_attacks": {"checked": 22, "failed": 0},
+    "generated_mutation_attacks": {"checked": 140, "failed": 0},
+    "agent_boundary_attacks": {"checked": 3, "failed": 0},
+    "warning": "Synthetic policy-consistency evidence is not a real-world accuracy claim."
+  },
+  "limitations": [
+    "The v4 Cofacts HIGH result does not outperform v3 on every metric.",
+    "HIGH plus CAUTION is a human-review triage result, not an automatic alarm accuracy claim.",
+    "No Qwen training or fine-tuning was performed in this revision.",
+    "Raw datasets, message text, prompts and local model caches are not included in Git."
+  ]
+}

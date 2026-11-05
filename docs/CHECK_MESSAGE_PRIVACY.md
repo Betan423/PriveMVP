@@ -1,6 +1,6 @@
 # 情境二：可疑訊息判讀的隱私與防禦設計
 
-> 本文件描述「隱私特徵模式」。2026-11-04新增的準確率優先本機Qwen模式會在每次手動確認後把原始訊息送到使用者自己的電腦，不適用下列「原文不離開手機」主張；詳見 [`LOCAL_ACCURACY_MODE.md`](LOCAL_ACCURACY_MODE.md)。使用者可在App中關閉精準模式回到本文流程。
+> 目前App正式採用本文的隱私特徵／遮蔽摘錄路徑。本機Qwen只作為未來雲端API的免費替身，接收相同privacy packet，不接收額外未遮蔽原文；同資料集結果見 [`PRIVACY_LOCAL_QWEN_EVALUATION.md`](PRIVACY_LOCAL_QWEN_EVALUATION.md)。原文Qwen只保留離線評測數字作歷史效能上限，HTTP端點已移除。
 
 ## 目前採用的架構
 

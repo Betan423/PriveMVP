@@ -1,6 +1,6 @@
 # PrivAgent：情境一、情境二隱私、功能與 UI 交接文件
 
-> 更新日期：2026-11-02（Asia/Taipei）
+> 更新日期：2026-11-04（Asia/Taipei）
 >
 > 對應分支：`feature/share-photo-line-chain`
 >
@@ -25,7 +25,7 @@
    - 主要缺口：尚未自動辨識照片像素中的人臉、證件、地址、螢幕文字、QR code 等「視覺型個資」；真實 LINE 版本仍需逐版校準畫面節點；LINE 無障礙自動化有 Google Play 政策風險。
 
 2. **情境二：收到訊息，判斷是不是詐騙**（`CHECK_MESSAGE`）
-   - 目前產品預設為準確率優先：經逐次告知後把單則原始訊息送到使用者電腦上的本機Qwen，不送雲端；可關閉精準模式，回到原始訊息不離開手機的去識別化特徵流程。
+   - 目前產品統一採隱私路徑：手機先萃取特徵與遮蔽直接識別值，再把privacy packet送到Receiver。本機Qwen只用來免費模擬未來雲端API，收到的資料邊界與雲端版相同；App不再呼叫未遮蔽原文端點。
    - 現況：情境二的隱私邊界、可執行隱私預算、重播防護、Receiver 二次檢查、AI 輸出白名單、稽核最小化、紅隊變形測試與 Android 實機等價測試均已完成 MVP。
    - 目前合成資料評測：6,144 則訊息中，封包識別值洩漏、原文直接暴露、高風險漏判、安全訊息誤判為高風險、140 組變形攻擊失敗數皆為 0。但這是**有限合成模板的一致性結果，不等於真實世界詐騙辨識率 100%**。
 
@@ -42,16 +42,19 @@
 | Android 原始碼 | `app/`，本文件所在的最新本機 commit | ✅ |
 | 情境一 LINE 完整鏈 | 最新本機 commit（遮罩選點、長按、三階段分享、選人） | ✅ MVP |
 | 正式亮色雙情境 UI | `94d2e56` | ✅ |
-| Debug APK | `D:\PriveMVP\PrivAgent-line-overlay-forward-v0.8.2-debug.apk` | ✅，v2 Debug 簽章 |
-| APK SHA-256 | `15E80A72168934338F536EF2C40765CC6C80448A676FF51795D95923C8F33F1F` | ✅ |
-| JVM 測試 | 74／74（含公開簡訊與兩套台灣繁中離線評估） | ✅ |
+| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` | ✅，v2 Debug 簽章 |
+| APK SHA-256 | `0F68E6C6E52A8D372F5814E399DFFB63AFA966D7CF1006711203DB719FC62D69`（7,469,085 bytes；2026-11-05建置） | ✅ |
+| JVM 測試 | 75／75（含公開簡訊與兩套台灣繁中離線評估） | ✅ |
+| Receiver Python 測試 | 87／87（依模組執行，含HTTP、重播、DLP、AI契約與demo feed） | ✅ |
+| 評測腳本測試 | 14／14（含隱私評分契約、資料切分與A／B／C評測） | ✅ |
 | Android instrumentation | 11／11（Pixel 6 Pro AVD / API 34） | ✅ |
 | 生成式隱私紅隊基準 | 2,921／2,921；0 個基準後反例 | ✅ 初版，固定 seed 4232026 |
 | 公開簡訊資料集基準 | UCI 5,574筆＋FBS 14,074筆 | ✅ 離線執行；結果與限制見專屬報告 |
 | 台灣繁中資料基準 | TS-Bench 98筆風險＋98筆安全配對；Cofacts 5,000筆詐騙＋5,000筆非詐騙 | ✅ 兩套均已本機離線執行；Cofacts原文不進Git、不送AI Proxy |
 | A／B／C隱私AI對照 | Cofacts固定抽樣100詐騙＋100非詐騙；20筆一批 | ✅ A Recall 22%；B 57%；C 74%，但C Specificity僅46%，需再校準誤報 |
-| 本機原文Qwen精準模式 | TS-Bench跨資料集98風險＋98安全 | ✅ Accuracy 80.10%、Recall 84.69%、Specificity 75.51%；原規則Accuracy 61.22% |
-| Android Lint | 0 error；36 個既有 warning | ✅ 可建置 |
+| 遮罩後本機Qwen雲端模擬 | Cofacts dev 400校準＋held-out test 1,000；TS-Bench只作診斷 | ✅ v4型別化遮罩＋單次雙分數／證據閘門；held-out嚴格HIGH Accuracy 57.20%、Recall 32.40%、Specificity 82.00%、F1 43.09%；HIGH＋CAUTION人工分流Recall 69.20%；TS嚴格HIGH診斷Accuracy 69.39%、F1 62.50%。未全面超越v3，禁止宣稱整體準確率提升 |
+| 本機原文Qwen歷史上限 | TS-Bench跨資料集98風險＋98安全 | 🟡 Accuracy 80.10%、F1 80.98%；已退出正式App路徑，只保留研究對照 |
+| Android Lint | 0 error；37 個既有 warning | ✅ 可建置 |
 
 ---
 
@@ -348,7 +351,7 @@ flowchart TD
     B --> C[移除 zero-width / bidi controls]
     C --> D[本機遮蔽電話、帳號、OTP、網址、Email、姓名]
     D --> E[本機萃取風險特徵]
-    E --> F[本機規則判定 high / verify / insufficient]
+    E --> F[本機規則判定 high / caution / low_signal / insufficient]
     F --> G{是否同意雲端 AI？}
     G -- 否 --> H[只顯示本機結果]
     G -- 是 --> I{是否另行同意摘錄？}
@@ -372,11 +375,11 @@ flowchart TD
 |---|---:|---|
 | 原文預設留在手機 | ✅ | default packet 不含 raw message |
 | 本機去識別化 | ✅ | 電話、Email、URL、ID、OTP、帳號、數字、已知聯絡人名稱 |
-| 本機連結網域分級 `link_kind` | ✅ | 2026-11-02 起（packet v3）。網址只在手機分級為 `known_official / unknown / shortener / suspicious`，封包只送枚舉；官方白名單不再因「連結＋催促」誤判高風險，仿冒拼寫、IP、punycode、`@` 夾帶、高風險 TLD 直接高風險。清單示範用，見 `docs/CHECK_MESSAGE_PRIVACY.md` |
+| 本機連結網域分級 `link_kind` | ✅ | packet v4延續網址本機分級為 `known_official / unknown / shortener / suspicious`，封包只送枚舉；官方白名單不再因「連結＋催促」誤判高風險，仿冒拼寫、IP、punycode、`@` 夾帶、高風險 TLD 直接高風險。清單示範用，見 `docs/CHECK_MESSAGE_PRIVACY.md` |
 | Unicode／零寬／Bidi 正規化 | ✅ | NFKC、移除 format controls、separator control 正規化 |
 | 空白／標點／emoji 繞過 | ✅ | 建立 detection compact view，偵測 `轉-帳`、`匯💸款`、`驗·證·碼` 等 |
 | 否定語意基本處理 | ✅ | 「請勿提供驗證碼」不直接當成索取；後續真正要求仍可抓到 |
-| 本機風險安全下限 | ✅ | AI 只能提高警戒，不能把本機 high 降成 verify |
+| 本機風險安全下限 | ✅ | AI 只能提高警戒，不能把本機 high 降級 |
 | 摘錄預設關閉 | ✅ | `redacted_excerpt=null` |
 | 摘錄獨立同意 | ✅ | 使用者另勾選；傳前顯示完整 packet 說明 |
 | 高風險禁止摘錄 | ✅ | local risk=high 時，即使同意也強制 `null` |
@@ -416,15 +419,15 @@ flowchart TD
 手機本機遮蔽後：
 
 ```text
-[NAME]您好，我是銀行客服，請立即匯款到 [NUMBER]，
-再把驗證碼 [OTP] 回傳，詳情 [LINK]，電話 [PHONE]。
+[NAME]您好，我是銀行客服，請立即匯款到 [BANK_ACCOUNT]，
+再把驗證碼 [OTP_CODE] 回傳，詳情 [SUSPICIOUS_URL]，電話 [PHONE_NUMBER]。
 ```
 
 預設送往 Receiver／AI 的不是上面的文字，而是：
 
 ```json
 {
-  "schema": "privagent.check_message_packet.v3",
+  "schema": "privagent.check_message_packet.v4",
   "task_id_alias": "TASK_QWERTYUI",
   "request_nonce": "REQ_ASDFGHJKLQWERTYUIOPZ",
   "issued_at_ms": 1793390400000,
@@ -438,18 +441,29 @@ flowchart TD
     "link_kind": "unknown",
     "offers_reward": false,
     "requests_remote_control": false,
+    "action_negated": false,
+    "financial_promise": false,
+    "account_threat": false,
+    "contact_change": false,
+    "anti_scam_context": false,
+    "fact_check_context": false,
+    "direct_request": true,
     "context_sufficient": true,
     "impersonation": "support",
+    "message_stance": "direct_request",
+    "requested_action": "multiple",
+    "credential_target": "multiple",
     "source_kind": "pasted"
   },
   "redacted_excerpt": null,
   "allowed_sops": [
     "MESSAGE_CAUTION",
     "MESSAGE_VERIFY",
+    "MESSAGE_LOW_SIGNAL",
     "MESSAGE_INSUFFICIENT",
     "ASK_USER"
   ],
-  "client_policy_version": "phone-msg-3"
+  "client_policy_version": "phone-msg-4"
 }
 ```
 
@@ -791,7 +805,7 @@ python -m unittest discover -s receiver/tests
 |---|---:|---|
 | JVM unit tests | 72／72 | message guard、packet、隱私規則、LINE 遮罩座標／三階段分享／選人純規則、儲存與傳輸、2,921項生成式 campaign、19,648筆公開簡訊離線 benchmark |
 | Android instrumentation | 11／11 | 首頁雙情境 smoke test、關係／LINE 名稱、EXIF/GPS、遮罩選點與三階段順序 session、25種 phase pair 窮舉、選人 session、語音手動備援、Android ICU regex、加密儲存 |
-| Android Lint | 0 error；36 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
+| Android Lint | 0 error；37 warning | warning 主要為既有 KTX、i18n、dependency 與 accessibility 建議 |
 | Debug APK | v2 signature verified | Android Debug certificate；不得當正式 release 簽章 |
 
 直接執行 Gradle 驗證：
@@ -863,7 +877,7 @@ $env:JAVA_HOME = "D:\PriveMVP\PrivAgentRawCollectorMVP_v0.1\PrivAgentRawCollecto
 2. 情境一目前只能清除 metadata，還不能保證像素中沒有個資，下一步要如何補？
 3. 情境二預設封包有哪些欄位，為何沒有原文？
 4. 為何 high-risk 一律不送 excerpt？
-5. AI 為何不能把 high 降成 verify？
+5. AI 為何不能把 high 降成較低風險？
 6. nonce、timestamp、alias 各解決什麼問題？
 7. 競賽紅隊的 flag inference、implementation flaw、endpoint oracle 如何映射到本專案？
 8. 為何目前不硬加 FL／DP／HE／SMPC？未來什麼條件下才需要？

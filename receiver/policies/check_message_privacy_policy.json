@@ -1,7 +1,7 @@
 {
-  "policy_version": "check-message-privacy-3",
-  "packet_schema": "privagent.check_message_packet.v3",
-  "client_policy_versions": ["phone-msg-3"],
+  "policy_version": "check-message-privacy-4",
+  "packet_schema": "privagent.check_message_packet.v4",
+  "client_policy_versions": ["phone-msg-4"],
   "allowed_top_level_fields": [
     "schema",
     "task_id_alias",
@@ -27,11 +27,33 @@
     },
     "offers_reward": {"type": "boolean", "purpose": "detect reward or investment pressure"},
     "requests_remote_control": {"type": "boolean", "purpose": "detect remote-control requests"},
+    "action_negated": {"type": "boolean", "purpose": "distinguish warnings such as do not transfer from direct requests"},
+    "financial_promise": {"type": "boolean", "purpose": "detect guaranteed-return and investment solicitation language"},
+    "account_threat": {"type": "boolean", "purpose": "detect account suspension or transaction-failure pressure"},
+    "contact_change": {"type": "boolean", "purpose": "detect changed-number and move-to-another-account social engineering"},
+    "anti_scam_context": {"type": "boolean", "purpose": "distinguish anti-scam warnings from scam solicitations"},
+    "fact_check_context": {"type": "boolean", "purpose": "distinguish news, quotation and fact-check content"},
+    "direct_request": {"type": "boolean", "purpose": "record whether the recipient is being asked to act"},
     "context_sufficient": {"type": "boolean", "purpose": "avoid guessing from incomplete content"},
     "impersonation": {
       "type": "enum",
       "values": ["none", "family", "official", "support"],
       "purpose": "select a trusted out-of-band verification path"
+    },
+    "message_stance": {
+      "type": "enum",
+      "values": ["direct_request", "warning", "report", "notice", "general", "unknown"],
+      "purpose": "separate solicitation from warning, quotation, report and ordinary conversation"
+    },
+    "requested_action": {
+      "type": "enum",
+      "values": ["none", "transfer", "share_secret", "open_link", "install_remote", "contact", "multiple"],
+      "purpose": "describe the requested action without retaining message text"
+    },
+    "credential_target": {
+      "type": "enum",
+      "values": ["none", "otp", "password", "card", "identity", "account", "multiple"],
+      "purpose": "retain credential type semantics while removing the credential value"
     },
     "source_kind": {
       "type": "enum",

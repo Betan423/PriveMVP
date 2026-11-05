@@ -3,7 +3,7 @@
 Android 9（API 28）以上的隱私優先生活助理。compileSdk / targetSdk 36。
 產品首頁採正式亮色雙情境介面，只呈現「安心傳送照片」與「詐騙訊息檢查」。過去的原始研究蒐集與手機救援模組仍保留於程式庫供研究驗證，但不再顯示或啟動於產品 UI。
 
-兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。情境二預設使用準確率較高的電腦端本機Qwen：每次手動送出前明確告知原始訊息會進入使用者自己的電腦，但不送雲端。關閉精準模式後，仍可使用原本的手機去識別化特徵＋Gemini隱私路徑或完全手機本機規則。
+兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。情境二目前統一採隱私路徑：手機先萃取特徵並遮蔽直接識別值，再把 privacy packet 送給電腦端本機Qwen。本機模型只用來免費模擬未來雲端API，測試輸入邊界與雲端版相同，不會收到額外的未遮蔽原文。
 
 ## Repository 導覽
 
@@ -60,7 +60,7 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 | 情境 | 手機做什麼 | 會送到雲端的內容（需同意） | 停下或詢問 |
 | --- | --- | --- | --- |
 | 分享照片 | 長輩停留在含有圖片的 LINE 聊天室，按浮動「助理」後會出現半透明的全螢幕選取遮罩。長輩點一下目標圖片，該次點擊由遮罩攔截、不會打開圖片；遮罩移除後，專用無障礙服務只在同一座標長按一次，再依序點擊唯一「分享」→「分享(1)」→「更多」，最後沿用女兒 HMAC 選人與確認 | 聊天內轉傳路徑不呼叫雲端，也不取得圖片 bytes、URI 或 EXIF；只有 LINE 本身處理圖片。App 只短暫使用使用者點擊座標與 LINE 可見語意節點 | 必須已設定唯一女兒與 LINE 名稱，且聊天頁有輸入框。點擊位置必須落在可確認的圖片節點內；任何階段按鈕、收件人或送出按鈕不唯一就停止；60 秒未完成也停止 |
-| 可疑訊息 | 見下節 | 預設只送到自己電腦的本機Qwen；選用Gemini時只送遮蔽特徵 | 見下節 |
+| 可疑訊息 | 見下節 | 只送隱私特徵與使用者選用的遮蔽摘錄；目前以本機Qwen模擬雲端API | 見下節 |
 
 「設定家人」把女兒、兒子等關係對應到通訊錄裡的人，只存在這支手機（系統聯絡人挑選器，不需通訊錄權限）。
 在「設定家人」選擇關係後，可使用「設定並立即分享照片」或「立即分享照片」，不必返回首頁重走流程。LINE 未安裝時會引導安裝，也可由使用者明確選擇改用其他 App。
@@ -95,24 +95,23 @@ make apk                   # 網址和存取碼包進 APK，手機不用再填
 App 首頁「情境 02｜詐騙訊息檢查」：
 
 1. 貼上訊息，或按「從目前的通知選一則」（需先開啟通知存取；銀行／驗證器等敏感 App 的通知不列出）。
-2. 預設勾選「電腦端本機 AI 精準判讀」；每次手動檢查前再次告知原始訊息會傳到使用者自己的Receiver，再交給本機Ollama/Qwen，不經Gemini。模型同時評估詐騙證據與正常／反詐語境，允許完整語境修正關鍵字規則。
-3. 關閉精準模式後，手機才改走既有隱私路徑：遮蔽電話、帳號、驗證碼、網址、Email、身分證與姓名，只送風險特徵；也可完全關閉雲端而只用手機規則。
-4. 結果仍只顯示高風險／需要核實／資訊不足，不宣稱「安全」。所有文字由App固定reason code產生，AI不能輸出或執行任意UI指令。
+2. 手機先以型別化占位符遮蔽電話、帳號、驗證碼、網址、Email、身分證與可辨識姓名，並萃取訊息立場、要求動作、憑證類型及反詐／查核脈絡等緊湊特徵；本機已判為高風險時一律不附文字摘錄。
+3. 勾選AI判讀後，手動檢查會先預覽實際要送出的privacy packet。目前Receiver把相同packet交給本機Ollama/Qwen，作為未來雲端API的免費替身；取消同意時完全只用手機規則。
+4. 結果分為高風險／請謹慎核實／暫無強烈訊號／資訊不足，不宣稱「安全」。所有文字由App固定reason code產生，AI不能輸出或執行任意UI指令；背景通知仍只有高風險會發警報。
 
-雲端封包使用情境二 v3 契約：每次產生一次性 nonce 與簽發時間，Receiver 會阻擋過期、時鐘異常與重播；可揭露欄位（含 `link_kind`）與摘錄限制由 `receiver/policies/check_message_privacy_policy.json` 的可執行隱私預算控制。
+雲端封包使用情境二 v4 契約：每次產生一次性 nonce 與簽發時間，Receiver 會阻擋過期、時鐘異常與重播；可揭露欄位（含連結分級、訊息立場、要求動作與憑證類型）與摘錄限制由 `receiver/policies/check_message_privacy_policy.json` 的可執行隱私預算控制。
 
 勾選「自動檢查新進來的通知」後，每則新通知會在背景自動檢查（需通知存取權）：
 
 - 略過常駐／進度／來電通知、群組摘要、敏感 App 與排除清單內的 App；同一則訊息被聊天 App 重新發布只檢查一次。
-- 精準模式啟用時，通知原文會送到使用者電腦上的本機Qwen；關閉時才依既有設定只送特徵packet。敏感App與排除清單仍一律不處理。
+- 背景通知沒有逐筆預覽，因此即使啟用AI也只送特徵packet，不附摘錄；敏感App與排除清單仍一律不處理。
 - 只有「高風險」會跳出「可疑訊息提醒」通知，其餘結果只列在 App 的「最近自動檢查」（最近 10 則，只存在記憶體）。
 
-電腦端（精準模式需先啟動Ollama；Receiver預設8080；只有隱私雲端模式才另需Gemini proxy 8000）：
+電腦端（先啟動Ollama；Receiver預設8080，本機Qwen會接收與未來雲端相同的隱私packet）：
 
 ```bash
 ollama serve
 # 另一終端第一次執行：ollama pull qwen3.5:9b
-cd ~/Documents/gemini-proxymeow && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port 8000
 cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
 ```
 
@@ -120,7 +119,7 @@ cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
 
 沒有手機時可用 `python3 -m receiver.phone_sim` 模擬手機端；契約、流程與限制見 [receiver/README.md](receiver/README.md)。
 
-準確率優先的本機Qwen架構與跨資料集結果見 [docs/LOCAL_ACCURACY_MODE.md](docs/LOCAL_ACCURACY_MODE.md)；原隱私模式的威脅模型與技術取捨見 [docs/CHECK_MESSAGE_PRIVACY.md](docs/CHECK_MESSAGE_PRIVACY.md)。
+目前正式的遮罩後本機Qwen測試見 [docs/PRIVACY_LOCAL_QWEN_EVALUATION.md](docs/PRIVACY_LOCAL_QWEN_EVALUATION.md)；隱私威脅模型與技術取捨見 [docs/CHECK_MESSAGE_PRIVACY.md](docs/CHECK_MESSAGE_PRIVACY.md)。原文Qwen結果只保留於 [docs/LOCAL_ACCURACY_MODE.md](docs/LOCAL_ACCURACY_MODE.md) 作歷史效能上限，不再是正式產品路徑。
 
 ## 目前可以取得的資料
 
@@ -306,7 +305,7 @@ JVM 測試涵蓋加密 round trip、nonce、篡改與錯誤金鑰、記錄上限
 
 另以Cofacts固定種子平衡抽樣200筆完成A／B／C初測：A本機規則Recall 22%／Specificity 96%；B隱私特徵＋本機Qwen為57%／27%；C隱私特徵＋遮蔽摘錄＋本機Qwen為74%／46%。C明顯增加攔截，但誤報仍高，尚不應直接作為強制警報。20筆一批、快取及prompt injection防禦方式見 [`docs/PRIVACY_ABC_AI_EVALUATION.md`](docs/PRIVACY_ABC_AI_EVALUATION.md)。
 
-準確率優先實驗另外使用8,600則Cofacts train、400則dev與1,000則held-out test，再以完全不同來源的TS-Bench做跨資料集驗證。Cofacts字元／融合模型在同來源可達94%以上、但跨來源約50%，因此未採用；最終採用的原文Qwen雙分數模式在TS-Bench達Accuracy 80.10%、Recall 84.69%、Specificity 75.51%，相較原規則Accuracy 61.22%有明顯提升。方法與限制見 [`docs/LOCAL_ACCURACY_MODE.md`](docs/LOCAL_ACCURACY_MODE.md)。
+歷史準確率上限實驗另外使用8,600則Cofacts train、400則dev與1,000則held-out test，再以完全不同來源的TS-Bench驗證。未遮罩原文Qwen在TS-Bench達Accuracy 80.10%、Recall 84.69%，但不符合目前正式隱私邊界，因此不再採用。現行v4改成型別化遮罩、訊息立場／要求動作特徵、單次`risk_score`／`benign_score`與程式證據閘門；Cofacts held-out嚴格HIGH為Accuracy 57.20%、Recall 32.40%、Specificity 82.00%、F1 43.09%，HIGH＋CAUTION人工分流Recall為69.20%。已看過的TS-Bench僅作診斷：嚴格HIGH Accuracy 69.39%、Recall 51.02%、Specificity 87.76%、F1 62.50%。v4未在Cofacts全面超越v3，文件不宣稱整體準確率已提升。正式結果見 [`docs/PRIVACY_LOCAL_QWEN_EVALUATION.md`](docs/PRIVACY_LOCAL_QWEN_EVALUATION.md)，歷史上限見 [`docs/LOCAL_ACCURACY_MODE.md`](docs/LOCAL_ACCURACY_MODE.md)。
 
 ```powershell
 .\scripts\fetch_tw_message_benchmarks.ps1

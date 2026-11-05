@@ -11,18 +11,21 @@ from pathlib import Path
 from receiver.assistant import (
     MessageAssistant,
     PlannerUnavailable,
+    apply_privacy_score,
     build_prompt,
     forbidden_hits,
     gemini_proxy_planner,
+    ollama_privacy_scorer,
     parse_packet,
     parse_planner_answer,
+    privacy_score_messages,
     rule_assessment,
 )
 from receiver.contracts import ReceiverError
 from receiver.phone_sim import build_packet, extract_facts, redact
 from receiver.server import ASSIST_PATH, create_server
 
-SOPS = ["MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_INSUFFICIENT", "ASK_USER"]
+SOPS = ["MESSAGE_CAUTION", "MESSAGE_VERIFY", "MESSAGE_LOW_SIGNAL", "MESSAGE_INSUFFICIENT", "ASK_USER"]
 
 
 def encode(packet: dict[str, object]) -> bytes:
@@ -40,7 +43,7 @@ class PhoneSideTests(unittest.TestCase):
         redacted = redact(text)
         for leaked in ("482913", "SYN_", "0912", "https", "example", "@", "A123456789"):
             self.assertNotIn(leaked, redacted)
-        for placeholder in ("[OTP]", "[ACCOUNT]", "[PHONE]", "[LINK]", "[EMAIL]", "[ID]"):
+        for placeholder in ("[OTP_CODE]", "[BANK_ACCOUNT]", "[PHONE_NUMBER]", "[SUSPICIOUS_URL]", "[EMAIL]", "[NATIONAL_ID]"):
             self.assertIn(placeholder, redacted)
 
     def test_negated_requests_are_not_risk_signals(self) -> None:
@@ -110,7 +113,7 @@ class PhoneSideTests(unittest.TestCase):
     def test_official_link_no_longer_escalates_but_suspicious_link_is_decisive(self) -> None:
         official = extract_facts("您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未處理將退回", "pasted")
         level, codes = rule_assessment(official)
-        self.assertEqual("verify", level)
+        self.assertEqual("caution", level)
         self.assertIn("HAS_LINK", codes)
         phishing = extract_facts("您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料", "pasted")
         level, codes = rule_assessment(phishing)
@@ -237,8 +240,8 @@ class PlannerAnswerTests(unittest.TestCase):
     def test_plain_and_fenced_answers(self) -> None:
         self.assertEqual(parse_planner_answer(answer("MESSAGE_CAUTION", "high", ["URGENCY"]), SOPS),
                          ("MESSAGE_CAUTION", "high", ["URGENCY"]))
-        fenced = "```json\n" + answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]) + "\n```"
-        self.assertEqual(parse_planner_answer(fenced, SOPS)[1], "verify")
+        fenced = "```json\n" + answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"]) + "\n```"
+        self.assertEqual(parse_planner_answer(fenced, SOPS)[1], "caution")
 
     def test_out_of_whitelist_answers_are_rejected(self) -> None:
         bad = [
@@ -247,7 +250,7 @@ class PlannerAnswerTests(unittest.TestCase):
             answer("MESSAGE_CAUTION", "safe", ["URGENCY"]),
             answer("MESSAGE_VERIFY", "high", ["URGENCY"]),
             answer("MESSAGE_CAUTION", "high", ["CALL_THIS_NUMBER"]),
-            "CALL 0912345678 " + answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]),
+            "CALL 0912345678 " + answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"]),
             json.dumps({"sop_id": "MESSAGE_CAUTION", "risk_level": "high", "reason_codes": ["URGENCY"], "say": "x"}),
         ]
         for text in bad:
@@ -264,7 +267,7 @@ class AssistantTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_model_cannot_lower_rule_risk(self) -> None:
-        assistant = MessageAssistant(self.audit, lambda _p: answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]))
+        assistant = MessageAssistant(self.audit, lambda _p: answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"]))
         result = assistant.assess(build_packet("我是客服，請提供一次性驗證碼 SYN_OTP_PRIVATE_1。"))
         self.assertEqual(result["risk_level"], "high")
         self.assertEqual(result["sop_id"], "MESSAGE_CAUTION")
@@ -300,6 +303,32 @@ class AssistantTests(unittest.TestCase):
         self.assertNotIn("帶傘", text)
         self.assertIn(packet["task_id_alias"], text)
 
+    def test_local_qwen_is_labelled_as_privacy_cloud_simulation(self) -> None:
+        scorer = lambda _packet: (0, 4, "GENERAL_CHAT")
+        result = MessageAssistant(self.audit, None, privacy_scorer=scorer).assess(
+            build_packet("明天下午一起吃飯。", allow_excerpt=True)
+        )
+        self.assertEqual(result["planner"]["kind"], "LOCAL_QWEN_PRIVACY")
+        self.assertEqual(result["planner"]["benign_score"], 4)
+
+    def test_privacy_high_gate_requires_strong_evidence(self) -> None:
+        calm = extract_facts("明天下午一起吃飯。", "pasted")
+        self.assertEqual(apply_privacy_score(calm, (3, 0, "UNCERTAIN"))[0], "caution")
+        self.assertEqual(apply_privacy_score(calm, (4, 0, "INVESTMENT_PITCH"))[0], "high")
+        campaign = extract_facts("限時抽獎活動，請查看官方公告。", "pasted")
+        self.assertEqual(apply_privacy_score(campaign, (3, 0, "LEGITIMATE_NOTICE"))[0], "caution")
+        warning = extract_facts("警方提醒這是詐騙，請勿匯款或提供驗證碼。", "pasted")
+        self.assertNotEqual(apply_privacy_score(warning, (0, 4, "ANTI_SCAM_WARNING"))[0], "high")
+
+    def test_privacy_score_messages_only_disclose_scoring_fields(self) -> None:
+        packet = build_packet("王小明您好，明天下午一起吃飯。", allow_excerpt=True)
+        messages = privacy_score_messages(packet)
+        self.assertEqual([message["role"] for message in messages], ["system", "user"])
+        user = json.loads(messages[1]["content"])
+        self.assertEqual(set(user), {"facts", "redacted_excerpt"})
+        self.assertNotIn(packet["task_id_alias"], messages[1]["content"])
+        self.assertNotIn("王小明", messages[1]["content"])
+
 
 class ProxyAdapterTests(unittest.TestCase):
     """Exercises the real HTTP adapter against a fake proxy, including broken responses."""
@@ -330,10 +359,18 @@ class ProxyAdapterTests(unittest.TestCase):
         return f"http://127.0.0.1:{listener.getsockname()[1]}"
 
     def test_valid_envelope(self) -> None:
-        body = json.dumps({"answer": answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"])}).encode()
+        body = json.dumps({"answer": answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"])}).encode()
         url = self.serve(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
                          str(len(body)).encode() + b"\r\nConnection: close\r\n\r\n" + body)
         self.assertIn("MESSAGE_VERIFY", gemini_proxy_planner(url, 3)("prompt"))
+
+    def test_local_ollama_privacy_envelope(self) -> None:
+        score = json.dumps({"risk_score": 1, "benign_score": 4, "intent_code": "GENERAL_CHAT"})
+        body = json.dumps({"message": {"content": score}}).encode()
+        url = self.serve(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                         str(len(body)).encode() + b"\r\nConnection: close\r\n\r\n" + body)
+        packet = build_packet("明天下午一起吃飯。", allow_excerpt=True)
+        self.assertEqual((1, 4, "GENERAL_CHAT"), ollama_privacy_scorer(url, "qwen-test", 3)(packet))
 
     def test_broken_responses_become_planner_unavailable(self) -> None:
         responses = {
@@ -348,9 +385,11 @@ class ProxyAdapterTests(unittest.TestCase):
 
 
 class AssistHttpTests(unittest.TestCase):
-    def start(self, planner: object = None, api_token: str | None = None) -> None:
+    def start(self, planner: object = None, api_token: str | None = None,
+              privacy_scorer: object = None) -> None:
         self.temp = tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent)
-        self.server = create_server("127.0.0.1", 0, data_dir=self.temp.name, planner=planner, api_token=api_token)
+        self.server = create_server("127.0.0.1", 0, data_dir=self.temp.name, planner=planner,
+                                    api_token=api_token, privacy_scorer=privacy_scorer)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.host, self.port = self.server.server_address[:2]
@@ -385,9 +424,23 @@ class AssistHttpTests(unittest.TestCase):
         self.assertEqual(len(prompts), 1)
         self.assertNotIn("SYN_", prompts[0])
 
+    def test_end_to_end_with_privacy_scorer_and_high_gate(self) -> None:
+        packets: list[dict[str, object]] = []
+
+        def scorer(packet: dict[str, object]) -> tuple[int, int, str]:
+            packets.append(packet)
+            return 4, 0, "INVESTMENT_PITCH"
+
+        self.start(privacy_scorer=scorer)
+        packet = build_packet("王小明您好，這是一則投資資訊。", allow_excerpt=True)
+        status, result = self.post(encode(packet))
+        self.assertEqual((status, result["risk_level"]), (200, "high"))
+        self.assertEqual(result["planner"]["kind"], "LOCAL_QWEN_PRIVACY")
+        self.assertNotIn("王小明", packets[0]["redacted_excerpt"])
+
     def test_leaking_packet_is_rejected_before_planner(self) -> None:
         calls: list[str] = []
-        self.start(lambda p: calls.append(p) or answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]))
+        self.start(lambda p: calls.append(p) or answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"]))
         packet = build_packet("明天下午一起吃飯。")
         packet["redacted_excerpt"] = "請打 0912345678"
         status, result = self.post(encode(packet))
@@ -407,9 +460,19 @@ class AssistHttpTests(unittest.TestCase):
         self.assertEqual(self.post(b"{}", {"Content-Type": "text/plain"})[0], 415)
         self.assertEqual(self.post(b"x" * 20000)[0], 413)
 
+    def test_raw_message_ai_endpoint_has_been_removed(self) -> None:
+        self.start()
+        connection = http.client.HTTPConnection(self.host, self.port, timeout=3)
+        connection.request("POST", "/api/v1/assist/check-message-accurate", body=b"{}",
+                           headers={"Content-Type": "application/json"})
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        self.assertEqual(response.status, 404)
+
     def test_replay_and_stale_packets_are_rejected_before_planner(self) -> None:
         calls: list[str] = []
-        self.start(lambda prompt: calls.append(prompt) or answer("MESSAGE_VERIFY", "verify", ["NO_STRONG_SIGNAL"]))
+        self.start(lambda prompt: calls.append(prompt) or answer("MESSAGE_VERIFY", "caution", ["NO_STRONG_SIGNAL"]))
         packet = build_packet("明天下午一起吃飯。")
         body = encode(packet)
         self.assertEqual(self.post(body)[0], 200)

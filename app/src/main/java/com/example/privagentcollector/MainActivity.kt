@@ -191,7 +191,7 @@ class MainActivity : Activity() {
             AppUi.title(this)
         })
         addView(TextView(this@MainActivity).apply {
-            text = "貼上訊息或從通知選取。可用電腦端本機 AI 精準判讀，也可關閉後改用手機遮蔽特徵模式。"
+            text = "貼上訊息或從通知選取。手機先遮蔽個資與萃取特徵，再由本機 Qwen 模擬未來雲端 AI 判讀。"
             AppUi.body(this)
         })
         addView(AppUi.spacer(this@MainActivity, 10))
