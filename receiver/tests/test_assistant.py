@@ -545,6 +545,59 @@ class AntiScamFramingTests(unittest.TestCase):
     BENIGN = ('請轉到設定頁面開啟通知權限', '停車費請於 App 內儲值後使用', '您的手機號碼已完成變更',
               '訂單序號 A123，請回覆是否收到', '要驗證嗎？不用的話就直接登入', '媽，我把錢放在抽屜了')
 
+    # Round 4: phrasings collected from 165, bank notices and fact-checkers (docs/CHECK_MESSAGE_PRIVACY.md).
+    COERCED = ('匯款資訊如下，今天內匯 3 萬，否則停權', '收到請回覆 1 確認，否則帳戶將被凍結',
+               '取消訂單需付違約金並負擔法律責任，將列入重大信用瑕疵', '您的卡片被暫停使用，請解除卡片異常狀態 https://tsb-verify.net/a',
+               '您的訂單異常，需退費請點此連結 https://refund-now.shop/o', '系統出錯誤設為VIP會員，每月將扣款 3000，請依指示取消')
+    FAKE_POLICE = ('您涉嫌洗錢，帳戶將被凍結，不配合會被逮捕，請將存款交給法院監管',
+                   '您的健保卡被冒用涉案，偵查不公開，請加LINE定時回報', '為證明清白，請至ATM操作監管程序',
+                   '您的身分遭冒用，請接收法院公文並配合監管帳戶')
+    ADVANCE_FEE = ('應徵通過，上班前需先繳保證金與制服費', '保證追回詐騙款項，先繳保證金 5000', '名額有限，先匯款才保留名額',
+                   '境外包裹需補繳關稅，請點連結付款 https://parcel-tax.click')
+    FAKE_FRIEND = ('我手機壞了，先借我 30 萬，明天還你', '阿嬤，我是阿明，我手機掉了，這是新號碼，先借我兩萬急用',
+                   '低價出清，跳過平台私下付款更便宜，加我LINE')
+    PAYMENT_OPS = ('7-11賣貨便訂單金流異常，請操作網銀解除', '實名認證失敗，金流驗證未完成，請重新操作網銀',
+                   '退稅通知：請提供銀行帳號以便退稅')
+    ROUND4_BENIGN = ('我已匯 3000 給你，收到再說。', '老師說明天要帶單字本和水壺。', '信用卡帳單已產生，本期應繳 5,200 元，繳款截止 11/20。',
+                     '媽，我換新手機了，舊的壞掉，號碼一樣喔。', '停車費請於離場前至繳費機繳納。', '保險費到期提醒，可於 App 內繳費。',
+                     '會員卡到期了，續約可以到櫃檯辦理。', '通知：社區管理費請於月底前繳交，逾期加收 50 元。', '你上次借我的書我看完了，週末還你。')
+    ROUND4_WARNINGS = ('若有人要你今天內匯款否則停權，就是詐騙，請撥 165。', '國稅局提醒：報稅期間不會以簡訊通知退稅，勿點不明連結。',
+                       '警方提醒：若接到自稱檢察官要求監管帳戶，就是詐騙。')
+
+    def test_threat_clause_makes_a_demand_without_a_request_verb(self) -> None:
+        for text in self.COERCED:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertTrue(facts["account_threat"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+
+    def test_fake_police_script_is_official_impersonation(self) -> None:
+        for text in self.FAKE_POLICE:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertEqual("official", facts["impersonation"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+
+    def test_advance_fee_and_payment_operations_are_transfers(self) -> None:
+        for text in self.ADVANCE_FEE + self.PAYMENT_OPS:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertTrue(facts["asks_transfer"] or facts["requests_secret"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+
+    def test_fake_friend_and_off_platform_payment_are_high(self) -> None:
+        for text in self.FAKE_FRIEND:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertTrue(facts["contact_change"], text)
+            self.assertEqual("high", rule_assessment(facts)[0], text)
+
+    def test_round4_everyday_messages_stay_below_high(self) -> None:
+        for text in self.ROUND4_BENIGN:
+            self.assertNotEqual("high", rule_assessment(phone_sim.extract_facts(text, "pasted"))[0], text)
+
+    def test_verdict_endings_and_agency_reminders_are_warnings(self) -> None:
+        for text in self.ROUND4_WARNINGS:
+            facts = phone_sim.extract_facts(text, "pasted")
+            self.assertEqual("warning", facts["message_stance"], text)
+            self.assertEqual("low_signal", rule_assessment(facts)[0], text)
+
     def test_remote_tool_names_are_remote_control(self) -> None:
         for text in self.REMOTE_TOOLS:
             facts = phone_sim.extract_facts(text, "pasted")

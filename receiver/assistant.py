@@ -265,11 +265,18 @@ def rule_assessment(facts: dict[str, Any]) -> tuple[str, list[str]]:
     # (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message, and no
     # warning or news framing cancels it: a live phishing link is dangerous to tap whatever surrounds it.
     risky_link = facts["has_link"] and link_kind != "known_official"
+    # A threat ("否則停權", "涉嫌洗錢", "卡片被暫停") turns any money, secret, link, impersonation or
+    # request in the same message into a demand; and a payment that comes with a change of channel
+    # ("加我LINE私下付款", "手機壞了先借我") is the fake-friend / off-platform shape.
+    coerced = facts["account_threat"] and not safe_context
     if ((direct and (facts["asks_transfer"] or facts["requests_secret"] or facts["requests_remote_control"])) or
             link_kind == "suspicious" or
             (direct and risky_link and (facts["urgency"] or facts["offers_reward"] or impersonating)) or
             (direct and impersonating and (facts["urgency"] or facts["contact_change"])) or
-            (direct and facts["financial_promise"])):
+            (direct and facts["financial_promise"]) or
+            (coerced and (direct or facts["asks_transfer"] or facts["requests_secret"] or
+                          facts["requests_remote_control"] or risky_link or impersonating)) or
+            (facts["asks_transfer"] and facts["contact_change"] and not safe_context)):
         return "high", codes
     if not facts["context_sufficient"]:
         return "insufficient", codes + ["CONTEXT_INSUFFICIENT"]

@@ -300,8 +300,88 @@
     {
       "id": "topup_instruction_is_not_a_direct_request",
       "text": "停車費請於 App 內儲值後使用",
-      "expected_level": "caution",
-      "expected_facts": {"direct_request": false},
+      "expected_level": "low_signal",
+      "expected_facts": {"direct_request": false, "asks_transfer": false},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "threat_clause_demands_money_without_request_verb",
+      "text": "匯款資訊如下，今天內匯 3 萬，否則停權",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true, "account_threat": true, "direct_request": false},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "fake_police_monitored_account_script",
+      "text": "您涉嫌洗錢，帳戶將被凍結，不配合會被逮捕，請將存款交給法院監管",
+      "expected_level": "high",
+      "expected_facts": {"impersonation": "official", "account_threat": true, "asks_transfer": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "fake_friend_broken_phone_loan",
+      "text": "我手機壞了，先借我 30 萬，明天還你",
+      "expected_level": "high",
+      "expected_facts": {"contact_change": true, "asks_transfer": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "advance_fee_before_job",
+      "text": "應徵通過，上班前需先繳保證金與制服費",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true, "direct_request": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "off_platform_payment_with_line",
+      "text": "低價出清，跳過平台私下付款更便宜，加我LINE",
+      "expected_level": "high",
+      "expected_facts": {"contact_change": true, "asks_transfer": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "account_state_plus_link_is_phishing",
+      "text": "您的訂單異常，需退費請點此連結 https://refund-now.shop/o",
+      "expected_level": "high",
+      "expected_facts": {"account_threat": true, "has_link": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "payment_operation_on_online_banking",
+      "text": "7-11賣貨便訂單金流異常，請操作網銀解除",
+      "expected_level": "high",
+      "expected_facts": {"asks_transfer": true, "direct_request": true},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "verdict_ending_is_a_warning",
+      "text": "若有人要你今天內匯款否則停權，就是詐騙，請撥 165。",
+      "expected_level": "low_signal",
+      "expected_facts": {"anti_scam_context": true, "message_stance": "warning"},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "self_service_machine_payment_is_not_a_transfer",
+      "text": "停車費請於離場前至繳費機繳納。",
+      "expected_level": "low_signal",
+      "expected_facts": {"asks_transfer": false, "direct_request": false},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "teacher_homework_is_not_trading_signal",
+      "text": "老師說明天要帶單字本和水壺。",
+      "expected_level": "low_signal",
+      "expected_facts": {"financial_promise": false},
       "redaction_contains": [],
       "redaction_excludes": []
     }
