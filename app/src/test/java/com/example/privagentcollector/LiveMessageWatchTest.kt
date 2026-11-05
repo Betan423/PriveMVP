@@ -24,7 +24,8 @@ class LiveMessageWatchTest {
 
     @Test fun onlyHighRiskInterruptsTheUser() {
         assertTrue(LiveMessageWatch.shouldAlert(MessageGuard.Level.HIGH))
-        assertFalse(LiveMessageWatch.shouldAlert(MessageGuard.Level.VERIFY))
+        assertFalse(LiveMessageWatch.shouldAlert(MessageGuard.Level.CAUTION))
+        assertFalse(LiveMessageWatch.shouldAlert(MessageGuard.Level.LOW_SIGNAL))
         assertFalse(LiveMessageWatch.shouldAlert(MessageGuard.Level.INSUFFICIENT))
     }
 }

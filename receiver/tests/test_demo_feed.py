@@ -29,8 +29,8 @@ class DemoFeedUnitTests(unittest.TestCase):
 
     def test_phone_steps_never_put_identifiers_in_the_packet(self) -> None:
         steps = phone_steps(SCAM)
-        self.assertIn("[OTP]", steps["redacted"])
-        self.assertIn("[PHONE]", steps["redacted"])
+        self.assertIn("[OTP_CODE]", steps["redacted"])
+        self.assertIn("[PHONE_NUMBER]", steps["redacted"])
         self.assertIn("[NAME]", steps["redacted"])
         self.assertEqual(steps["local"]["risk_level"], "high")
         self.assertIn("requests_secret", steps["triggers"])
@@ -122,7 +122,7 @@ class DemoFeedHttpTests(unittest.TestCase):
 
         def planner(prompt: str) -> str:
             prompts.append(prompt)
-            return '{"sop_id":"MESSAGE_VERIFY","risk_level":"verify","reason_codes":["NO_STRONG_SIGNAL"]}'
+            return '{"sop_id":"MESSAGE_LOW_SIGNAL","risk_level":"low_signal","reason_codes":["NO_STRONG_SIGNAL"]}'
 
         self.start(demo_feed=True, planner=planner)
         status, body = self.request("POST", "/api/v1/demo/sandbox", json.dumps({"text": SCAM}, ensure_ascii=False).encode("utf-8"))
@@ -134,7 +134,7 @@ class DemoFeedHttpTests(unittest.TestCase):
         self.assertNotIn("482913", prompts[0])
         (event,) = self.events()
         self.assertEqual(event["origin"], "sandbox")
-        self.assertEqual(event["planner"]["risk_level"], "verify")
+        self.assertEqual(event["planner"]["risk_level"], "low_signal")
         self.assertEqual(event["final"]["risk_level"], "high")
 
 

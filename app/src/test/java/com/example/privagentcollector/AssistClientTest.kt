@@ -60,11 +60,19 @@ class AssistClientTest {
     }
 
     @Test fun cloudCannotLowerTheLocalRiskOnThePhone() {
-        val url = serve(200) { reply(aliasOf(it), "verify", "\"NO_STRONG_SIGNAL\"") }
+        val url = serve(200) { reply(aliasOf(it), "caution", "\"NO_STRONG_SIGNAL\"") }
         val packet = MessageGuard.buildPacket("我是客服，請提供驗證碼", "pasted", false)
         val outcome = AssistClient.check(url, "", packet, cloudConsent = true)
         assertEquals(MessageGuard.Level.HIGH, outcome.level)
         assertFalse(outcome.reasonCodes.contains("NO_STRONG_SIGNAL"))
+    }
+
+    @Test fun localQwenPrivacyBackendIsShownAsCloudSimulation() {
+        val url = serve(200) { reply(aliasOf(it), "caution", "\"NO_STRONG_SIGNAL\"", "LOCAL_QWEN_PRIVACY") }
+        val packet = MessageGuard.buildPacket("明天下午一起吃飯。", "pasted", true)
+        val outcome = AssistClient.check(url, "", packet, cloudConsent = true)
+        assertTrue(outcome.source.contains("模擬雲端"))
+        assertFalse(received.single().contains("原始訊息"))
     }
 
     @Test fun mismatchedAliasFallsBackToLocalRules() {
@@ -85,7 +93,7 @@ class AssistClientTest {
         val url = serve(200) { "" }
         server!!.close()
         val outcome = AssistClient.check(url, "", MessageGuard.buildPacket("明天下午大家一起見面吧", "pasted", false), true)
-        assertEquals(MessageGuard.Level.VERIFY, outcome.level)
+        assertEquals(MessageGuard.Level.LOW_SIGNAL, outcome.level)
         assertTrue(outcome.source, outcome.source.startsWith("手機本機規則"))
     }
 

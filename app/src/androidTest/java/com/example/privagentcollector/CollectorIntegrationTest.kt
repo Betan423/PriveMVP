@@ -1,5 +1,14 @@
 package com.example.privagentcollector
 
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.media.ExifInterface
+import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -7,10 +16,173 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 /** Run only on a disposable emulator: these tests clear the target app's test data. */
 @RunWith(AndroidJUnit4::class)
 class CollectorIntegrationTest {
+    @Test fun productHomeShowsOnlyTheTwoApprovedScenarios() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val activity = instrumentation.startActivitySync(
+            Intent(instrumentation.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        try {
+            var visibleValues = emptyList<String>()
+            instrumentation.runOnMainSync {
+                val values = mutableListOf<String>()
+                fun collect(view: View) {
+                    if (view is TextView) values += view.text.toString()
+                    if (view is ViewGroup) for (index in 0 until view.childCount) collect(view.getChildAt(index))
+                }
+                collect(activity.window.decorView)
+                visibleValues = values
+            }
+            val visibleText = visibleValues.joinToString("\n")
+            assertTrue(visibleText.contains("安心傳送照片"))
+            assertTrue(visibleText.contains("詐騙訊息檢查"))
+            assertFalse(visibleValues.any { it.trim() == "手機救援" })
+            assertFalse(visibleValues.any { it.trim() == "研究資料蒐集" })
+        } finally { activity.finish() }
+    }
+
+    @Test fun relationBindingCanContinueTheShareChainWithoutDuplicates() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        RelationBindings.clear(context, "daughter")
+        try {
+            RelationBindings.add(context, "daughter", "測試女兒")
+            RelationBindings.add(context, "daughter", "測試女兒")
+            assertEquals(listOf("測試女兒"), RelationBindings.names(context, "daughter"))
+            assertNull(RelationBindings.lineName(context, "daughter", "測試女兒"))
+            RelationBindings.setLineName(context, "daughter", "測試女兒", "LINE 小美")
+            assertEquals("LINE 小美", RelationBindings.lineName(context, "daughter", "測試女兒"))
+        } finally { RelationBindings.clear(context, "daughter") }
+        assertNull(RelationBindings.lineName(context, "daughter", "測試女兒"))
+    }
+
+    @Test fun photoSanitizerRemovesGpsAndDeviceExif() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = File(context.cacheDir, "source-with-private-exif.jpg")
+        val bitmap = Bitmap.createBitmap(40, 30, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        source.outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it)) }
+        ExifInterface(source.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "25/1,1/1,588/100")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "121/1,33/1,5544/100")
+            setAttribute(ExifInterface.TAG_MAKE, "PRIVATE_DEVICE_MAKE")
+            setAttribute(ExifInterface.TAG_MODEL, "PRIVATE_DEVICE_MODEL")
+            saveAttributes()
+        }
+        try {
+            val result = PhotoSanitizer.prepare(context, Uri.fromFile(source), "TEST_SANITIZED")
+            assertTrue(result.hadLocation)
+            val output = ExifInterface(result.file.absolutePath)
+            assertNull(output.getAttribute(ExifInterface.TAG_GPS_LATITUDE))
+            assertNull(output.getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
+            assertNull(output.getAttribute(ExifInterface.TAG_MAKE))
+            assertNull(output.getAttribute(ExifInterface.TAG_MODEL))
+        } finally {
+            source.delete()
+            PhotoSanitizer.clear(context)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun lineShareIntentTargetsLineAndGrantsTheSanitizedUri() {
+        val uri = Uri.parse("content://com.example.privagentcollector.share/shared/PHOTO_1.jpg")
+        val intent = LineShare.imageIntent(uri, directToLine = true)
+        assertEquals(Intent.ACTION_SEND, intent.action)
+        assertEquals("image/jpeg", intent.type)
+        assertEquals(LineShare.PACKAGE_NAME, intent.`package`)
+        assertEquals(uri, intent.getParcelableExtra(Intent.EXTRA_STREAM))
+        assertEquals(uri, intent.clipData!!.getItemAt(0).uri)
+        assertNotEquals(0, intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        assertNull(LineShare.imageIntent(uri, directToLine = false).`package`)
+    }
+
+    @Test fun lineAutomationSessionIsOneShotAndOrdered() {
+        LineAutomationSession.abort()
+        val id = LineAutomationSession.start("LINE 小美")
+        try {
+            assertEquals(LineAutomationSession.Phase.FIND_RECIPIENT, LineAutomationSession.snapshot()!!.phase)
+            assertTrue(LineAutomationSession.matchesRecipient(id, " LINE 小美 "))
+            assertFalse(LineAutomationSession.matchesRecipient(id, "LINE 小華"))
+            assertFalse(LineAutomationSession.snapshot().toString().contains("小美"))
+            val page = LineAutomationSession.pageFingerprint(id, listOf("最近的傳送對象", "LINE 小華"))!!
+            assertEquals(LineAutomationSession.ScrollDecision.ALLOW, LineAutomationSession.beginScroll(id, page))
+            assertEquals(LineAutomationSession.ScrollDecision.SAME_PAGE, LineAutomationSession.beginScroll(id, page))
+            page.fill(0)
+            assertTrue(LineAutomationSession.beginRecipientClick(id))
+            assertFalse(LineAutomationSession.beginRecipientClick(id))
+            assertTrue(LineAutomationSession.beginVoiceConfirmation(id))
+            assertFalse(LineAutomationSession.beginSendClick(id))
+            assertTrue(LineAutomationSession.confirm(id))
+            assertTrue(LineAutomationSession.beginSendClick(id))
+            assertFalse(LineAutomationSession.beginSendClick(id))
+            assertTrue(LineAutomationSession.complete(id))
+            assertNull(LineAutomationSession.snapshot())
+        } finally { LineAutomationSession.abort() }
+    }
+
+    @Test fun lineChatForwardSessionRequiresOneExplicitPointAndOrderedLineStages() {
+        LineChatForwardSession.abort()
+        val id = LineChatForwardSession.start("LINE 小美")
+        try {
+            assertEquals(LineChatForwardSession.Phase.WAIT_TARGET_POINT,
+                LineChatForwardSession.snapshot()!!.phase)
+            assertNull(LineChatForwardSession.consumeRecipient(id))
+            assertFalse(LineChatForwardSession.selectPoint(id, 500, 20, 1080, 2400))
+            assertTrue(LineChatForwardSession.selectPoint(id, 500, 900, 1080, 2400))
+            assertEquals(LineChatForwardSession.Phase.FIND_CONTEXT_SHARE,
+                LineChatForwardSession.snapshot()!!.phase)
+            assertFalse(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_MORE,
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_CONTEXT_SHARE,
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_SELECTED_MESSAGE_SHARE,
+                LineChatForwardSession.Phase.FIND_MORE))
+            assertTrue(LineChatForwardSession.advance(id,
+                LineChatForwardSession.Phase.FIND_MORE,
+                LineChatForwardSession.Phase.WAIT_RECIPIENT_SCREEN))
+            assertEquals("LINE 小美", LineChatForwardSession.recipient(id))
+            assertEquals("LINE 小美", LineChatForwardSession.consumeRecipient(id))
+            assertNull(LineChatForwardSession.snapshot())
+        } finally { LineChatForwardSession.abort() }
+    }
+
+    @Test fun voiceConfirmationAlwaysOffersAnExplicitManualFallback() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        LineAutomationSession.abort()
+        val id = LineAutomationSession.start("LINE 小美")
+        assertTrue(LineAutomationSession.beginRecipientClick(id))
+        assertTrue(LineAutomationSession.beginVoiceConfirmation(id))
+        val activity = instrumentation.startActivitySync(
+            Intent(instrumentation.targetContext, LineVoiceConfirmActivity::class.java)
+                .putExtra(LineVoiceConfirmActivity.EXTRA_SESSION_ID, id)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        try {
+            var confirm: Button? = null
+            instrumentation.runOnMainSync {
+                fun find(view: View) {
+                    if (view is Button && view.text.toString() == "確認傳送") confirm = view
+                    if (view is ViewGroup) for (index in 0 until view.childCount) find(view.getChildAt(index))
+                }
+                find(activity.window.decorView)
+                assertNotNull(confirm)
+                confirm!!.performClick()
+            }
+            instrumentation.waitForIdleSync()
+            assertEquals(LineAutomationSession.Phase.CONFIRMED, LineAutomationSession.snapshot()!!.phase)
+        } finally {
+            activity.finish()
+            LineAutomationSession.abort()
+        }
+    }
+
     @Test fun messageGuardPatternsInitializeOnAndroid() {
         // Android uses ICU's regex engine, which does not accept every flag supported by the
         // desktop JVM. Exercising the real packet path here prevents click-time initializer crashes.

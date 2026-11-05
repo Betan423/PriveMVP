@@ -28,7 +28,7 @@ from typing import Any
 
 from .assistant import MAX_EXCERPT_CHARS, MESSAGE_PACKET_SCHEMA, MESSAGE_SOPS, packet_forbidden_hits, rule_assessment
 
-CLIENT_POLICY_VERSION = "phone-msg-3"
+CLIENT_POLICY_VERSION = "phone-msg-4"
 
 # Red teams can insert zero-width or bidi formatting controls inside a phone number,
 # URL or scam keyword. They have no semantic value for this task, so remove them
@@ -37,8 +37,9 @@ CLIENT_POLICY_VERSION = "phone-msg-3"
 INVISIBLE_FORMAT_CONTROLS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
 
 SYNTHETIC_KINDS = {
-    "ACCOUNT": "[ACCOUNT]", "OTP": "[OTP]", "NAME": "[NAME]", "PHONE": "[PHONE]", "ADDRESS": "[ADDRESS]",
-    "RECORD": "[RECORD]", "ID": "[ID]", "PASSWORD": "[SECRET]", "LOCATION": "[ADDRESS]",
+    "ACCOUNT": "[BANK_ACCOUNT]", "OTP": "[OTP_CODE]", "NAME": "[NAME]", "PHONE": "[PHONE_NUMBER]",
+    "ADDRESS": "[ADDRESS]", "RECORD": "[RECORD]", "ID": "[NATIONAL_ID]", "PASSWORD": "[SECRET]",
+    "LOCATION": "[ADDRESS]",
 }
 SEP = r"[\s\-./()]"
 # Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised,
@@ -50,11 +51,15 @@ REDACTIONS = (
     (URL_PATTERN := re.compile(r"(?i)(?:https?://|www\.)[^\s，。、「」！？]+"), lambda m: "[LINK]"),
     (BARE_DOMAIN_PATTERN := re.compile(r"(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?:/[^\s，。、「」！？]*)?"),
      lambda m: "[LINK]"),
-    (re.compile(r"\b[A-Z][12][0-9]{8}\b"), lambda m: "[ID]"),
+    (re.compile(r"\b[A-Z][12][0-9]{8}\b"), lambda m: "[NATIONAL_ID]"),
+    (re.compile(r"((?:帳號|帳戶|匯到|轉入|轉至)[^0-9\[\]\n]{0,8})[0-9](?:" + SEP + r"{0,2}[0-9]){3,}"),
+     lambda m: m.group(1) + "[BANK_ACCOUNT]"),
+    (re.compile(r"(?i)(?:(?:NT\$|TWD|新臺幣|台幣|\$)\s*)?[0-9][0-9,.\s]{2,}(?=\s*(?:元|塊|萬))"),
+     lambda m: "[AMOUNT]"),
     (re.compile(r"((?:驗證碼|認證碼|OTP|密碼|控制碼|代碼)[^\[\]A-Za-z0-9]{0,6}?)(?=[A-Za-z]*[0-9])[A-Za-z0-9]{4,10}\b", re.I),
-     lambda m: m.group(1) + "[OTP]"),
-    (re.compile(r"(?<![0-9])(?:\+?886" + SEP + r"*|0)9(?:" + SEP + r"*[0-9]){8}(?![0-9])"), lambda m: "[PHONE]"),
-    (re.compile(r"(?<![0-9])(?:\+?886" + SEP + r"*|0)[2-8](?:" + SEP + r"*[0-9]){6,8}(?![0-9])"), lambda m: "[PHONE]"),
+     lambda m: m.group(1) + "[OTP_CODE]"),
+    (re.compile(r"(?<![0-9])(?:\+?886" + SEP + r"*|0)9(?:" + SEP + r"*[0-9]){8}(?![0-9])"), lambda m: "[PHONE_NUMBER]"),
+    (re.compile(r"(?<![0-9])(?:\+?886" + SEP + r"*|0)[2-8](?:" + SEP + r"*[0-9]){6,8}(?![0-9])"), lambda m: "[PHONE_NUMBER]"),
     (re.compile(r"(?<![0-9])[0-9](?:" + SEP + r"{0,2}[0-9]){3,}"), lambda m: "[NUMBER]"),
 )
 # Regexes cannot recognise arbitrary names; catch salutations, and on a real phone also the
@@ -111,7 +116,7 @@ def classify_link_detail(link: str) -> tuple[str, str]:
     """Grade one matched link -> (kind, reason). Only the kind ever leaves the phone, never the URL;
     the reason is a fixed LINK_REASON_TEXT key for the on-device preview and the stage demo."""
     stripped = re.sub(r"(?i)^https?://", "", link.strip().lower())
-    host = re.split(r"[/?#]", stripped, 1)[0]
+    host = re.split(r"[/?#]", stripped, maxsplit=1)[0]
     if "@" in host or host.startswith("[email]"):
         return "suspicious", "userinfo"  # "https://www.gov.tw@evil.example/": the real host is after the @.
     if host.startswith("["):
@@ -162,9 +167,21 @@ def classify_links(links: list[str]) -> str:
 # after it (plus "或／和" chains) and never crosses 請 or punctuation, so "不要猶豫請轉帳" stays risky.
 ACTIONS = r"(?:付款|轉帳|匯款|支付|繳費|告訴|提供|分享|輸入|給)"
 NEGATED_ACTION = re.compile(
-    r"(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?"
+    # "不會要求民眾提供" is how anti-scam notices phrase it; keep in sync with MessageGuard.kt.
+    r"(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別|"
+    r"(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?"
     + ACTIONS + r"(?:(?:或|和|、|及)" + ACTIONS + r")*"
 )
+# Reported speech describes someone else's request ("如有人要求您匯款至安全帳戶，請勿照做",
+# "假冒檢察官要求民眾匯款"); it is removed before detection like a negated action. The cue must be
+# third-person: a scam says "我是檢察官，請匯款", a warning says "自稱檢察官要求匯款".
+REPORTED_REQUEST = re.compile(
+    r"(?:如有人|若有人|如果有人|若接到|如接到|假冒|冒充|自稱|詐騙集團|詐團|歹徒|騙徒|詐騙者).{0,16}"
+    r"要求(?:你|您|民眾|被害人|受害者|長輩)?(?:立即|立刻|馬上)?" + ACTIONS
+)
+# A fact check quotes the scam it debunks. Only that quoted text is excused; a request outside the
+# quotes is still a live request, so "【網傳】請立即匯款到…" cannot launder itself as a report.
+QUOTED_SPAN = re.compile(r"[「『“\"][^」』”\"]{1,120}[」』”\"]")
 SECRET_WORDS = re.compile(r"(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)", re.I)
 REQUEST_VERBS = re.compile(r"(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
 CREDENTIAL_PHISHING = re.compile(r"(帳戶|帳號|會員).{0,12}(驗證|登入|解鎖).{0,20}(輸入|填寫).{0,6}(資料|個資)")
@@ -174,6 +191,20 @@ PATTERNS = {
     "offers_reward": re.compile(r"(中獎|獎金|保證獲利|高報酬|穩賺|免費領|紅利|抽中)"),
     "requests_remote_control": re.compile(r"(遠端控制|遠端軟體|遠端協助|螢幕分享|控制碼)"),
 }
+FINANCIAL_PROMISE = re.compile(r"(保證獲利|高報酬|穩賺|零風險|老師帶單|投資群組|內線消息|翻倍獲利)")
+ACCOUNT_THREAT = re.compile(r"((帳戶|帳號|會員).{0,12}(異常|凍結|停用|停權|鎖定|被盜)|扣款失敗|交易失敗|驗證失敗)")
+CONTACT_CHANGE = re.compile(r"(換(了)?(新)?(手機)?號碼|這是我的新號碼|加(我|新的?)(LINE|line)|改用.{0,8}(聯絡|帳號))")
+ANTI_SCAM_CONTEXT = re.compile(r"(警方|警政署|165|反詐騙|反詐).{0,12}(提醒|呼籲|宣導|表示)")
+FACT_CHECK_CONTEXT = re.compile(r"(事實查核|查核結果|謠言|假消息|不實訊息|網傳|新聞報導|媒體報導|轉傳內容|有人收到)")
+DIRECT_REQUEST = re.compile(
+    r"((請|麻煩|務必|記得|幫我|需要你|立刻|立即|趕快).{0,32}"
+    r"(轉帳|匯款|付款|支付|繳費|繳納|提供|告訴|輸入|回覆|點擊|登入|安裝|下載|聯絡|回電|加入|加我)|"
+    r"(轉帳|匯款|付款|支付|繳費|繳納).{0,8}(給我|給我們|到|至|帳戶|帳號)|"
+    r"(加入.{0,8}(投資|群組)|老師帶單|私訊.{0,8}(領取|獲利)))"
+)
+CLICK_ACTION = re.compile(r"(點擊|點選|點|開啟|登入|進入|查看|上).{0,12}(\[LINK\]|\[OFFICIAL_URL\]|\[SHORT_URL\]|\[SUSPICIOUS_URL\])")
+CONTACT_ACTION = re.compile(r"(回電|聯絡|回覆|加我|加入.{0,6}(LINE|line|群組)|私訊)")
+NOTICE_CONTEXT = re.compile(r"(通知|公告|提醒|帳單|繳費單|包裹|訂單|交易紀錄)")
 IMPERSONATION = (
     ("family", re.compile(r"(我是(你的?)?(家人|兒子|女兒|孫子|孫女|媳婦|女婿)|換(了)?(新)?(手機)?號碼)")),
     ("official", re.compile(r"(我是(警察|檢察官|法官|法院|機構人員|公務員|政府)|警察局|檢察署|地檢署)")),
@@ -190,8 +221,9 @@ HAN_GAP = re.compile(
 ADVICE = {
     "high": "高風險：這則訊息有常見的詐騙特徵。不要匯款、不要提供驗證碼或密碼、不要點連結。"
             "請用你原本就知道的電話，直接問家人或官方客服。",
-    "verify": "需要核實：沒有找到明顯的詐騙特徵，但這不代表一定安全。"
-              "如果跟錢或個人資料有關，請先用原本的管道確認。",
+    "caution": "需要核實：發現可疑訊號，但證據不足以直接判定高風險。"
+               "如果跟錢或個人資料有關，請先用原本的管道確認。",
+    "low_signal": "未發現明顯風險訊號，但這不代表一定安全。遇到金錢、密碼或陌生連結仍請先確認。",
     "insufficient": "資訊不足：這則訊息的內容不夠判斷。請先不要回應，可以問家人，或把完整訊息給我再看一次。",
 }
 REASON_TEXT = {
@@ -200,7 +232,11 @@ REASON_TEXT = {
     "LINK_SHORTENER": "使用短網址，看不出真正的網站",
     "IMPERSONATION_FAMILY": "自稱家人或換了號碼", "IMPERSONATION_OFFICIAL": "自稱警察或政府機關",
     "IMPERSONATION_SUPPORT": "自稱客服或銀行", "OFFERS_REWARD": "提到中獎或保證獲利", "REMOTE_CONTROL": "要求遠端控制手機",
+    "ACTION_NEGATED": "內容是在提醒不要執行高風險行動", "FINANCIAL_PROMISE": "出現保證獲利或投資帶單話術",
+    "ACCOUNT_THREAT": "以帳戶異常或停權施壓", "CONTACT_CHANGE": "要求改用新號碼或其他帳號聯絡",
+    "ANTI_SCAM_CONTEXT": "內容屬於反詐提醒", "FACT_CHECK_CONTEXT": "內容屬於新聞、引用或事實查核",
     "CONTEXT_INSUFFICIENT": "內容太少，無法判斷", "NO_STRONG_SIGNAL": "沒有發現明顯詐騙特徵",
+    "AI_SCAM_PATTERN": "AI覆核後仍發現詐騙語意", "AI_BENIGN_CONTEXT": "AI辨識為一般通知、反詐或查核內容",
 }
 
 
@@ -232,7 +268,11 @@ def _redact_collecting_links(text: str, known_names: tuple[str, ...] = ()) -> tu
                 link, rest = split_link_text(match.group(0))
                 links.append(link)
                 # The text after the link stays visible to the later patterns and to detection.
-                return "[LINK]" + rest
+                return {
+                    "known_official": "[OFFICIAL_URL]",
+                    "shortener": "[SHORT_URL]",
+                    "suspicious": "[SUSPICIOUS_URL]",
+                }.get(classify_link(link), "[LINK]") + rest
             text = pattern.sub(collect, text)
         else:
             text = pattern.sub(replacement, text)
@@ -248,7 +288,12 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     # Detection uses a compact view so harmless spacing cannot hide phrases such as
     # "匯 款" or "驗 證 碼". The optional excerpt remains readable and unchanged.
     detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", redacted))
-    without_negation = NEGATED_ACTION.sub("", detection_text)
+    fact_check_framing = bool(FACT_CHECK_CONTEXT.search(detection_text))
+    if fact_check_framing:
+        # Quote marks sit between Han characters, so drop the quoted scam before HAN_GAP eats the marks.
+        detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", QUOTED_SPAN.sub("", redacted)))
+    action_negated = bool(NEGATED_ACTION.search(detection_text))
+    without_negation = REPORTED_REQUEST.sub("", NEGATED_ACTION.sub("", detection_text))
     facts: dict[str, Any] = {key: bool(pattern.search(without_negation)) for key, pattern in PATTERNS.items()}
     facts["requests_secret"] = bool(
         (SECRET_WORDS.search(without_negation) and REQUEST_VERBS.search(without_negation))
@@ -259,6 +304,61 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     facts["has_link"] = bool(links)
     facts["link_kind"] = classify_links(links)
     facts["impersonation"] = next((kind for kind, pattern in IMPERSONATION if pattern.search(detection_text)), "none")
+    facts["action_negated"] = action_negated
+    facts["financial_promise"] = bool(FINANCIAL_PROMISE.search(without_negation))
+    facts["account_threat"] = bool(ACCOUNT_THREAT.search(without_negation))
+    facts["contact_change"] = bool(CONTACT_CHANGE.search(without_negation))
+    organization_warning = bool(ANTI_SCAM_CONTEXT.search(detection_text))
+    direct_request = bool(
+        DIRECT_REQUEST.search(without_negation) or CLICK_ACTION.search(without_negation) or
+        CREDENTIAL_PHISHING.search(without_negation) or facts["requests_secret"]
+    )
+    if facts["financial_promise"] and not fact_check_framing:
+        direct_request = True
+    # A "165 提醒" or "網傳／事實查核" header is only a warning or report when nothing in the message
+    # still asks the reader to act: real warnings negate the action ("請勿點擊") and real fact checks
+    # quote it, and both were removed above. Letting a header override a live request let
+    # "【165反詐騙提醒】帳戶異常，請立即點擊…" and "【網傳】請立即匯款到…" through as low_signal.
+    facts["anti_scam_context"] = (organization_warning or action_negated) and not direct_request
+    facts["fact_check_context"] = fact_check_framing and not direct_request
+    facts["direct_request"] = direct_request
+    if facts["anti_scam_context"]:
+        facts["message_stance"] = "warning"
+    elif facts["fact_check_context"]:
+        facts["message_stance"] = "report"
+    elif facts["direct_request"]:
+        facts["message_stance"] = "direct_request"
+    elif NOTICE_CONTEXT.search(detection_text):
+        facts["message_stance"] = "notice"
+    else:
+        facts["message_stance"] = "general"
+    requested = []
+    if facts["asks_transfer"] and facts["direct_request"]:
+        requested.append("transfer")
+    if facts["requests_secret"] and facts["direct_request"]:
+        requested.append("share_secret")
+    if facts["has_link"] and CLICK_ACTION.search(detection_text) and facts["direct_request"]:
+        requested.append("open_link")
+    if facts["requests_remote_control"] and facts["direct_request"]:
+        requested.append("install_remote")
+    if CONTACT_ACTION.search(without_negation) and facts["direct_request"]:
+        requested.append("contact")
+    facts["requested_action"] = "none" if not requested else requested[0] if len(set(requested)) == 1 else "multiple"
+    credential_targets = []
+    if re.search(r"(\[OTP_CODE\]|驗證碼|認證碼|OTP|控制碼)", detection_text, re.I):
+        credential_targets.append("otp")
+    if re.search(r"(密碼|\[SECRET\])", detection_text):
+        credential_targets.append("password")
+    if re.search(r"(信用卡|卡號|提款卡)", detection_text):
+        credential_targets.append("card")
+    if re.search(r"(身分證|\[NATIONAL_ID\])", detection_text):
+        credential_targets.append("identity")
+    if re.search(r"(帳號|帳戶|\[BANK_ACCOUNT\])", detection_text):
+        credential_targets.append("account")
+    facts["credential_target"] = (
+        "none" if not credential_targets else credential_targets[0]
+        if len(set(credential_targets)) == 1 else "multiple"
+    )
     core = FILLER.sub("", redacted).strip()
     facts["context_sufficient"] = not VAGUE.search(core) and len(core) >= 8
     facts["source_kind"] = source_kind
@@ -319,7 +419,12 @@ def render(result: dict[str, Any]) -> str:
     lines = [ADVICE[result["risk_level"]]]
     lines += ["  · " + REASON_TEXT[code] for code in result["reason_codes"]]
     planner = result["planner"]
-    source = "Gemini" if planner["kind"] == "GEMINI_PROXY" else f"本機規則（{planner['fallback_reason']}）"
+    if planner["kind"] == "LOCAL_QWEN_PRIVACY":
+        source = "本機 Qwen 模擬雲端（隱私 packet）"
+    elif planner["kind"] == "GEMINI_PROXY":
+        source = "Gemini"
+    else:
+        source = f"本機規則（{planner['fallback_reason']}）"
     lines.append(f"  判讀來源：{source}")
     return "\n".join(lines)
 

@@ -40,7 +40,7 @@ def load_and_generate(path: Path) -> list[dict[str, Any]]:
     for seed in value["seeds"]:
         if type(seed) is not dict or set(seed) != required or seed["text"].count(seed["target"]) != 1:
             raise ValueError("every mutation seed must use the exact schema and contain its target once")
-        if len(seed["target"]) < 2 or seed["expected_level"] not in {"high", "verify", "insufficient"}:
+        if len(seed["target"]) < 2 or seed["expected_level"] not in {"high", "caution", "low_signal", "insufficient"}:
             raise ValueError("mutation target or expected level is invalid")
         for technique, separator in SEPARATORS.items():
             attack_id = f"{seed['id']}__{technique}"

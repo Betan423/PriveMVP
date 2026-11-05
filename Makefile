@@ -4,6 +4,8 @@
 PYTHON      ?= python3
 PROXY_DIR   ?= gemini-proxy
 PROXY_PORT  ?= 8000
+LOCAL_AI_URL ?= $(or $(OLLAMA_URL),http://127.0.0.1:11434)
+LOCAL_AI_MODEL ?= $(or $(OLLAMA_MODEL),qwen3.5:9b)
 PORT        ?= 8080
 PUBLIC_PORT ?= 8081
 LOCAL_PROPS := local.properties
@@ -16,6 +18,10 @@ TOKEN       ?= $(PRIVAGENT_API_TOKEN)
 AI          ?= gemini
 export GEMINI_API_KEY GEMINI_MODEL ANTHROPIC_API_KEY CLAUDE_MODEL OLLAMA_URL OLLAMA_MODEL
 AI_BACKEND  := $(if $(filter local,$(AI)),ollama,$(AI))
+# Receiver 的 AI 參數：分享照片／手機救援一律經 AI 後端（make proxy）；
+# 訊息檢查在 AI=local 時改用本機 Qwen 隱私評分器（直接連 Ollama），其餘也經 AI 後端。
+AI_FLAGS     = --planner-url http://127.0.0.1:$(PROXY_PORT) \
+	$(if $(filter local,$(AI)),--privacy-ai-url $(LOCAL_AI_URL) --privacy-ai-model $(LOCAL_AI_MODEL),--privacy-ai-url off)
 MESSAGE     ?= 我是家人，臨時換號碼，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18
 ENV         ?= 1
 DATASET     := dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json
@@ -41,7 +47,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval core-eval golden check-services ip
+        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -81,17 +87,17 @@ proxy: ## 啟動 AI 後端（127.0.0.1:8000）：make proxy AI=gemini|claude|loc
 	@case "$(AI)" in gemini|claude|local) ;; *) echo "AI 只能是 gemini、claude 或 local"; exit 1;; esac
 	$(PYTHON) $(PROXY_DIR)/official_api.py --backend $(AI_BACKEND) --host 127.0.0.1 --port $(PROXY_PORT)
 
-receiver: ## 啟動 Receiver，只接受本機連線（給 phone_sim 或 adb reverse）
-	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT)
+receiver: ## 啟動 Receiver，只接受本機連線（給 phone_sim 或 adb reverse）；AI=gemini|claude|local
+	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) $(AI_FLAGS)
 
 receiver-lan: ## 對區網開放的 Receiver，必須給存取碼：make receiver-lan TOKEN=xxx
 	@test -n "$(TOKEN)" || { echo "區網模式請設定存取碼：make receiver-lan TOKEN=xxx"; exit 1; }
 	@echo "手機 App 填：http://$$(hostname -I | awk '{print $$1}'):$(PORT)，存取碼同 TOKEN"
 	PRIVAGENT_API_TOKEN=$(TOKEN) $(PYTHON) -m receiver.server --host 0.0.0.0 --port $(PORT) \
-		--data-dir $(DATA_DIR) --planner-url http://127.0.0.1:$(PROXY_PORT)
+		--data-dir $(DATA_DIR) $(AI_FLAGS)
 
 receiver-rules: ## 不接 AI、只用規則判斷的 Receiver
-	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off
+	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off --privacy-ai-url off
 
 # ---- 對網際網路開放（反向代理 / tunnel） ----
 # 存取碼與網址寫在 local.properties（已被 .gitignore 排除），make apk 時會包進 APK。
@@ -104,7 +110,7 @@ public-token: ## 產生公開用的存取碼（已有就沿用），寫進 local
 public: public-token ## 只開放 AI 端點的 Receiver（127.0.0.1:8081，必須帶存取碼、每分鐘 30 次）
 	PRIVAGENT_API_TOKEN="$$(sed -n 's/^privagent.assistToken=//p' $(LOCAL_PROPS))" $(PYTHON) -m receiver.server \
 		--assist-only --host 127.0.0.1 --port $(PUBLIC_PORT) --data-dir $(DATA_DIR) \
-		--planner-url http://127.0.0.1:$(PROXY_PORT)
+		$(AI_FLAGS)
 
 tunnel: ## 用 Cloudflare Tunnel 把 make public 開到網際網路，會印出 https://….trycloudflare.com
 	@test -x "$(CLOUDFLARED)" || { echo "找不到 cloudflared，請先安裝：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"; exit 1; }
@@ -133,6 +139,10 @@ message-eval: ## 情境二：6,144 則訊息 + 紅隊案例的隱私、召回、
 	$(PYTHON) -m receiver.message_eval --dataset "$(DATASET)" --catalog "$(CATALOG)" \
 		--attacks "$(MESSAGE_ATTACKS)" --mutation-seeds "$(MESSAGE_MUTATION_SEEDS)" --out "$(MESSAGE_EVAL_OUT)"
 	@echo "證據檔：$(MESSAGE_EVAL_OUT)/（summary.json、message_results.csv、attack_results.csv、mutation_results.csv、failures.json、manifest.json）"
+
+privacy-score-eval: ## 情境二：遮罩後Qwen雙分數校準、保留集驗證與TS診斷
+	$(PYTHON) scripts/evaluate_privacy_score_classifier.py
+	@echo "報告：app/build/reports/privacy-score/（report.md、results.json）"
 
 # ---- 核心三情境 ----
 

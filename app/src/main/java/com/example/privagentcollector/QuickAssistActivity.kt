@@ -55,9 +55,9 @@ class QuickAssistActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(this@QuickAssistActivity).apply {
-                text = "金孫在這裡，請說要做什麼"
+                text = "PrivAgent 快速助理"
                 textSize = 20f
-                setTextColor(Color.rgb(230, 81, 0))
+                setTextColor(AppUi.PRIMARY)
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(Button(this@QuickAssistActivity).apply {
                 text = "關閉"

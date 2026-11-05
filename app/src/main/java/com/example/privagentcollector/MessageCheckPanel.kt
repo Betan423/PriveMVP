@@ -11,6 +11,7 @@ import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -31,7 +32,9 @@ class MessageCheckPanel(
     root: LinearLayout,
     private val dp: (Int) -> Int,
     /** Validated Receiver base URL from the main screen, or null if the field is invalid. */
-    private val endpoint: () -> String?
+    private val endpoint: () -> String?,
+    private val showHeader: Boolean = true,
+    private val formalStyle: Boolean = false
 ) {
     companion object {
         private const val TAG = "MessageCheckPanel"
@@ -68,24 +71,29 @@ class MessageCheckPanel(
 
     init {
         fun label(text: String, size: Float = 16f) = TextView(activity).apply {
-            this.text = text; textSize = size; setPadding(0, dp(8), 0, dp(8)); root.addView(this)
+            this.text = text; textSize = size; setTextColor(AppUi.TEXT)
+            setPadding(0, dp(8), 0, dp(8)); root.addView(this)
         }
-        label("可疑訊息檢查", 21f)
-        label("選一則通知或貼上訊息。手機會先遮蔽電話、帳號、驗證碼、網址與姓名，只把風險特徵交給電腦與雲端 AI；原文不會離開手機。")
+        if (showHeader) {
+            label("詐騙訊息檢查", 21f).let { AppUi.title(it, 21f) }
+            label("選一則通知或貼上訊息。手機會先遮蔽個資並萃取風險特徵，再交給本機 Qwen 模擬雲端判讀；不會另送未處理原文，選用摘錄時模型會看到最多 300 字的遮蔽文字。")
+                .let { AppUi.body(it) }
+        }
         autoBox = CheckBox(activity).apply {
-            text = "自動檢查新進來的通知（高風險時跳出提醒；只送特徵，不送摘錄）"
+            text = "自動檢查新進來的通知（高風險時跳出提醒；依下方選擇的判讀模式）"
             isChecked = AssistConfig.autoCheck(activity)
-            textSize = 16f
+            AppUi.checkbox(this)
             setOnCheckedChangeListener { _, checked -> setAuto(checked) }
             root.addView(this)
         }
-        autoStatus = label("", 14f)
+        autoStatus = label("", 13f).also { AppUi.body(it, 13f) }
         input = EditText(activity).apply {
             hint = "貼上要檢查的訊息"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             filters = arrayOf(InputFilter.LengthFilter(MAX_MESSAGE_CHARS))
-            minLines = 3
-            textSize = 18f
+            minLines = 4
+            gravity = android.view.Gravity.TOP
+            AppUi.field(this)
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -95,13 +103,14 @@ class MessageCheckPanel(
         root.addView(input)
         pickButton = Button(activity).apply {
             text = "從目前的通知選一則"
+            AppUi.secondary(this)
             setOnClickListener { pickNotification() }
             root.addView(this)
         }
         cloudBox = CheckBox(activity).apply {
-            text = "同意使用雲端 AI 判讀（只送遮蔽後的特徵）"
+            text = "同意使用 AI 判讀（目前由本機 Qwen 模擬雲端，只送隱私資料）"
             isChecked = AssistConfig.cloudConsent(activity)
-            textSize = 16f
+            AppUi.checkbox(this)
             // Background checks read the saved choice, so withdrawing consent takes effect at once.
             setOnCheckedChangeListener { _, _ -> saveOptions() }
             root.addView(this)
@@ -109,6 +118,7 @@ class MessageCheckPanel(
         excerptBox = CheckBox(activity).apply {
             text = "也傳送遮蔽後的訊息摘錄（可提高判讀品質，但無法保證所有姓名都被遮蔽；高風險訊息一律不送）"
             isChecked = AssistConfig.allowExcerpt(activity)
+            AppUi.checkbox(this)
             root.addView(this)
         }
         tokenInput = EditText(activity).apply {
@@ -117,16 +127,21 @@ class MessageCheckPanel(
             isSingleLine = true
             if (AssistConfig.builtIn) hint = "已內建雲端 AI 存取碼（留空即可）"
             setText(AssistConfig.prefs(activity).getString("token", "").orEmpty())
+            AppUi.field(this)
+            if (formalStyle) visibility = View.GONE
             root.addView(this)
         }
         checkButton = Button(activity).apply {
             text = "檢查這則訊息"
-            textSize = 18f
+            AppUi.primary(this)
             setOnClickListener { begin() }
             root.addView(this)
         }
-        result = label("", 20f)
-        source = label("", 14f)
+        result = label("", 19f).apply {
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 12)
+        }
+        source = label("", 13f).also { AppUi.body(it, 13f) }
         current = WeakReference(this)
         LiveMessageWatch.observe(onAutoResult)
         render()
@@ -136,8 +151,15 @@ class MessageCheckPanel(
     private fun saveOptions() =
         AssistConfig.save(activity, tokenInput.text.toString(), cloudBox.isChecked, excerptBox.isChecked)
 
+    fun refreshConnectionSettings() {
+        tokenInput.setText(AssistConfig.prefs(activity).getString("token", "").orEmpty())
+    }
+
     private fun setAuto(enabled: Boolean) {
-        if (enabled && cloudBox.isChecked && endpoint() == null) { autoBox.isChecked = false; return }
+        if (enabled && cloudBox.isChecked && endpoint() == null) {
+            autoBox.isChecked = false
+            return
+        }
         saveOptions()
         AssistConfig.setAutoCheck(activity, enabled)
         if (enabled && android.os.Build.VERSION.SDK_INT >= 33 &&
@@ -149,8 +171,8 @@ class MessageCheckPanel(
 
     fun renderAuto() {
         val format = SimpleDateFormat("HH:mm", Locale.TAIWAN)
-        val levelText = mapOf(MessageGuard.Level.HIGH to "高風險", MessageGuard.Level.VERIFY to "需要核實",
-            MessageGuard.Level.INSUFFICIENT to "資訊不足")
+        val levelText = mapOf(MessageGuard.Level.HIGH to "高風險", MessageGuard.Level.CAUTION to "需要核實",
+            MessageGuard.Level.LOW_SIGNAL to "未發現明顯風險", MessageGuard.Level.INSUFFICIENT to "資訊不足")
         autoStatus.text = when {
             !autoBox.isChecked -> ""
             !ResearchNotificationListener.connected() -> "請先在系統設定開啟本 App 的通知存取，才能自動檢查"
@@ -169,6 +191,8 @@ class MessageCheckPanel(
         result.text = resultText
         result.setTextColor(resultColor)
         source.text = sourceText
+        result.visibility = if (resultText.isEmpty()) View.GONE else View.VISIBLE
+        source.visibility = if (sourceText.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun toast(text: String) = Toast.makeText(activity, text, Toast.LENGTH_LONG).show()
@@ -218,7 +242,7 @@ class MessageCheckPanel(
                     try {
                         if (!cloud) { send("", packet, false); return@ui }
                         AlertDialog.Builder(activity).setTitle("確認要傳送的內容")
-                            .setMessage("只會把下列內容傳到 $baseUrl，再交給雲端 AI：\n\n${MessageGuard.describe(packet)}")
+                            .setMessage("只會把下列隱私處理後資料傳到 $baseUrl；目前由本機 Qwen 模擬未來雲端 AI：\n\n${MessageGuard.describe(packet)}")
                             .setPositiveButton("傳送") { _, _ -> send(baseUrl, packet, true) }
                             .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false) }
                             .setOnCancelListener {
@@ -239,7 +263,7 @@ class MessageCheckPanel(
     private fun send(baseUrl: String, packet: MessageGuard.Packet, cloud: Boolean) {
         preparing = false
         sending = true
-        publish(if (cloud) "已送出，等待判讀（約 5–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
+        publish(if (cloud) "已送出隱私 packet，等待判讀（約 2–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
         val token = tokenInput.text.toString().trim().ifBlank { AssistConfig.token(activity) }
         Thread({
             try {
@@ -250,7 +274,8 @@ class MessageCheckPanel(
                 }
                 val color = when (outcome.level) {
                     MessageGuard.Level.HIGH -> Color.rgb(183, 28, 28)
-                    MessageGuard.Level.VERIFY -> Color.rgb(230, 81, 0)
+                    MessageGuard.Level.CAUTION -> Color.rgb(230, 81, 0)
+                    MessageGuard.Level.LOW_SIGNAL -> Color.rgb(30, 117, 109)
                     MessageGuard.Level.INSUFFICIENT -> Color.DKGRAY
                 }
                 publish(text, color, "判讀來源：${outcome.source}", done = true)

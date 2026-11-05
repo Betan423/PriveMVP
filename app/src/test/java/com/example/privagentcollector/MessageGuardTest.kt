@@ -37,7 +37,7 @@ class MessageGuardTest {
         for (leak in listOf("王小明", "0912", "482913", "example", "https")) {
             assertFalse(leak, packet.json.contains(leak))
         }
-        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.check_message_packet.v3\""))
+        assertTrue(packet.json.startsWith("{\"schema\":\"privagent.check_message_packet.v4\""))
         assertTrue(packet.json.contains("\"link_kind\":\"unknown\""))
         assertTrue(packet.json.contains("\"source_kind\":\"notification\""))
         assertTrue(Regex("^TASK_[A-Z]{8}$").matches(packet.alias))
@@ -93,7 +93,7 @@ class MessageGuardTest {
         val phone = MessageGuard.redact("電話 0912\u200b345678")
         val url = MessageGuard.redact("網址 https://exa\u2060mple.invalid/login")
         assertFalse(phone.contains("0912"))
-        assertTrue(phone.contains("[PHONE]"))
+        assertTrue(phone.contains("[PHONE_NUMBER]"))
         assertFalse(url.contains("example"))
         assertTrue(url.contains("[LINK]"))
     }
@@ -128,7 +128,7 @@ class MessageGuardTest {
     @Test fun officialLinkNoLongerEscalatesButSuspiciousLinkIsDecisive() {
         val official = MessageGuard.assess(MessageGuard.extractFacts(
             "您的包裹已到，請上 https://www.post.gov.tw/track 查詢，今天內未處理將退回", "pasted"))
-        assertEquals(MessageGuard.Level.VERIFY, official.level)
+        assertEquals(MessageGuard.Level.CAUTION, official.level)
         assertTrue(official.reasonCodes.contains("HAS_LINK"))
         val phishing = MessageGuard.assess(MessageGuard.extractFacts(
             "您的包裹已到，請點 https://taiwanpost-verify.xyz/login 補填收件資料", "pasted"))
