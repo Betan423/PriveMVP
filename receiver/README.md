@@ -230,6 +230,8 @@ make message-eval
 變形攻擊失敗 0/140、Agent 邊界攻擊失敗 0/3。
 這些數字只證明規則對有限合成模板與明列攻擊的覆蓋，不能宣稱真實世界準確率。
 
+`make inference-attack` 從攻擊者視角量同一批訊息：只拿封包的 20 個特徵欄位（不含原文與摘錄），以手機環境切 4 折建查表後推回模板家族、原文與手機身分，並輸出 `receiver/data/inference_attack/`（`inference_attack.json` 總表、`classes.csv` 每種特徵組合的 k、家族數與原文數、`manifest.json`）。只看封包：風險等級 100%、家族 61.5%、原文 16.7%、最小 k=64、無手機被唯一指認；封包＋摘錄：家族 100%、原文 56.3%。詳見 [docs/CHECK_MESSAGE_INFERENCE_ATTACK.md](../docs/CHECK_MESSAGE_INFERENCE_ATTACK.md)。
+
 ## 分享照片與手機救援（`POST /api/v1/assist/plan`）
 
 分享照片與手機救援仍使用 `privagent.planner_packet.v1` 外框、存取碼與 16 KiB 上限；`intent` 決定欄位：
