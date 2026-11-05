@@ -3,13 +3,13 @@
 Android 9（API 28）以上的隱私優先生活助理。compileSdk / targetSdk 36。
 產品首頁採正式亮色雙情境介面，只呈現「安心傳送照片」與「詐騙訊息檢查」。過去的原始研究蒐集與手機救援模組仍保留於程式庫供研究驗證，但不再顯示或啟動於產品 UI。
 
-兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。情境二目前統一採隱私路徑：手機先萃取特徵並遮蔽直接識別值，再把 privacy packet 送給電腦端本機Qwen。本機模型只用來免費模擬未來雲端API，測試輸入邊界與雲端版相同，不會收到額外的未遮蔽原文。
+兩個核心情境為分享照片（SHARE_PHOTO）與可疑訊息檢查（CHECK_MESSAGE）。情境二採隱私路徑：手機先萃取特徵並遮蔽直接識別值，只把 privacy packet 送到電腦端，再交給可自選的 AI：Gemini API、Claude API，或本機 Qwen（`AI=local`，資料不出電腦，也用來免費模擬雲端 API）。不論哪一種，AI 都不會收到未遮蔽的原文。
 
 ## Repository 導覽
 
 - `app/`：Android Collector 與即時傳輸服務。
 - `receiver/`：Python 標準函式庫實作的電腦接收端。
-- `gemini-proxy/`：Gemini 網頁版 HTTP proxy（可疑訊息判讀的雲端 AI），Cookie 只放本機設定檔。
+- `gemini-proxy/`：AI 後端（`official_api.py`），可選 Gemini API、Claude API 或本機 Ollama；API Key 只放 `.env` 或環境變數。
 - `docs/REALTIME_PIPELINE.md`：即時管線、契約與模組化分工基線。
 - `docs/competition/`：決賽與後續開發整合文件。
 - `dataset/`：競賽資料集、生成與驗證程式。
@@ -23,9 +23,9 @@ GitHub 推送與遠端已有 commit 時的安全整合方式見 [docs/GITHUB_UPL
 Linux／macOS 在專案根目錄執行 `make` 會列出所有指令。常用流程：
 
 ```bash
-make setup                 # 建 gemini-proxy/.venv；再依 gemini-proxy/README.md 放入自己的 Cookie
+make setup                 # 建立 .env，填入 GEMINI_API_KEY 或 ANTHROPIC_API_KEY（見 gemini-proxy/README.md）
 make test                  # Receiver、proxy、Android 全部測試
-make proxy                 # 終端機 A：Gemini proxy（127.0.0.1:8000）
+make proxy                 # 終端機 A：AI 後端（127.0.0.1:8000）；AI=claude 或 AI=local 可切換
 make receiver              # 終端機 B：Receiver（127.0.0.1:8080）
 make demo                  # 終端機 C：模擬手機送一則訊息；make demo MESSAGE="..."
 make demo-dataset ENV=1    # 送資料集第 1 個環境的 32 則訊息
@@ -41,7 +41,7 @@ Android 建置需要 JDK 17 與 Android SDK（`JAVA_HOME`、`ANDROID_HOME`）。
 只開放 `/health` 和 `/api/v1/assist/*`，蒐集到的資料、儀表板都不會出去；必須帶存取碼，所有人合計每分鐘最多 30 次（`--rate-limit` 可調）。
 
 ```bash
-make proxy                 # 終端機 1：Gemini proxy（只聽 127.0.0.1）
+make proxy                 # 終端機 1：AI 後端（只聽 127.0.0.1；AI=gemini|claude|local）
 make public                # 終端機 2：公開模式 Receiver（127.0.0.1:8081），第一次會產生存取碼
 make tunnel                # 終端機 3：Cloudflare Tunnel，印出 https://xxxx.trycloudflare.com
 make public-url URL=https://xxxx.trycloudflare.com
@@ -107,12 +107,11 @@ App 首頁「情境 02｜詐騙訊息檢查」：
 - 背景通知沒有逐筆預覽，因此即使啟用AI也只送特徵packet，不附摘錄；敏感App與排除清單仍一律不處理。
 - 只有「高風險」會跳出「可疑訊息提醒」通知，其餘結果只列在 App 的「最近自動檢查」（最近 10 則，只存在記憶體）。
 
-電腦端（先啟動Ollama；Receiver預設8080，本機Qwen會接收與未來雲端相同的隱私packet）：
+電腦端（Receiver 預設 8080，AI 後端 8000；`AI=` 可選 gemini、claude、local）：
 
 ```bash
-ollama serve
-# 另一終端第一次執行：ollama pull qwen3.5:9b
-cd ~/Documents/PriveMVP && python3 -m receiver.server --host 0.0.0.0 --port 8080
+make proxy AI=gemini       # 或 AI=claude；AI=local 需先 ollama serve 並 ollama pull qwen3.5:9b
+make receiver-lan AI=gemini TOKEN=xxx   # 同一個 AI=；AI=local 時訊息檢查改用本機 Qwen
 ```
 
 手機連線：USB 用 `adb reverse tcp:8080 tcp:8080` 並在 App 填 `http://127.0.0.1:8080`；同一 Wi-Fi 填 `http://<電腦區網 IP>:8080`。區網展示請先設定 `PRIVAGENT_API_TOKEN` 環境變數再啟動 Receiver，並在 App 填入相同存取碼。

@@ -79,6 +79,7 @@ OFFICIAL_DOMAINS = (
     "hncb.com.tw", "chb.com.tw", "megabank.com.tw", "tbb.com.tw", "ctbcbank.com", "cathaybk.com.tw",
     "esunbank.com.tw", "esunbank.com", "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
     "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw",
+    "bankchb.com", "taipeifubon.com.tw", "o-bank.com",
 )
 # A URL shortener hides the destination, so it can never count as official.
 SHORTENER_DOMAINS = (
@@ -89,11 +90,18 @@ SHORTENER_DOMAINS = (
 # TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
 HIGH_RISK_TLDS = frozenset({"tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click"})
 # Distinctive official tokens appearing inside a NON-official host mean a lookalike domain
-# ("165-gov.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
+# ("gov-tw.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
 LOOKALIKE_TOKENS = (
-    "govtw", "165", "bank", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
+    "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
     "hncb", "sinopac", "firstbank", "tcbbank", "scsb", "fubon",
 )
+# Generic words count only as a whole dot/hyphen segment ("165-gov.com", "my-bank-login.com"):
+# as substrings they would flag citibank.com.tw or shop1650.com.tw.
+LOOKALIKE_SEGMENTS = ("165", "bank")
+# zh-TW messages often run a URL straight into text ("請至https://www.post.gov.tw查詢"). A complete
+# ASCII host followed by CJK text ends the link there; a host that is itself non-ASCII stays whole.
+CJK_TEXT = re.compile(r"[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]")
+ASCII_HOST = re.compile(r"(?i)[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?::[0-9]+)?")
 # Fixed, host-free wording for why a link got its grade; shown in the on-device preview and the demo.
 LINK_REASON_TEXT = {
     "none": "沒有連結", "official": "政府、學校或主要銀行的官方網域", "unknown": "無法辨識的一般網域",
@@ -128,7 +136,8 @@ def classify_link_detail(link: str) -> tuple[str, str]:
     if any(label.startswith("xn--") for label in labels):
         return "suspicious", "punycode"  # Punycode outside the whitelist.
     compact = host.replace(".", "").replace("-", "")
-    if any(token in compact for token in LOOKALIKE_TOKENS):
+    segments = re.split(r"[.-]", host)
+    if any(token in compact for token in LOOKALIKE_TOKENS) or any(s in LOOKALIKE_SEGMENTS for s in segments):
         return "suspicious", "lookalike"  # Official brand token inside a non-official host.
     if labels and labels[-1] in HIGH_RISK_TLDS:
         return "suspicious", "high_risk_tld"
@@ -219,6 +228,18 @@ REASON_TEXT = {
 }
 
 
+def split_link_text(match: str) -> tuple[str, str]:
+    """Splits "https://host.tw查詢進度" into the link and the text glued after it."""
+    cjk = CJK_TEXT.search(match)
+    if cjk is None:
+        return match, ""
+    head = match[:cjk.start()].rstrip(",.;:!?)'\"")  # Sentence punctuation belongs to the text.
+    host = re.split(r"[/?#]", re.sub(r"(?i)^https?://", "", head), 1)[0]
+    if ASCII_HOST.fullmatch(host):
+        return head, match[len(head):]
+    return match, ""
+
+
 def _redact_collecting_links(text: str, known_names: tuple[str, ...] = ()) -> tuple[str, list[str]]:
     """Redacts like redact() and also returns what the two link patterns matched, so link
     classification sees exactly the links that became [LINK] (never an email already redacted)."""
@@ -232,13 +253,14 @@ def _redact_collecting_links(text: str, known_names: tuple[str, ...] = ()) -> tu
     for pattern, replacement in REDACTIONS:
         if pattern is URL_PATTERN or pattern is BARE_DOMAIN_PATTERN:
             def collect(match: re.Match[str]) -> str:
-                value = match.group(0)
-                links.append(value)
+                link, rest = split_link_text(match.group(0))
+                links.append(link)
+                # The text after the link stays visible to the later patterns and to detection.
                 return {
                     "known_official": "[OFFICIAL_URL]",
                     "shortener": "[SHORT_URL]",
                     "suspicious": "[SUSPICIOUS_URL]",
-                }.get(classify_link(value), "[LINK]")
+                }.get(classify_link(link), "[LINK]") + rest
             text = pattern.sub(collect, text)
         else:
             text = pattern.sub(replacement, text)
