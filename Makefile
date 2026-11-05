@@ -1,19 +1,27 @@
 # PrivAgent 常用指令。`make` 或 `make help` 列出全部目標。
-# 可覆寫的變數：make receiver-lan TOKEN=abc123、make proxy PROXY_DIR=~/gemini-proxymeow
+# 可覆寫的變數：make receiver-lan TOKEN=abc123、make proxy PROXY_PORT=9000
 
 PYTHON      ?= python3
 PROXY_DIR   ?= gemini-proxy
-PROXY_PY    := $(PROXY_DIR)/.venv/bin/python
-PROXY_VENV  := $(PROXY_DIR)/.venv/.installed
 PROXY_PORT  ?= 8000
-LOCAL_AI_URL ?= http://127.0.0.1:11434
-LOCAL_AI_MODEL ?= qwen3.5:9b
+LOCAL_AI_URL ?= $(or $(OLLAMA_URL),http://127.0.0.1:11434)
+LOCAL_AI_MODEL ?= $(or $(OLLAMA_MODEL),qwen3.5:9b)
 PORT        ?= 8080
 PUBLIC_PORT ?= 8081
 LOCAL_PROPS := local.properties
 CLOUDFLARED ?= $(shell command -v cloudflared 2>/dev/null || echo $(HOME)/.cache/privagent-toolchain/cloudflared)
 DATA_DIR    ?= receiver/data
 TOKEN       ?= $(PRIVAGENT_API_TOKEN)
+# AI 後端：gemini（Gemini API）、claude（Claude API）、local（本機 Ollama，不需 Key、資料不出電腦）
+# Key 放環境變數，或專案根目錄的 .env（已被 git 忽略）；也可在 .env 寫 AI=claude 當預設
+-include .env
+AI          ?= gemini
+export GEMINI_API_KEY GEMINI_MODEL ANTHROPIC_API_KEY CLAUDE_MODEL OLLAMA_URL OLLAMA_MODEL
+AI_BACKEND  := $(if $(filter local,$(AI)),ollama,$(AI))
+# Receiver 的 AI 參數：分享照片／手機救援一律經 AI 後端（make proxy）；
+# 訊息檢查在 AI=local 時改用本機 Qwen 隱私評分器（直接連 Ollama），其餘也經 AI 後端。
+AI_FLAGS     = --planner-url http://127.0.0.1:$(PROXY_PORT) \
+	$(if $(filter local,$(AI)),--privacy-ai-url $(LOCAL_AI_URL) --privacy-ai-model $(LOCAL_AI_MODEL),--privacy-ai-url off)
 MESSAGE     ?= 我是家人，臨時換號碼，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18
 ENV         ?= 1
 DATASET     := dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json
@@ -46,14 +54,10 @@ help: ## 列出所有指令
 
 # ---- 安裝 ----
 
-setup: $(PROXY_VENV) ## 建立 Gemini proxy 的 venv 並安裝套件
-	@test -f $(PROXY_DIR)/config.json -o -f $(PROXY_DIR)/cookies.txt || \
-		echo "提醒：還沒有 $(PROXY_DIR)/config.json 或 cookies.txt，請依 $(PROXY_DIR)/README.md 填入自己的 Gemini Cookie"
-
-$(PROXY_VENV): $(PROXY_DIR)/requirements.txt
-	$(PYTHON) -m venv $(PROXY_DIR)/.venv
-	$(PROXY_PY) -m pip install -q -r $(PROXY_DIR)/requirements.txt
-	@touch $@
+setup: ## 建立 .env（填 AI 的 API Key）；Python 端只用標準函式庫，不需安裝套件
+	@test -f .env || { cp .env.example .env; echo "已建立 .env，請填入 GEMINI_API_KEY（https://aistudio.google.com/apikey）"; }
+	@grep -qE '^(GEMINI_API_KEY|ANTHROPIC_API_KEY)=.' .env && echo ".env 已有 API Key" || \
+		echo "提醒：.env 還沒有 GEMINI_API_KEY 或 ANTHROPIC_API_KEY（用 AI=local 則不需要）"
 
 # ---- 測試 ----
 
@@ -62,8 +66,8 @@ test: test-receiver test-proxy test-android ## 跑全部自動化測試
 test-receiver: ## Receiver 單元測試（只需 Python 標準函式庫）
 	$(PYTHON) -m unittest discover -s receiver/tests
 
-test-proxy: $(PROXY_VENV) ## Gemini proxy 單元測試（不需 Cookie）
-	cd $(PROXY_DIR) && .venv/bin/python -m unittest test_api
+test-proxy: ## AI 後端單元測試（不需 API Key、不連網）
+	cd $(PROXY_DIR) && $(PYTHON) -m unittest test_official_api
 
 test-android: ## Android 建置、lint 與單元測試
 	$(GRADLE) assembleDebug lintDebug testDebugUnitTest
@@ -79,21 +83,18 @@ install: apk ## 用 adb 安裝 APK 到已連線的手機
 
 # ---- 啟動服務（各開一個終端機） ----
 
-proxy: $(PROXY_VENV) ## 啟動 Gemini proxy（127.0.0.1:8000）
-	@test -f $(PROXY_DIR)/config.json -o -f $(PROXY_DIR)/cookies.txt || \
-		{ echo "缺少 $(PROXY_DIR)/config.json 或 cookies.txt，請依 $(PROXY_DIR)/README.md 設定 Cookie"; exit 1; }
-	cd $(PROXY_DIR) && .venv/bin/python -m uvicorn api:app --host 127.0.0.1 --port $(PROXY_PORT)
+proxy: ## 啟動 AI 後端（127.0.0.1:8000）：make proxy AI=gemini|claude|local
+	@case "$(AI)" in gemini|claude|local) ;; *) echo "AI 只能是 gemini、claude 或 local"; exit 1;; esac
+	$(PYTHON) $(PROXY_DIR)/official_api.py --backend $(AI_BACKEND) --host 127.0.0.1 --port $(PROXY_PORT)
 
-receiver: ## 啟動 Receiver，只接受本機連線（給 phone_sim 或 adb reverse）
-	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off \
-		--privacy-ai-url $(LOCAL_AI_URL) --privacy-ai-model $(LOCAL_AI_MODEL)
+receiver: ## 啟動 Receiver，只接受本機連線（給 phone_sim 或 adb reverse）；AI=gemini|claude|local
+	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) $(AI_FLAGS)
 
 receiver-lan: ## 對區網開放的 Receiver，必須給存取碼：make receiver-lan TOKEN=xxx
 	@test -n "$(TOKEN)" || { echo "區網模式請設定存取碼：make receiver-lan TOKEN=xxx"; exit 1; }
 	@echo "手機 App 填：http://$$(hostname -I | awk '{print $$1}'):$(PORT)，存取碼同 TOKEN"
 	PRIVAGENT_API_TOKEN=$(TOKEN) $(PYTHON) -m receiver.server --host 0.0.0.0 --port $(PORT) \
-		--data-dir $(DATA_DIR) --planner-url off \
-		--privacy-ai-url $(LOCAL_AI_URL) --privacy-ai-model $(LOCAL_AI_MODEL)
+		--data-dir $(DATA_DIR) $(AI_FLAGS)
 
 receiver-rules: ## 不接 AI、只用規則判斷的 Receiver
 	$(PYTHON) -m receiver.server --port $(PORT) --data-dir $(DATA_DIR) --planner-url off --privacy-ai-url off
@@ -109,7 +110,7 @@ public-token: ## 產生公開用的存取碼（已有就沿用），寫進 local
 public: public-token ## 只開放 AI 端點的 Receiver（127.0.0.1:8081，必須帶存取碼、每分鐘 30 次）
 	PRIVAGENT_API_TOKEN="$$(sed -n 's/^privagent.assistToken=//p' $(LOCAL_PROPS))" $(PYTHON) -m receiver.server \
 		--assist-only --host 127.0.0.1 --port $(PUBLIC_PORT) --data-dir $(DATA_DIR) \
-		--planner-url http://127.0.0.1:$(PROXY_PORT) --privacy-ai-url off
+		$(AI_FLAGS)
 
 tunnel: ## 用 Cloudflare Tunnel 把 make public 開到網際網路，會印出 https://….trycloudflare.com
 	@test -x "$(CLOUDFLARED)" || { echo "找不到 cloudflared，請先安裝：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"; exit 1; }

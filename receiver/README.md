@@ -127,9 +127,9 @@ App正式使用 `/api/v1/assist/check-message`。Receiver預設把隱私packet�
 Receiver：POST /api/v1/assist/check-message
   → 嚴格契約驗證（未知欄位、缺雲端同意一律拒絕）
   → 禁用值掃描：命中即 422，不呼叫 AI
-  → 本機規則分級 + 本機Qwen（預設，以相同packet模擬雲端）或Gemini proxy
-  → Qwen只能回傳0–4的risk／benign雙分數與意圖白名單；程式證據閘門才決定是否升級HIGH
-  → Gemini回應只能是白名單sop_id／risk_level／reason_codes；契約外輸出一律改用規則結果
+  → 本機規則分級 + 可自選的 AI（make 的 AI=gemini|claude|local）
+  → AI=local：本機Qwen只能回傳0–4的risk／benign雙分數與意圖白名單；程式證據閘門才決定是否升級HIGH
+  → AI=gemini／claude：經 AI 後端（/generate，每次無狀態），回應只能是白名單sop_id／risk_level／reason_codes；契約外輸出一律改用規則結果
   → AI 只能提高、不能降低規則判定的風險
   → 稽核寫入 data/assist_audit.ndjson（只有決策、reason codes 與 packet SHA-256，不含摘錄）
 手機：依 reason_codes 套固定文字顯示，不直接顯示 AI 句子
@@ -139,14 +139,15 @@ Receiver：POST /api/v1/assist/check-message
 
 ### 啟動 demo
 
-Receiver 預設8080，本機Ollama預設11434。
+Receiver 預設 8080，AI 後端 8000，本機 Ollama 預設 11434。
 
 ```bash
-# 1. 本機Qwen模擬未來雲端API，只會收到隱私packet
-ollama serve
-ollama pull qwen3.5:9b
-# 2. Receiver；只提供隱私packet端點
-python -m receiver.server --port 8080 --planner-url off --privacy-ai-url http://127.0.0.1:11434
+# 1. AI 後端（在專案根目錄；AI=gemini|claude|local，Key 讀 .env）
+make proxy AI=gemini
+# 2. Receiver（同樣的 AI=，會自動帶對應參數）
+make receiver AI=gemini
+# AI=local 時，訊息檢查改由本機 Qwen 評分（另一終端先 ollama serve，第一次 ollama pull qwen3.5:9b）：
+make receiver AI=local
 # 3. 手機端模擬器：單則訊息或 v5 資料集某個環境的 32 則訊息
 python -m receiver.phone_sim --message "我是家人，臨時換號碼，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18" --show-packet
 # 加 --allow-excerpt 才會附上遮蔽後摘錄
@@ -154,7 +155,7 @@ python -m receiver.phone_sim --message "王小明您好，明天下午三點集�
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --environment 1
 # 遮蔽檢查：全部 6,144 則訊息組成的 packet 是否仍含禁用值（不送出）
 python -m receiver.phone_sim --dataset "dataset/AI金孫_合成原始資料集_v5_廣度擴充/dataset/source_raw_v5.json" --scan-only
-# 完整情境二證據：6,144 則合成訊息、22 個紅隊案例、140 個變形攻擊、3 個 Agent 邊界攻擊
+# 完整情境二證據：6,144 則合成訊息、27 個紅隊案例、140 個變形攻擊、3 個 Agent 邊界攻擊
 make message-eval
 ```
 
@@ -210,7 +211,7 @@ make message-eval
 
 - 遮蔽與特徵抽取是關鍵字／正規表示式規則；對 v5 訊息模板的分級結果只代表規則與模板一致，不是獨立評測。
 - 正規表示式無法辨識所有人名（只處理稱呼前的姓名與手機已知的聯絡人姓名），所以摘錄預設不送。
-- 本機Qwen只模擬雲端輸入與輸出契約，不代表未來實際雲端模型會有相同準確率；失效時自動改用手機／Receiver規則。
+- AI 可選 Gemini API、Claude API 或本機 Qwen（Ollama）；本機Qwen只模擬雲端輸入與輸出契約，不代表雲端模型會有相同準確率。Key 錯誤、配額用完、拒答、逾時或 Ollama 沒開，都會自動改用手機／Receiver規則。
 - AI 可提高風險等級，因此可能比規則更保守（例如把只有物流連結的訊息判成高風險）。
 
 ### 情境二評測證據

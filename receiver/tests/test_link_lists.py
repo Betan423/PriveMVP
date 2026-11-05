@@ -30,6 +30,7 @@ class LinkListParityTests(unittest.TestCase):
         self.assertEqual(list(phone_sim.SHORTENER_DOMAINS), kotlin_list("shortenerDomains"))
         self.assertEqual(sorted(phone_sim.HIGH_RISK_TLDS), sorted(kotlin_list("highRiskTlds")))
         self.assertEqual(list(phone_sim.LOOKALIKE_TOKENS), kotlin_list("lookalikeTokens"))
+        self.assertEqual(list(phone_sim.LOOKALIKE_SEGMENTS), kotlin_list("lookalikeSegments"))
         self.assertEqual(list(phone_sim.LINK_KINDS), kotlin_list("linkKinds"))
 
     def test_lists_are_lowercase_registrable_domains(self) -> None:
@@ -41,6 +42,23 @@ class LinkListParityTests(unittest.TestCase):
             self.assertEqual(classify_link_detail("https://www." + entry + "/x"), ("known_official", "official"), entry)
         for entry in phone_sim.SHORTENER_DOMAINS:
             self.assertEqual(classify_link_detail("https://" + entry + "/abc")[0], "shortener", entry)
+
+
+class GluedTextTests(unittest.TestCase):
+    """A URL followed directly by Chinese text must not swallow that text."""
+
+    def test_official_link_glued_to_text_stays_official(self) -> None:
+        facts = extract_facts("您的包裹已到，請至https://www.post.gov.tw查詢配送進度", "pasted")
+        self.assertEqual("known_official", facts["link_kind"])
+
+    def test_text_after_link_is_still_detected(self) -> None:
+        facts = extract_facts("請至https://secure.top立即匯款到帳戶", "pasted")
+        self.assertTrue(facts["asks_transfer"])
+        self.assertEqual("suspicious", facts["link_kind"])
+
+    def test_non_ascii_host_is_not_split(self) -> None:
+        self.assertEqual(("https://台灣郵政.com/x", ""), phone_sim.split_link_text("https://台灣郵政.com/x"))
+        self.assertEqual("suspicious", extract_facts("請點 https://台灣郵政.com/x", "pasted")["link_kind"])
 
 
 class LinkReasonTests(unittest.TestCase):
@@ -62,6 +80,11 @@ class LinkReasonTests(unittest.TestCase):
             "https://taiwanpost-verify.xyz/login": ("suspicious", "high_risk_tld"),
             "https://evil.example:8443/x": ("unknown", "unknown"),
             "www.gov.tw": ("known_official", "official"),
+            # Real bank domains, and brand-free hosts that merely contain "bank" or "165".
+            "https://www.bankchb.com/": ("known_official", "official"),
+            "https://www.taipeifubon.com.tw/": ("known_official", "official"),
+            "https://www.citibank.com.tw/": ("unknown", "unknown"),
+            "https://shop1650.com.tw/": ("unknown", "unknown"),
         }
         for link, expected in cases.items():
             self.assertEqual(expected, classify_link_detail(link), link)

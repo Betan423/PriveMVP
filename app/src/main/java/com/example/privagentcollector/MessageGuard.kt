@@ -74,7 +74,8 @@ object MessageGuard {
         "gov.tw", "edu.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw",
         "hncb.com.tw", "chb.com.tw", "megabank.com.tw", "tbb.com.tw", "ctbcbank.com", "cathaybk.com.tw",
         "esunbank.com.tw", "esunbank.com", "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
-        "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw"
+        "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw",
+        "bankchb.com", "taipeifubon.com.tw", "o-bank.com"
     )
     // A URL shortener hides the destination, so it can never count as official.
     private val shortenerDomains = listOf(
@@ -85,11 +86,18 @@ object MessageGuard {
     // TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
     private val highRiskTlds = setOf("tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click")
     // Distinctive official tokens appearing inside a NON-official host mean a lookalike domain
-    // ("165-gov.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
+    // ("gov-tw.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
     private val lookalikeTokens = listOf(
-        "govtw", "165", "bank", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
+        "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
         "hncb", "sinopac", "firstbank", "tcbbank", "scsb", "fubon"
     )
+    // Generic words count only as a whole dot/hyphen segment ("165-gov.com", "my-bank-login.com"):
+    // as substrings they would flag citibank.com.tw or shop1650.com.tw.
+    private val lookalikeSegments = listOf("165", "bank")
+    // zh-TW messages often run a URL straight into text ("請至https://www.post.gov.tw查詢"). A complete
+    // ASCII host followed by CJK text ends the link there; a host that is itself non-ASCII stays whole.
+    private val cjkText = Regex("""[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]""")
+    private val asciiHost = Regex("""(?i)[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?::[0-9]+)?""")
     // Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised.
     // Do not use Java's inline (?U) flag here: Android's ICU regex engine rejects it. Character
     // classes are explicit where Unicode letters/numbers matter so these patterns behave on both.
@@ -116,9 +124,19 @@ object MessageGuard {
     // Negation covers only the action right after it and never crosses 請 or punctuation.
     private const val ACTIONS = "(?:付款|轉帳|匯款|支付|繳費|告訴|提供|分享|輸入|給)"
     private val negatedAction = Regex(
-        "(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?" +
+        // "不會要求民眾提供" is how anti-scam notices phrase it; keep in sync with phone_sim.py.
+        "(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別|" +
+            "(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?" +
             ACTIONS + "(?:(?:或|和|、|及)" + ACTIONS + ")*"
     )
+    // Reported speech describes someone else's request ("如有人要求您匯款至安全帳戶，請勿照做"); it is
+    // removed before detection like a negated action. Keep in sync with phone_sim.py.
+    private val reportedRequest = Regex(
+        "(?:如有人|若有人|如果有人|若接到|如接到|假冒|冒充|自稱|詐騙集團|詐團|歹徒|騙徒|詐騙者).{0,16}" +
+            "要求(?:你|您|民眾|被害人|受害者|長輩)?(?:立即|立刻|馬上)?" + ACTIONS
+    )
+    // A fact check quotes the scam it debunks; only the quoted text is excused, not the whole message.
+    private val quotedSpan = Regex("[「『“\"][^」』”\"]{1,120}[」』”\"]")
     private val secretWords = Regex("(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)")
     private val requestVerbs = Regex("(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
     // Explicit [^\n] matches Python's dot behaviour and avoids another platform-specific flag.
@@ -192,19 +210,30 @@ object MessageGuard {
         for ((pattern, replacement) in redactions) {
             result = if (pattern === urlPattern || pattern === bareDomainPattern) {
                 pattern.replace(result) { m ->
-                    links += m.value
-                    when (classifyLink(m.value)) {
+                    val (link, rest) = splitLinkText(m.value)
+                    links += link
+                    // The text after the link stays visible to the later patterns and to detection.
+                    when (classifyLink(link)) {
                         "known_official" -> "[OFFICIAL_URL]"
                         "shortener" -> "[SHORT_URL]"
                         "suspicious" -> "[SUSPICIOUS_URL]"
                         else -> "[LINK]"
-                    }
+                    } + rest
                 }
             } else {
                 pattern.replace(result, replacement)
             }
         }
         return salutation.replace(result, "[NAME]") to links
+    }
+
+    /** Splits "https://host.tw查詢進度" into the link and the text glued after it. */
+    internal fun splitLinkText(match: String): Pair<String, String> {
+        val cjk = cjkText.find(match) ?: return match to ""
+        // Sentence punctuation belongs to the text.
+        val head = match.substring(0, cjk.range.first).trimEnd(',', '.', ';', ':', '!', '?', ')', '\'', '"')
+        val host = head.replaceFirst(Regex("(?i)^https?://"), "").split('/', '?', '#').first()
+        return if (asciiHost.matches(host)) head to match.substring(head.length) else match to ""
     }
 
     fun redact(text: String, knownNames: Collection<String> = emptyList()): String =
@@ -225,7 +254,8 @@ object MessageGuard {
         if (officialDomains.any { host == it || host.endsWith(".$it") }) return "known_official"
         if (labels.any { it.startsWith("xn--") }) return "suspicious" // Punycode outside the whitelist.
         val compact = host.replace(".", "").replace("-", "")
-        if (lookalikeTokens.any { compact.contains(it) }) return "suspicious" // Lookalike of an official domain.
+        val segments = host.split('.', '-')
+        if (lookalikeTokens.any { compact.contains(it) } || segments.any { it in lookalikeSegments }) return "suspicious" // Lookalike of an official domain.
         if (labels.isNotEmpty() && labels.last() in highRiskTlds) return "suspicious"
         if (shortenerDomains.any { host == it || host.endsWith(".$it") }) return "shortener"
         return "unknown"
@@ -239,21 +269,25 @@ object MessageGuard {
         val (redacted, links) = redactCollectingLinks(original)
         // Feature matching uses a compact view so spacing cannot hide "匯 款" or "驗 證 碼".
         // The redacted excerpt keeps its original readable spacing.
-        val detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        var detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        val factCheckFraming = factCheckContext.containsMatchIn(detectionText)
+        // Quote marks sit between Han characters, so drop the quoted scam before hanGap eats the marks.
+        if (factCheckFraming) detectionText = detectionWhitespace.replace(hanGap.replace(quotedSpan.replace(redacted, ""), ""), "")
         val actionWasNegated = negatedAction.containsMatchIn(detectionText)
-        val withoutNegation = negatedAction.replace(detectionText, "")
+        val withoutNegation = reportedRequest.replace(negatedAction.replace(detectionText, ""), "")
         val core = filler.replace(redacted, "").trim()
         val asksForTransfer = asksTransfer.containsMatchIn(withoutNegation)
         val asksForSecret = (secretWords.containsMatchIn(withoutNegation) && requestVerbs.containsMatchIn(withoutNegation)) ||
             credentialPhishing.containsMatchIn(detectionText)
         val promise = financialPromise.containsMatchIn(withoutNegation)
         val organizationWarning = antiScamContext.containsMatchIn(detectionText)
-        val factCheck = factCheckContext.containsMatchIn(detectionText)
-        var isDirect = directRequest.containsMatchIn(withoutNegation) || clickAction.containsMatchIn(withoutNegation) ||
-            credentialPhishing.containsMatchIn(withoutNegation) || asksForSecret
-        if (promise && !factCheck) isDirect = true
-        val antiScam = organizationWarning || (actionWasNegated && !isDirect)
-        isDirect = isDirect && !organizationWarning && !factCheck
+        val isDirect = directRequest.containsMatchIn(withoutNegation) || clickAction.containsMatchIn(withoutNegation) ||
+            credentialPhishing.containsMatchIn(withoutNegation) || asksForSecret || (promise && !factCheckFraming)
+        // A "165 提醒" or "網傳／事實查核" header is only a warning or report when nothing still asks the
+        // reader to act (negated, reported and quoted phrases were removed above); otherwise
+        // "【165反詐騙提醒】…請立即點擊…" and "【網傳】請立即匯款到…" passed as low_signal.
+        val antiScam = (organizationWarning || actionWasNegated) && !isDirect
+        val factCheck = factCheckFraming && !isDirect
         val stance = when {
             antiScam -> "warning"
             factCheck -> "report"
@@ -321,12 +355,13 @@ object MessageGuard {
         val impersonating = f.impersonation != "none"
         if (impersonating) codes += "IMPERSONATION_" + f.impersonation.uppercase()
         // A link to a whitelisted official domain no longer escalates on its own; a suspicious domain
-        // (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message.
+        // (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message, and no
+        // warning or news framing cancels it: a live phishing link is dangerous to tap whatever surrounds it.
         val riskyLink = f.hasLink && f.linkKind != "known_official"
         val safeContext = f.antiScamContext || f.factCheckContext || f.messageStance in setOf("warning", "report")
         val direct = f.directRequest && !safeContext
         if ((direct && (f.asksTransfer || f.requestsSecret || f.requestsRemoteControl)) ||
-            (f.linkKind == "suspicious" && !safeContext) ||
+            f.linkKind == "suspicious" ||
             (direct && riskyLink && (f.urgency || f.offersReward || impersonating)) ||
             (direct && impersonating && (f.urgency || f.contactChange)) ||
             (direct && f.financialPromise)) return Assessment(Level.HIGH, codes)

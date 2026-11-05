@@ -176,6 +176,46 @@
       "expected_facts": {"link_kind": "suspicious"},
       "redaction_contains": ["[SUSPICIOUS_URL]"],
       "redaction_excludes": ["verify.cc"]
+    },
+    {
+      "id": "warning_header_with_live_request_is_high",
+      "text": "【165反詐騙提醒】您的帳戶異常，請立即匯款至安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18 以保護存款。",
+      "expected_level": "high",
+      "expected_facts": {"anti_scam_context": false, "direct_request": true, "message_stance": "direct_request"},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "fact_check_header_with_live_request_is_high",
+      "text": "【網傳】您的帳戶異常，請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18。",
+      "expected_level": "high",
+      "expected_facts": {"fact_check_context": false, "direct_request": true, "message_stance": "direct_request"},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "forwarded_family_request_is_high",
+      "text": "轉傳內容：媽，我換號碼了，急用錢，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18。",
+      "expected_level": "high",
+      "expected_facts": {"impersonation": "family", "direct_request": true},
+      "redaction_contains": ["[BANK_ACCOUNT]"],
+      "redaction_excludes": ["SYN_ACCOUNT"]
+    },
+    {
+      "id": "fact_check_quoting_scam_stays_low",
+      "text": "事實查核：網傳「您的帳戶異常，請立即匯款到安全帳戶」是假消息，請勿轉傳。",
+      "expected_level": "low_signal",
+      "expected_facts": {"fact_check_context": true, "direct_request": false, "message_stance": "report"},
+      "redaction_contains": [],
+      "redaction_excludes": []
+    },
+    {
+      "id": "warning_with_reported_request_stays_low",
+      "text": "165反詐騙提醒：如有人要求您匯款至安全帳戶，請勿照做並撥打165查證。",
+      "expected_level": "low_signal",
+      "expected_facts": {"anti_scam_context": true, "direct_request": false, "message_stance": "warning"},
+      "redaction_contains": [],
+      "redaction_excludes": []
     }
   ]
 }
