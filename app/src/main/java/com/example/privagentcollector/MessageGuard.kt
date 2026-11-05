@@ -64,7 +64,8 @@ object MessageGuard {
         "gov.tw", "edu.tw", "bot.com.tw", "landbank.com.tw", "tcb-bank.com.tw", "firstbank.com.tw",
         "hncb.com.tw", "chb.com.tw", "megabank.com.tw", "tbb.com.tw", "ctbcbank.com", "cathaybk.com.tw",
         "esunbank.com.tw", "esunbank.com", "taishinbank.com.tw", "sinopac.com", "scsb.com.tw", "fubon.com",
-        "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw"
+        "linebank.com.tw", "ubot.com.tw", "skbank.com.tw", "yuantabank.com.tw", "kgibank.com.tw",
+        "bankchb.com", "taipeifubon.com.tw", "o-bank.com"
     )
     // A URL shortener hides the destination, so it can never count as official.
     private val shortenerDomains = listOf(
@@ -75,11 +76,18 @@ object MessageGuard {
     // TLDs with near-zero legitimate use in zh-TW messages but heavy phishing abuse.
     private val highRiskTlds = setOf("tk", "ml", "ga", "cf", "gq", "xyz", "top", "icu", "vip", "buzz", "cfd", "sbs", "click")
     // Distinctive official tokens appearing inside a NON-official host mean a lookalike domain
-    // ("165-gov.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
+    // ("gov-tw.com", "esunbank-tw.net"). Hosts are compared with dots and hyphens removed.
     private val lookalikeTokens = listOf(
-        "govtw", "165", "bank", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
+        "govtw", "ctbcbank", "cathaybk", "esunbank", "megabank", "taishinbank", "landbank",
         "hncb", "sinopac", "firstbank", "tcbbank", "scsb", "fubon"
     )
+    // Generic words count only as a whole dot/hyphen segment ("165-gov.com", "my-bank-login.com"):
+    // as substrings they would flag citibank.com.tw or shop1650.com.tw.
+    private val lookalikeSegments = listOf("165", "bank")
+    // zh-TW messages often run a URL straight into text ("請至https://www.post.gov.tw查詢"). A complete
+    // ASCII host followed by CJK text ends the link there; a host that is itself non-ASCII stays whole.
+    private val cjkText = Regex("""[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]""")
+    private val asciiHost = Regex("""(?i)[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?::[0-9]+)?""")
     // Order matters: specific identifiers first, generic number runs last. Input is NFKC-normalised.
     // Do not use Java's inline (?U) flag here: Android's ICU regex engine rejects it. Character
     // classes are explicit where Unicode letters/numbers matter so these patterns behave on both.
@@ -163,12 +171,26 @@ object MessageGuard {
         val links = mutableListOf<String>()
         for ((pattern, replacement) in redactions) {
             result = if (pattern === urlPattern || pattern === bareDomainPattern) {
-                pattern.replace(result) { m -> links += m.value; "[LINK]" }
+                pattern.replace(result) { m ->
+                    val (link, rest) = splitLinkText(m.value)
+                    links += link
+                    // The text after the link stays visible to the later patterns and to detection.
+                    "[LINK]" + rest
+                }
             } else {
                 pattern.replace(result, replacement)
             }
         }
         return salutation.replace(result, "[NAME]") to links
+    }
+
+    /** Splits "https://host.tw查詢進度" into the link and the text glued after it. */
+    internal fun splitLinkText(match: String): Pair<String, String> {
+        val cjk = cjkText.find(match) ?: return match to ""
+        // Sentence punctuation belongs to the text.
+        val head = match.substring(0, cjk.range.first).trimEnd(',', '.', ';', ':', '!', '?', ')', '\'', '"')
+        val host = head.replaceFirst(Regex("(?i)^https?://"), "").split('/', '?', '#').first()
+        return if (asciiHost.matches(host)) head to match.substring(head.length) else match to ""
     }
 
     fun redact(text: String, knownNames: Collection<String> = emptyList()): String =
@@ -189,7 +211,8 @@ object MessageGuard {
         if (officialDomains.any { host == it || host.endsWith(".$it") }) return "known_official"
         if (labels.any { it.startsWith("xn--") }) return "suspicious" // Punycode outside the whitelist.
         val compact = host.replace(".", "").replace("-", "")
-        if (lookalikeTokens.any { compact.contains(it) }) return "suspicious" // Lookalike of an official domain.
+        val segments = host.split('.', '-')
+        if (lookalikeTokens.any { compact.contains(it) } || segments.any { it in lookalikeSegments }) return "suspicious" // Lookalike of an official domain.
         if (labels.isNotEmpty() && labels.last() in highRiskTlds) return "suspicious"
         if (shortenerDomains.any { host == it || host.endsWith(".$it") }) return "shortener"
         return "unknown"
