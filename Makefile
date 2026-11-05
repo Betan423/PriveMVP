@@ -32,6 +32,7 @@ APK         := app/build/outputs/apk/debug/app-debug.apk
 EVAL_OUT    ?= receiver/data/core_eval
 INFERENCE_OUT ?= receiver/data/inference_attack
 MESSAGE_EVAL_OUT ?= receiver/data/message_eval
+SHARE_COMPARE_OUT ?= receiver/data/share_photo_compare
 
 # 有本機離線工具鏈（JDK 17 + SDK + Gradle 快取）就用它；否則沿用系統的 JAVA_HOME / ANDROID_HOME。
 TOOLCHAIN   ?= $(HOME)/.cache/privagent-toolchain
@@ -48,7 +49,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval inference-attack golden check-services ip
+        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval inference-attack share-compare golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -154,6 +155,10 @@ core-eval: ## 1,728 筆核心任務跑政策引擎並輸出證據檔（隱私指
 inference-attack: ## 情境二：攻擊者只看封包特徵，能推回多少模板家族、原文與手機（等價類 k）
 	$(PYTHON) -m receiver.inference_attack_eval --dataset "$(DATASET)" --catalog "$(CATALOG)" --out $(INFERENCE_OUT)
 	@echo "證據檔：$(INFERENCE_OUT)/（inference_attack.json、classes.csv、manifest.json）"
+
+share-compare: ## 情境一：576 筆分享照片任務的 Raw／Masked／Task-Minimal 三版本比較
+	$(PYTHON) -m receiver.share_photo_compare --dataset "$(DATASET)" --out $(SHARE_COMPARE_OUT)
+	@echo "證據檔：$(SHARE_COMPARE_OUT)/（comparison.json、pairs.jsonl、manifest.json）"
 
 golden: ## 改了 receiver/core_tasks.py 或 phone_sim.py 後，重新產生 Android 的對照測試資料
 	$(PYTHON) -m receiver.gen_core_golden --dataset "$(DATASET)"
