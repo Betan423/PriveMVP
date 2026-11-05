@@ -172,6 +172,16 @@ NEGATED_ACTION = re.compile(
     r"(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?"
     + ACTIONS + r"(?:(?:或|和|、|及)" + ACTIONS + r")*"
 )
+# Reported speech describes someone else's request ("如有人要求您匯款至安全帳戶，請勿照做",
+# "假冒檢察官要求民眾匯款"); it is removed before detection like a negated action. The cue must be
+# third-person: a scam says "我是檢察官，請匯款", a warning says "自稱檢察官要求匯款".
+REPORTED_REQUEST = re.compile(
+    r"(?:如有人|若有人|如果有人|若接到|如接到|假冒|冒充|自稱|詐騙集團|詐團|歹徒|騙徒|詐騙者).{0,16}"
+    r"要求(?:你|您|民眾|被害人|受害者|長輩)?(?:立即|立刻|馬上)?" + ACTIONS
+)
+# A fact check quotes the scam it debunks. Only that quoted text is excused; a request outside the
+# quotes is still a live request, so "【網傳】請立即匯款到…" cannot launder itself as a report.
+QUOTED_SPAN = re.compile(r"[「『“\"][^」』”\"]{1,120}[」』”\"]")
 SECRET_WORDS = re.compile(r"(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)", re.I)
 REQUEST_VERBS = re.compile(r"(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
 CREDENTIAL_PHISHING = re.compile(r"(帳戶|帳號|會員).{0,12}(驗證|登入|解鎖).{0,20}(輸入|填寫).{0,6}(資料|個資)")
@@ -278,8 +288,12 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     # Detection uses a compact view so harmless spacing cannot hide phrases such as
     # "匯 款" or "驗 證 碼". The optional excerpt remains readable and unchanged.
     detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", redacted))
+    fact_check_framing = bool(FACT_CHECK_CONTEXT.search(detection_text))
+    if fact_check_framing:
+        # Quote marks sit between Han characters, so drop the quoted scam before HAN_GAP eats the marks.
+        detection_text = re.sub(r"\s+", "", HAN_GAP.sub("", QUOTED_SPAN.sub("", redacted)))
     action_negated = bool(NEGATED_ACTION.search(detection_text))
-    without_negation = NEGATED_ACTION.sub("", detection_text)
+    without_negation = REPORTED_REQUEST.sub("", NEGATED_ACTION.sub("", detection_text))
     facts: dict[str, Any] = {key: bool(pattern.search(without_negation)) for key, pattern in PATTERNS.items()}
     facts["requests_secret"] = bool(
         (SECRET_WORDS.search(without_negation) and REQUEST_VERBS.search(without_negation))
@@ -295,18 +309,19 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     facts["account_threat"] = bool(ACCOUNT_THREAT.search(without_negation))
     facts["contact_change"] = bool(CONTACT_CHANGE.search(without_negation))
     organization_warning = bool(ANTI_SCAM_CONTEXT.search(detection_text))
-    facts["fact_check_context"] = bool(FACT_CHECK_CONTEXT.search(detection_text))
     direct_request = bool(
         DIRECT_REQUEST.search(without_negation) or CLICK_ACTION.search(without_negation) or
         CREDENTIAL_PHISHING.search(without_negation) or facts["requests_secret"]
     )
-    if facts["financial_promise"] and not facts["fact_check_context"]:
+    if facts["financial_promise"] and not fact_check_framing:
         direct_request = True
-    # A "165 提醒" header is only a warning when nothing in the message still asks the reader to act:
-    # real warnings negate the action ("請勿點擊"), and negated phrases were removed above. Letting the
-    # header override a live request let "【165反詐騙提醒】帳戶異常，請立即點擊…" through as low_signal.
+    # A "165 提醒" or "網傳／事實查核" header is only a warning or report when nothing in the message
+    # still asks the reader to act: real warnings negate the action ("請勿點擊") and real fact checks
+    # quote it, and both were removed above. Letting a header override a live request let
+    # "【165反詐騙提醒】帳戶異常，請立即點擊…" and "【網傳】請立即匯款到…" through as low_signal.
     facts["anti_scam_context"] = (organization_warning or action_negated) and not direct_request
-    facts["direct_request"] = direct_request and not facts["fact_check_context"]
+    facts["fact_check_context"] = fact_check_framing and not direct_request
+    facts["direct_request"] = direct_request
     if facts["anti_scam_context"]:
         facts["message_stance"] = "warning"
     elif facts["fact_check_context"]:

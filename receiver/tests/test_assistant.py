@@ -494,8 +494,29 @@ class AssistHttpTests(unittest.TestCase):
 class AntiScamFramingTests(unittest.TestCase):
     """A warning or news header must not launder a message that still asks the reader to act."""
 
-    SCAMS = ('【165反詐騙提醒】您的帳戶異常，請立即點擊 https://secure-login.top 驗證身分', '警方提醒您帳戶異常，請立即回覆驗證碼以免停用', '反詐宣導：請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18 以保護存款', '【網傳】您的帳戶異常，請立即點擊 https://secure-login.top 驗證身分')
-    WARNINGS = ('165反詐騙提醒：請勿點擊不明連結，也不要提供驗證碼給任何人', '警方呼籲：接到自稱檢察官要求匯款的電話，請立即掛斷並撥打165查證', '165提醒您，近期假冒物流簡訊增加，切勿點擊連結', '反詐騙宣導：政府機關不會要求民眾提供網銀密碼', '銀行絕不會請您提供密碼或驗證碼', '事實查核：網傳「點擊連結領取補助」的訊息是假消息，請勿轉傳')
+    SCAMS = (
+        '【165反詐騙提醒】您的帳戶異常，請立即點擊 https://secure-login.top 驗證身分',
+        '警方提醒您帳戶異常，請立即回覆驗證碼以免停用',
+        '反詐宣導：請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18 以保護存款',
+        '【網傳】您的帳戶異常，請立即點擊 https://secure-login.top 驗證身分',
+        # Fact-check or news framing with an unquoted live request (no link, so the link rule cannot save it).
+        '【網傳】您的帳戶異常，請立即匯款到安全帳戶 SYN_ACCOUNT_PRIVATE_0001_18',
+        '新聞報導：您的健保卡異常，請立即回覆驗證碼以免停用',
+        '轉傳內容：媽，我換號碼了，急用錢，請轉帳到 SYN_ACCOUNT_PRIVATE_0001_18',
+        '165提醒：請勿點擊不明連結。另外，您的帳戶異常，請立即匯款至安全帳戶',
+    )
+    WARNINGS = (
+        '165反詐騙提醒：請勿點擊不明連結，也不要提供驗證碼給任何人',
+        '警方呼籲：接到自稱檢察官要求匯款的電話，請立即掛斷並撥打165查證',
+        '165提醒您，近期假冒物流簡訊增加，切勿點擊連結',
+        '反詐騙宣導：政府機關不會要求民眾提供網銀密碼',
+        '銀行絕不會請您提供密碼或驗證碼',
+        '事實查核：網傳「點擊連結領取補助」的訊息是假消息，請勿轉傳',
+        # Reported speech and quoted scams describe someone else's request.
+        '165反詐騙提醒：如有人要求您匯款至安全帳戶，請勿照做並撥打165',
+        '新聞報導：詐騙集團假冒檢察官要求民眾匯款至安全帳戶，請勿聽信',
+        '事實查核：網傳「您的帳戶異常，請立即匯款到安全帳戶」是假消息',
+    )
 
     def test_scam_behind_warning_header_stays_high(self) -> None:
         for text in self.SCAMS:

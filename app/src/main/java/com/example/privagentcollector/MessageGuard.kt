@@ -129,6 +129,14 @@ object MessageGuard {
             "(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?" +
             ACTIONS + "(?:(?:或|和|、|及)" + ACTIONS + ")*"
     )
+    // Reported speech describes someone else's request ("如有人要求您匯款至安全帳戶，請勿照做"); it is
+    // removed before detection like a negated action. Keep in sync with phone_sim.py.
+    private val reportedRequest = Regex(
+        "(?:如有人|若有人|如果有人|若接到|如接到|假冒|冒充|自稱|詐騙集團|詐團|歹徒|騙徒|詐騙者).{0,16}" +
+            "要求(?:你|您|民眾|被害人|受害者|長輩)?(?:立即|立刻|馬上)?" + ACTIONS
+    )
+    // A fact check quotes the scam it debunks; only the quoted text is excused, not the whole message.
+    private val quotedSpan = Regex("[「『“\"][^」』”\"]{1,120}[」』”\"]")
     private val secretWords = Regex("(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)")
     private val requestVerbs = Regex("(提供|告訴|寄給|給我|傳給|回傳|輸入|回覆|念給|唸給)")
     // Explicit [^\n] matches Python's dot behaviour and avoids another platform-specific flag.
@@ -261,23 +269,25 @@ object MessageGuard {
         val (redacted, links) = redactCollectingLinks(original)
         // Feature matching uses a compact view so spacing cannot hide "匯 款" or "驗 證 碼".
         // The redacted excerpt keeps its original readable spacing.
-        val detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        var detectionText = detectionWhitespace.replace(hanGap.replace(redacted, ""), "")
+        val factCheckFraming = factCheckContext.containsMatchIn(detectionText)
+        // Quote marks sit between Han characters, so drop the quoted scam before hanGap eats the marks.
+        if (factCheckFraming) detectionText = detectionWhitespace.replace(hanGap.replace(quotedSpan.replace(redacted, ""), ""), "")
         val actionWasNegated = negatedAction.containsMatchIn(detectionText)
-        val withoutNegation = negatedAction.replace(detectionText, "")
+        val withoutNegation = reportedRequest.replace(negatedAction.replace(detectionText, ""), "")
         val core = filler.replace(redacted, "").trim()
         val asksForTransfer = asksTransfer.containsMatchIn(withoutNegation)
         val asksForSecret = (secretWords.containsMatchIn(withoutNegation) && requestVerbs.containsMatchIn(withoutNegation)) ||
             credentialPhishing.containsMatchIn(detectionText)
         val promise = financialPromise.containsMatchIn(withoutNegation)
         val organizationWarning = antiScamContext.containsMatchIn(detectionText)
-        val factCheck = factCheckContext.containsMatchIn(detectionText)
-        var isDirect = directRequest.containsMatchIn(withoutNegation) || clickAction.containsMatchIn(withoutNegation) ||
-            credentialPhishing.containsMatchIn(withoutNegation) || asksForSecret
-        if (promise && !factCheck) isDirect = true
-        // A "165 提醒" header is only a warning when nothing still asks the reader to act (negated
-        // phrases were removed above); otherwise "【165反詐騙提醒】…請立即點擊…" passed as low_signal.
+        val isDirect = directRequest.containsMatchIn(withoutNegation) || clickAction.containsMatchIn(withoutNegation) ||
+            credentialPhishing.containsMatchIn(withoutNegation) || asksForSecret || (promise && !factCheckFraming)
+        // A "165 提醒" or "網傳／事實查核" header is only a warning or report when nothing still asks the
+        // reader to act (negated, reported and quoted phrases were removed above); otherwise
+        // "【165反詐騙提醒】…請立即點擊…" and "【網傳】請立即匯款到…" passed as low_signal.
         val antiScam = (organizationWarning || actionWasNegated) && !isDirect
-        isDirect = isDirect && !factCheck
+        val factCheck = factCheckFraming && !isDirect
         val stance = when {
             antiScam -> "warning"
             factCheck -> "report"
