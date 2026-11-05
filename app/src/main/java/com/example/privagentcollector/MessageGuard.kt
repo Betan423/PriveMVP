@@ -124,7 +124,9 @@ object MessageGuard {
     // Negation covers only the action right after it and never crosses 請 or punctuation.
     private const val ACTIONS = "(?:付款|轉帳|匯款|支付|繳費|告訴|提供|分享|輸入|給)"
     private val negatedAction = Regex(
-        "(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?" +
+        // "不會要求民眾提供" is how anti-scam notices phrase it; keep in sync with phone_sim.py.
+        "(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別|" +
+            "(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?" +
             ACTIONS + "(?:(?:或|和|、|及)" + ACTIONS + ")*"
     )
     private val secretWords = Regex("(?i)(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)")
@@ -272,8 +274,10 @@ object MessageGuard {
         var isDirect = directRequest.containsMatchIn(withoutNegation) || clickAction.containsMatchIn(withoutNegation) ||
             credentialPhishing.containsMatchIn(withoutNegation) || asksForSecret
         if (promise && !factCheck) isDirect = true
-        val antiScam = organizationWarning || (actionWasNegated && !isDirect)
-        isDirect = isDirect && !organizationWarning && !factCheck
+        // A "165 提醒" header is only a warning when nothing still asks the reader to act (negated
+        // phrases were removed above); otherwise "【165反詐騙提醒】…請立即點擊…" passed as low_signal.
+        val antiScam = (organizationWarning || actionWasNegated) && !isDirect
+        isDirect = isDirect && !factCheck
         val stance = when {
             antiScam -> "warning"
             factCheck -> "report"
@@ -341,12 +345,13 @@ object MessageGuard {
         val impersonating = f.impersonation != "none"
         if (impersonating) codes += "IMPERSONATION_" + f.impersonation.uppercase()
         // A link to a whitelisted official domain no longer escalates on its own; a suspicious domain
-        // (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message.
+        // (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message, and no
+        // warning or news framing cancels it: a live phishing link is dangerous to tap whatever surrounds it.
         val riskyLink = f.hasLink && f.linkKind != "known_official"
         val safeContext = f.antiScamContext || f.factCheckContext || f.messageStance in setOf("warning", "report")
         val direct = f.directRequest && !safeContext
         if ((direct && (f.asksTransfer || f.requestsSecret || f.requestsRemoteControl)) ||
-            (f.linkKind == "suspicious" && !safeContext) ||
+            f.linkKind == "suspicious" ||
             (direct && riskyLink && (f.urgency || f.offersReward || impersonating)) ||
             (direct && impersonating && (f.urgency || f.contactChange)) ||
             (direct && f.financialPromise)) return Assessment(Level.HIGH, codes)

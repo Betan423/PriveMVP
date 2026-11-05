@@ -167,7 +167,9 @@ def classify_links(links: list[str]) -> str:
 # after it (plus "或／和" chains) and never crosses 請 or punctuation, so "不要猶豫請轉帳" stays risky.
 ACTIONS = r"(?:付款|轉帳|匯款|支付|繳費|告訴|提供|分享|輸入|給)"
 NEGATED_ACTION = re.compile(
-    r"(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?"
+    # "不會要求民眾提供" is how anti-scam notices phrase it; keep in sync with MessageGuard.kt.
+    r"(?:不需要|不需|不用|無需|毋需|不必|請勿|不要|切勿|勿|別|"
+    r"(?:絕不會|不會|從不|不得)(?:要求|請)?(?:你|您|民眾|大眾|客戶|用戶)?)(?:再|去|隨便|任意|向?(?:任何人|他人|別人))?"
     + ACTIONS + r"(?:(?:或|和|、|及)" + ACTIONS + r")*"
 )
 SECRET_WORDS = re.compile(r"(驗證碼|認證碼|OTP|密碼|控制碼|提款卡|信用卡號|卡號|身分證)", re.I)
@@ -300,8 +302,11 @@ def extract_facts(original: str, source_kind: str) -> dict[str, Any]:
     )
     if facts["financial_promise"] and not facts["fact_check_context"]:
         direct_request = True
-    facts["anti_scam_context"] = organization_warning or (action_negated and not direct_request)
-    facts["direct_request"] = direct_request and not organization_warning and not facts["fact_check_context"]
+    # A "165 提醒" header is only a warning when nothing in the message still asks the reader to act:
+    # real warnings negate the action ("請勿點擊"), and negated phrases were removed above. Letting the
+    # header override a live request let "【165反詐騙提醒】帳戶異常，請立即點擊…" through as low_signal.
+    facts["anti_scam_context"] = (organization_warning or action_negated) and not direct_request
+    facts["direct_request"] = direct_request and not facts["fact_check_context"]
     if facts["anti_scam_context"]:
         facts["message_stance"] = "warning"
     elif facts["fact_check_context"]:

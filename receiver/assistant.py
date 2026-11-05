@@ -262,10 +262,11 @@ def rule_assessment(facts: dict[str, Any]) -> tuple[str, list[str]]:
     safe_context = facts["anti_scam_context"] or facts["fact_check_context"] or facts["message_stance"] in {"warning", "report"}
     direct = facts["direct_request"] and not safe_context
     # A link to a whitelisted official domain no longer escalates on its own; a suspicious domain
-    # (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message.
+    # (lookalike, IP literal, punycode or high-risk TLD) is decisive even in a calm message, and no
+    # warning or news framing cancels it: a live phishing link is dangerous to tap whatever surrounds it.
     risky_link = facts["has_link"] and link_kind != "known_official"
     if ((direct and (facts["asks_transfer"] or facts["requests_secret"] or facts["requests_remote_control"])) or
-            (link_kind == "suspicious" and not safe_context) or
+            link_kind == "suspicious" or
             (direct and risky_link and (facts["urgency"] or facts["offers_reward"] or impersonating)) or
             (direct and impersonating and (facts["urgency"] or facts["contact_change"])) or
             (direct and facts["financial_promise"])):
