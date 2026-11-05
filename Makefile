@@ -30,6 +30,7 @@ MESSAGE_ATTACKS := receiver/eval/check_message_attacks.json
 MESSAGE_MUTATION_SEEDS := receiver/eval/check_message_mutation_seeds.json
 APK         := app/build/outputs/apk/debug/app-debug.apk
 EVAL_OUT    ?= receiver/data/core_eval
+INFERENCE_OUT ?= receiver/data/inference_attack
 MESSAGE_EVAL_OUT ?= receiver/data/message_eval
 
 # 有本機離線工具鏈（JDK 17 + SDK + Gradle 快取）就用它；否則沿用系統的 JAVA_HOME / ANDROID_HOME。
@@ -47,7 +48,7 @@ GRADLE := $(GRADLE_ENV) bash ./gradlew $(GRADLE_FLAGS)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup test test-receiver test-proxy test-android apk install \
-        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval golden check-services ip
+        proxy receiver receiver-lan receiver-rules public-token public public-url tunnel demo demo-dataset scan message-eval privacy-score-eval core-eval inference-attack golden check-services ip
 
 help: ## 列出所有指令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -149,6 +150,10 @@ privacy-score-eval: ## 情境二：遮罩後Qwen雙分數校準、保留集驗�
 core-eval: ## 1,728 筆核心任務跑政策引擎並輸出證據檔（隱私指標任一不為 0 會失敗）
 	$(PYTHON) -m receiver.core_eval --dataset "$(DATASET)" --out $(EVAL_OUT)
 	@echo "證據檔：$(EVAL_OUT)/（summary.json、derived_tasks.csv、packets.jsonl、failures.json、manifest.json）"
+
+inference-attack: ## 情境二：攻擊者只看封包特徵，能推回多少模板家族、原文與手機（等價類 k）
+	$(PYTHON) -m receiver.inference_attack_eval --dataset "$(DATASET)" --catalog "$(CATALOG)" --out $(INFERENCE_OUT)
+	@echo "證據檔：$(INFERENCE_OUT)/（inference_attack.json、classes.csv、manifest.json）"
 
 golden: ## 改了 receiver/core_tasks.py 或 phone_sim.py 後，重新產生 Android 的對照測試資料
 	$(PYTHON) -m receiver.gen_core_golden --dataset "$(DATASET)"

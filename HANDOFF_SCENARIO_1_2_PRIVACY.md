@@ -97,7 +97,7 @@
 
 | 紅隊成功路徑／官方攻擊面 | 對本專案的意義 | 已採取的防守 | 後續仍應補強 |
 |---|---|---|---|
-| 敏感布林 flag 可被推回 | `asks_transfer=true`、`impersonation=family` 本身仍會透露訊息語意 | 只有明確同意才送；無穩定身分；每次新 alias/nonce；高風險不送摘錄 | 增加「嚴格模式」，只送 `risk_band` 或 SOP；逐欄證明 AI 是否真的需要該特徵 |
+| 敏感布林 flag 可被推回 | `asks_transfer=true`、`impersonation=family` 本身仍會透露訊息語意 | 只有明確同意才送；無穩定身分；每次新 alias/nonce；高風險不送摘錄；`make inference-attack` 量出原文不遮蔽時 192 支手機全被指認，只看封包則可推回風險等級 100%、家族 61.5%、原文 16.7%，最小 k=64，無手機被唯一指認（[docs/CHECK_MESSAGE_INFERENCE_ATTACK.md](docs/CHECK_MESSAGE_INFERENCE_ATTACK.md)） | 增加「嚴格模式」，只送 `risk_band` 或 SOP；逐欄證明 AI 是否真的需要該特徵 |
 | PET 實作錯誤 | 規格正確不代表 Android、Python、proxy 實作一致 | 精確 schema、跨語言 golden tests、Android instrumentation、可執行 policy hash | property-based fuzzing、依賴鎖定、正式 code review、負向整合測試 |
 | endpoint／oracle 回推明文 | 不同錯誤、延遲、封包大小可能透露內部判斷 | token、rate limit、固定回應 schema、禁止 AI 自由文字、Receiver 二次掃描 | 對外統一錯誤、內外日誌分離、固定大小封包或關閉摘錄、request signing |
 | 原始碼白箱檢查 | 不可依賴「攻擊者不知道封包格式」 | 按公開規格仍不包含原文、姓名、電話、帳號；安全依賴資料最小化與白名單 | 建立 threat-model 測試清單，定期由未參與開發者重做紅隊 |
