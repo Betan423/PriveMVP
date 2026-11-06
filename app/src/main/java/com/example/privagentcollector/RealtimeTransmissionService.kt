@@ -295,7 +295,7 @@ class RealtimeTransmissionService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_collector)
+            .setSmallIcon(R.drawable.ic_favorite)
             .setContentTitle("AI 金孫即時資料管線")
             .setContentText(content)
             .setContentIntent(openIntent)

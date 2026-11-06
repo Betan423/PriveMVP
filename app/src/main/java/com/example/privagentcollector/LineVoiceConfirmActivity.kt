@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -47,37 +46,45 @@ class LineVoiceConfirmActivity : Activity(), TextToSpeech.OnInitListener, Recogn
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding((24 * dp).toInt(), (20 * dp).toInt(), (24 * dp).toInt(), (20 * dp).toInt())
+            background = AppUi.rounded(this@LineVoiceConfirmActivity, AppUi.SURFACE, 26)
             addView(TextView(this@LineVoiceConfirmActivity).apply {
                 text = getString(R.string.line_voice_confirm_screen)
                 textSize = 25f
-                setTextColor(Color.BLACK)
+                setTextColor(AppUi.TEXT)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setLineSpacing(0f, 1.3f)
                 gravity = Gravity.CENTER
             })
             voiceStatus = TextView(this@LineVoiceConfirmActivity).apply {
                 text = "正在準備語音辨識…"
                 textSize = 18f
-                setTextColor(Color.DKGRAY)
+                setTextColor(AppUi.NEUTRAL)
                 gravity = Gravity.CENTER
                 setPadding(0, (14 * dp).toInt(), 0, (14 * dp).toInt())
             }
             addView(voiceStatus)
             retryButton = Button(this@LineVoiceConfirmActivity).apply {
                 text = "再試一次語音辨識"
+                AppUi.secondary(this)
                 textSize = 19f
                 visibility = Button.GONE
                 setOnClickListener { startRecognizer() }
             }
-            addView(retryButton)
+            fun buttonParams() = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = (10 * dp).toInt() }
+            addView(retryButton, buttonParams())
             addView(Button(this@LineVoiceConfirmActivity).apply {
                 text = "確認傳送"
+                AppUi.primary(this, AppUi.ACCENT)
                 textSize = 21f
                 setOnClickListener { confirmAndResume("已手動確認，正在由 LINE 傳送") }
-            })
+            }, buttonParams())
             addView(Button(this@LineVoiceConfirmActivity).apply {
                 text = "取消，不要傳"
+                AppUi.secondary(this)
                 textSize = 20f
                 setOnClickListener { abort("已取消，照片沒有傳送") }
-            })
+            }, buttonParams())
         })
         tts = TextToSpeech(this, this)
     }

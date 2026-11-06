@@ -107,7 +107,7 @@ object LiveMessageWatch {
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_collector)
+            .setSmallIcon(R.drawable.ic_favorite)
             .setContentTitle("小心！$appLabel" + (if (sender.isNotEmpty()) "「$sender」" else "") + "的訊息可能是詐騙")
             .setContentText("不要匯款、不要給驗證碼、不要點連結")
             .setStyle(Notification.BigTextStyle().bigText(text))

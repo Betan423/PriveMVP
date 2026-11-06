@@ -2,7 +2,6 @@ package com.example.privagentcollector
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
@@ -47,7 +46,7 @@ class QuickAssistActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(12), dp(20), dp(24))
             background = GradientDrawable().apply {
-                setColor(Color.WHITE)
+                setColor(AppUi.SURFACE)
                 cornerRadii = FloatArray(8) { i -> if (i < 4) dp(24).toFloat() else 0f }
             }
         }
@@ -56,11 +55,11 @@ class QuickAssistActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(this@QuickAssistActivity).apply {
                 text = "PrivAgent 快速助理"
-                textSize = 20f
-                setTextColor(AppUi.PRIMARY)
+                AppUi.title(this, 21f)
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(Button(this@QuickAssistActivity).apply {
                 text = "關閉"
+                AppUi.secondary(this)
                 setOnClickListener { finish() }
             })
         })

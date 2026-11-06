@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.provider.ContactsContract
 import android.text.Editable
 import android.text.InputFilter
@@ -42,7 +41,7 @@ class MessageCheckPanel(
         // A request outlives the Activity (e.g. recreation); its state and result live here.
         @Volatile private var sending = false
         @Volatile private var resultText: CharSequence = ""
-        @Volatile private var resultColor = Color.DKGRAY
+        @Volatile private var resultColor = AppUi.NEUTRAL
         @Volatile private var sourceText: CharSequence = ""
         private var current = WeakReference<MessageCheckPanel>(null)
 
@@ -100,12 +99,14 @@ class MessageCheckPanel(
                 override fun afterTextChanged(s: Editable?) { if (!settingText) fromNotification = false }
             })
         }
-        root.addView(input)
+        fun fullWidth(marginDp: Int) = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(marginDp) }
+        root.addView(input, fullWidth(8))
         pickButton = Button(activity).apply {
             text = "從目前的通知選一則"
             AppUi.secondary(this)
             setOnClickListener { pickNotification() }
-            root.addView(this)
+            root.addView(this, fullWidth(10))
         }
         cloudBox = CheckBox(activity).apply {
             text = "同意使用 AI 判讀（目前由本機 Qwen 模擬雲端，只送隱私資料）"
@@ -135,11 +136,12 @@ class MessageCheckPanel(
             text = "檢查這則訊息"
             AppUi.primary(this)
             setOnClickListener { begin() }
-            root.addView(this)
+            root.addView(this, fullWidth(12))
         }
         result = label("", 19f).apply {
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 12)
+            background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 16)
+            (layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(12)
         }
         source = label("", 13f).also { AppUi.body(it, 13f) }
         current = WeakReference(this)
@@ -229,7 +231,7 @@ class MessageCheckPanel(
         val baseUrl = if (cloud) endpoint() ?: return else ""
         AssistConfig.save(activity, tokenInput.text.toString(), cloud, excerptBox.isChecked)
         preparing = true
-        publish("正在遮蔽與分析…", Color.DKGRAY, "", done = false)
+        publish("正在遮蔽與分析…", AppUi.NEUTRAL, "", done = false)
         val sourceKind = if (fromNotification) "notification" else "pasted"
         val allowExcerpt = excerptBox.isChecked
         Thread({
@@ -247,7 +249,7 @@ class MessageCheckPanel(
                             .setNegativeButton("改用手機本機判讀") { _, _ -> send("", packet, false) }
                             .setOnCancelListener {
                                 preparing = false
-                                publish("已取消，沒有傳送任何資料", Color.DKGRAY, "", done = true)
+                                publish("已取消，沒有傳送任何資料", AppUi.NEUTRAL, "", done = true)
                             }
                             .show()
                     } catch (error: Exception) {
@@ -263,7 +265,7 @@ class MessageCheckPanel(
     private fun send(baseUrl: String, packet: MessageGuard.Packet, cloud: Boolean) {
         preparing = false
         sending = true
-        publish(if (cloud) "已送出隱私 packet，等待判讀（約 2–15 秒）…" else "手機本機判讀中…", Color.DKGRAY, "", done = false)
+        publish(if (cloud) "已送出隱私 packet，等待判讀（約 2–15 秒）…" else "手機本機判讀中…", AppUi.NEUTRAL, "", done = false)
         val token = tokenInput.text.toString().trim().ifBlank { AssistConfig.token(activity) }
         Thread({
             try {
@@ -273,10 +275,10 @@ class MessageCheckPanel(
                     for (code in outcome.reasonCodes) MessageGuard.reasonText[code]?.let { append("\n・").append(it) }
                 }
                 val color = when (outcome.level) {
-                    MessageGuard.Level.HIGH -> Color.rgb(183, 28, 28)
-                    MessageGuard.Level.CAUTION -> Color.rgb(230, 81, 0)
-                    MessageGuard.Level.LOW_SIGNAL -> Color.rgb(30, 117, 109)
-                    MessageGuard.Level.INSUFFICIENT -> Color.DKGRAY
+                    MessageGuard.Level.HIGH -> AppUi.DANGER
+                    MessageGuard.Level.CAUTION -> AppUi.WARNING
+                    MessageGuard.Level.LOW_SIGNAL -> AppUi.SUCCESS
+                    MessageGuard.Level.INSUFFICIENT -> AppUi.NEUTRAL
                 }
                 publish(text, color, "判讀來源：${outcome.source}", done = true)
             } catch (error: Throwable) {
@@ -301,7 +303,7 @@ class MessageCheckPanel(
         preparing = false
         publish(
             "這次檢查無法完成，App 已安全停止傳送。請再試一次；若仍失敗，請重新開啟 App。",
-            Color.rgb(183, 28, 28),
+            AppUi.DANGER,
             "判讀來源：未送出或已回退",
             done = true
         )
