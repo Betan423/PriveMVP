@@ -3,8 +3,7 @@ package com.example.privagentcollector
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
@@ -52,19 +51,22 @@ class ScamAlertActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(24), dp(24), dp(24))
-            background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = dp(24).toFloat() }
+            background = AppUi.rounded(this@ScamAlertActivity, AppUi.SURFACE, 26)
         }
-        fun text(value: String, size: Float, color: Int = Color.DKGRAY) = root.addView(TextView(this).apply {
-            text = value; textSize = size; setTextColor(color); setPadding(0, dp(6), 0, dp(6))
-        })
-        text("⚠️ $heading", 26f, Color.rgb(183, 28, 28))
-        text(advice, 22f, Color.BLACK)
+        fun text(value: String, size: Float, color: Int = AppUi.NEUTRAL, bold: Boolean = false) =
+            root.addView(TextView(this).apply {
+                text = value; textSize = size; setTextColor(color); setPadding(0, dp(6), 0, dp(6))
+                setLineSpacing(0f, 1.3f)
+                if (bold) setTypeface(typeface, Typeface.BOLD)
+            })
+        root.addView(AppUi.iconBadge(this, R.drawable.ic_sms_warning, AppUi.DANGER, AppUi.soft(AppUi.DANGER), 72, 40))
+        text(heading, 26f, AppUi.DANGER, bold = true)
+        text(advice, 22f, AppUi.TEXT, bold = true)
         if (reasons.isNotEmpty()) text(reasons.joinToString("\n") { "・$it" }, 20f)
         root.addView(Button(this).apply {
             text = "我知道了"
+            AppUi.primary(this, AppUi.DANGER)
             textSize = 24f
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { setColor(Color.rgb(183, 28, 28)); cornerRadius = dp(16).toFloat() }
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(72)).apply { topMargin = dp(16) })
         setContentView(LinearLayout(this).apply {

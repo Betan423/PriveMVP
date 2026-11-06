@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="app_background">#F6F9FC</color>
+    <color name="app_background">#F8FAFD</color>
     <color name="app_surface">#FFFFFF</color>
-    <color name="app_primary">#1E5A78</color>
-    <color name="app_accent">#1E756D</color>
-    <color name="app_text">#17324D</color>
+    <color name="app_primary">#2F7DE1</color>
+    <color name="app_accent">#2F7DE1</color>
+    <color name="app_text">#17325C</color>
 </resources>

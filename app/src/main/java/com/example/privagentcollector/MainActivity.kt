@@ -3,6 +3,8 @@ package com.example.privagentcollector
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -14,7 +16,6 @@ import android.view.WindowInsets
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -46,27 +47,49 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(32))
+            setPadding(dp(24), dp(20), dp(24), dp(32))
             setBackgroundColor(AppUi.BACKGROUND)
         }
+        val scroll = ScrollView(this)
         root.addView(header())
-        root.addView(AppUi.spacer(this, 18))
-        root.addView(privacyBanner())
-        root.addView(AppUi.spacer(this, 18))
-        root.addView(photoCard(), cardParams())
-        root.addView(AppUi.spacer(this, 18))
-        root.addView(messageCard(), cardParams())
+        root.addView(AppUi.spacer(this, 30))
+        root.addView(TextView(this).apply {
+            text = "${greeting()} 👋"
+            AppUi.title(this, 30f)
+        })
+        root.addView(TextView(this).apply {
+            text = "今天想做什麼？我會陪您一步一步完成。"
+            setPadding(0, dp(8), 0, 0)
+            AppUi.body(this, 18f)
+        })
+        root.addView(AppUi.spacer(this, 28))
+        root.addView(voiceCard(), cardParams())
+        // Every spoken or tapped task reports its progress here, right under the voice card.
+        val statusBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(14), 0, 0)
+        }
+        root.addView(statusBox, cardParams())
+        root.addView(AppUi.spacer(this, 28))
+        root.addView(AppUi.section(this, "常用協助"))
+        val messageSection = messageCard()
+        root.addView(helpGrid { scroll.post { scroll.smoothScrollTo(0, messageSection.top) } }, cardParams())
+        root.addView(AppUi.spacer(this, 28))
+        root.addView(messageSection, cardParams())
         root.addView(AppUi.spacer(this, 18))
         root.addView(supportCard(), cardParams())
-        root.addView(AppUi.spacer(this, 12))
+        root.addView(AppUi.spacer(this, 18))
+        root.addView(privacyNote(), cardParams())
         root.addView(TextView(this).apply {
             text = getString(R.string.app_footer, BuildConfig.VERSION_NAME)
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, 0)
+            setPadding(0, dp(16), 0, 0)
             AppUi.body(this, 13f)
         })
+        assistantPanel = AssistantPanel(this, statusBox, ::dp, ::assistEndpoint,
+            showControls = false) { messagePanel?.pickNotification() }
 
-        val scroll = ScrollView(this).apply {
+        scroll.apply {
             setBackgroundColor(AppUi.BACKGROUND)
             isFillViewport = true
             addView(root)
@@ -86,112 +109,111 @@ class MainActivity : Activity() {
         scroll.requestApplyInsets()
     }
 
+    private fun greeting(): String = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+        in 5..10 -> "早安"
+        in 11..17 -> "午安"
+        else -> "晚安"
+    }
+
     private fun header(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(ImageView(this@MainActivity).apply {
-            setImageResource(R.drawable.ic_collector)
-            contentDescription = "PrivAgent"
-        }, LinearLayout.LayoutParams(dp(54), dp(54)).apply { marginEnd = dp(14) })
+        addView(LinearLayout(this@MainActivity).apply {
+            gravity = Gravity.CENTER
+            background = AppUi.rounded(this@MainActivity, AppUi.PRIMARY, 14)
+            addView(AppUi.icon(this@MainActivity, R.drawable.ic_favorite, Color.WHITE, 27))
+        }, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginEnd = dp(12) })
+        addView(TextView(this@MainActivity).apply {
+            text = "PrivAgent"
+            textSize = 25f
+            setTextColor(AppUi.TEXT)
+            setTypeface(typeface, Typeface.BOLD)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(LinearLayout(this@MainActivity).apply {
+            gravity = Gravity.CENTER
+            background = AppUi.circle(AppUi.PRIMARY_SOFT)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "AI 連線設定"
+            setOnClickListener { showConnectionSettings() }
+            addView(AppUi.icon(this@MainActivity, R.drawable.ic_settings, AppUi.PRIMARY_DARK, 27))
+        }, LinearLayout.LayoutParams(dp(52), dp(52)))
+    }
+
+    /** The big blue「按一下，直接告訴我」card: starts speech input for either task. */
+    private fun voiceCard(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(22), dp(24), dp(18), dp(24))
+        background = AppUi.rounded(this@MainActivity, AppUi.PRIMARY, 26)
+        elevation = dp(3).toFloat()
+        isClickable = true
+        isFocusable = true
+        contentDescription = "按一下，直接用說的告訴我"
+        setOnClickListener { assistantPanel?.listen() }
+        addView(AppUi.iconBadge(this@MainActivity, R.drawable.ic_mic, AppUi.PRIMARY, Color.WHITE, 70, 39))
         addView(LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(this@MainActivity).apply {
-                text = "PrivAgent"
-                AppUi.title(this, 27f)
+                text = "按一下，直接告訴我"
+                textSize = 22f
+                setTextColor(Color.WHITE)
+                setTypeface(typeface, Typeface.BOLD)
             })
             addView(TextView(this@MainActivity).apply {
-                text = "隱私優先的生活助理"
-                AppUi.body(this, 14f)
+                text = "例如：「把照片傳給女兒」"
+                textSize = 16f
+                setTextColor(AppUi.ON_PRIMARY_MUTED)
+                setPadding(0, dp(5), 0, 0)
             })
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(Button(this@MainActivity).apply {
-            text = "連線設定"
-            AppUi.secondary(this)
-            setOnClickListener { showConnectionSettings() }
-        })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(18) })
+        addView(AppUi.icon(this@MainActivity, R.drawable.ic_chevron_right, Color.WHITE, 32))
     }
 
-    private fun privacyBanner(): View = LinearLayout(this).apply {
+    private fun helpGrid(showMessageCheck: () -> Unit): View = AppUi.grid(this, columns = 2, tiles = listOf(
+        AppUi.helpTile(this, R.drawable.ic_photo_library, "傳送照片", AppUi.PURPLE) { assistantPanel?.sharePhoto() },
+        AppUi.helpTile(this, R.drawable.ic_image, "傳最新照片", AppUi.PRIMARY) { assistantPanel?.shareLatestPhoto() },
+        AppUi.helpTile(this, R.drawable.ic_sms_warning, "檢查可疑訊息", AppUi.ROSE, showMessageCheck),
+        AppUi.helpTile(this, R.drawable.ic_notifications, "從通知檢查", AppUi.ORANGE) {
+            showMessageCheck()
+            messagePanel?.pickNotification()
+        },
+        AppUi.helpTile(this, R.drawable.ic_family, "家人設定", AppUi.ACCENT) { assistantPanel?.openFamilySettings() },
+        AppUi.helpTile(this, R.drawable.ic_touch_app, "LINE 免觸控", AppUi.SLATE) {
+            assistantPanel?.openLineAutomationSettings()
+        }
+    ))
+
+    private fun privacyNote(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16), dp(14), dp(16), dp(14))
+        setPadding(dp(16), dp(16), dp(16), dp(16))
         background = AppUi.rounded(this@MainActivity, AppUi.SUCCESS_SOFT, 16)
+        addView(AppUi.icon(this@MainActivity, R.drawable.ic_shield, AppUi.ACCENT, 29))
         addView(TextView(this@MainActivity).apply {
-            text = "✓"
-            textSize = 22f
-            setTextColor(AppUi.ACCENT)
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(dp(34), ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(TextView(this@MainActivity).apply {
-            text = "隱私保護已啟用\n敏感資料會先在手機完成清理與判斷"
-            AppUi.body(this, 14f)
-            setTextColor(AppUi.TEXT)
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-    }
-
-    private fun photoCard(): LinearLayout = AppUi.card(this).apply {
-        addView(AppUi.tag(this@MainActivity, "情境 01"), LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(TextView(this@MainActivity).apply {
-            text = "安心傳送照片"
-            setPadding(0, dp(12), 0, dp(6))
-            AppUi.title(this)
-        })
-        addView(TextView(this@MainActivity).apply {
-            text = "選擇家人與照片後，系統會建立不含 EXIF／GPS 的新副本，再安全交給 LINE。"
-            AppUi.body(this)
-        })
-        addView(AppUi.spacer(this@MainActivity, 12))
-        addView(LinearLayout(this@MainActivity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(AppUi.tag(this@MainActivity, "EXIF／GPS 清除"))
-            addView(AppUi.tag(this@MainActivity, "送出前語音確認"), LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
-        })
-        addView(AppUi.spacer(this@MainActivity, 16))
-        addView(Button(this@MainActivity).apply {
-            text = "選擇照片並傳送"
-            AppUi.primary(this)
-            setOnClickListener { assistantPanel?.sharePhoto() }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(Button(this@MainActivity).apply {
-            text = "傳送最新一張照片"
-            AppUi.secondary(this)
-            setOnClickListener { assistantPanel?.shareLatestPhoto() }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(8)
-        })
-        addView(LinearLayout(this@MainActivity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(Button(this@MainActivity).apply {
-                text = "家人設定"
-                AppUi.secondary(this)
-                setOnClickListener { assistantPanel?.openFamilySettings() }
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(4) })
-            addView(Button(this@MainActivity).apply {
-                text = "LINE 免觸控"
-                AppUi.secondary(this)
-                setOnClickListener { assistantPanel?.openLineAutomationSettings() }
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(4) })
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(4)
-        })
-        val statusBox = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-        addView(statusBox)
-        assistantPanel = AssistantPanel(this@MainActivity, statusBox, ::dp, ::assistEndpoint,
-            showControls = false) { messagePanel?.pickNotification() }
+            text = "您的資料會先在手機上處理，只有必要的資訊才會離開手機。"
+            textSize = 15f
+            setLineSpacing(0f, 1.4f)
+            setTextColor(AppUi.SUCCESS_TEXT)
+            setTypeface(typeface, Typeface.BOLD)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
     }
 
     private fun messageCard(): LinearLayout = AppUi.card(this).apply {
-        addView(AppUi.tag(this@MainActivity, "情境 02"), LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(TextView(this@MainActivity).apply {
-            text = "詐騙訊息檢查"
-            setPadding(0, dp(12), 0, dp(6))
-            AppUi.title(this)
+        addView(LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(AppUi.iconBadge(this@MainActivity, R.drawable.ic_sms_warning, AppUi.ROSE,
+                AppUi.soft(AppUi.ROSE), 48, 26))
+            addView(TextView(this@MainActivity).apply {
+                text = "詐騙訊息檢查"
+                AppUi.title(this)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
         })
         addView(TextView(this@MainActivity).apply {
-            text = "貼上訊息或從通知選取。手機先遮蔽個資與萃取特徵，再由本機 Qwen 模擬未來雲端 AI 判讀。"
+            text = "貼上訊息或從通知選一則。手機會先遮蔽個資、抽出風險特徵，再交給 AI 判讀。"
+            setPadding(0, dp(12), 0, 0)
             AppUi.body(this)
         })
         addView(AppUi.spacer(this@MainActivity, 10))
@@ -202,12 +224,12 @@ class MainActivity : Activity() {
     private fun supportCard(): LinearLayout = AppUi.card(this).apply {
         addView(TextView(this@MainActivity).apply {
             text = "輔助與權限"
-            AppUi.title(this, 18f)
+            AppUi.title(this, 19f)
         })
         addView(TextView(this@MainActivity).apply {
-            text = "這些設定只支援上方兩個情境，不會啟動研究資料蒐集。"
+            text = "這些設定只支援照片分享與訊息檢查，不會啟動研究資料蒐集。"
             setPadding(0, dp(4), 0, dp(8))
-            AppUi.body(this, 14f)
+            AppUi.body(this, 15f)
         })
         addView(CheckBox(this@MainActivity).apply {
             text = "顯示 PrivAgent 浮動按鈕"

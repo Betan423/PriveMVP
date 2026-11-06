@@ -228,7 +228,7 @@ class FloatingBubbleService : Service() {
             setPadding(dp(20), dp(14), dp(20), dp(14))
             background = GradientDrawable().apply {
                 cornerRadius = dp(18).toFloat()
-                setColor(Color.argb(230, 25, 74, 85))
+                setColor(Color.argb(230, 23, 50, 92))
             }
             isClickable = true
             setOnClickListener { speaker?.say("請點一下畫面中的目標圖片；若不傳送，請按下方取消") }
@@ -319,7 +319,7 @@ class FloatingBubbleService : Service() {
         val open = PendingIntent.getActivity(this, 0, Intent(this, QuickAssistActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_collector)
+            .setSmallIcon(R.drawable.ic_favorite)
             .setContentTitle("PrivAgent 快速按鈕已開啟")
             .setContentText("點畫面上的「助理」即可使用照片分享或訊息檢查")
             .setContentIntent(open)

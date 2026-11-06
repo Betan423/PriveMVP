@@ -7,7 +7,6 @@ import android.content.ActivityNotFoundException
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -99,7 +98,7 @@ class AssistantPanel(
         status.visibility = android.view.View.VISIBLE
         status.text = text
         status.setTextColor(color)
-        status.background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 12)
+        status.background = AppUi.rounded(activity, AppUi.PRIMARY_SOFT, 16)
         status.setPadding(dp(14), dp(12), dp(14), dp(12))
         onSay(text)
     }
@@ -384,7 +383,7 @@ class AssistantPanel(
             if (automatic) "照片已安全交給 LINE。系統只會精確選取「$name」；請在語音詢問時說「確認傳送」。任何畫面不確定都會停止。\n判讀來源：$source"
             else "照片已安全交給 LINE。請在 LINE 選「$name」並按傳送；回到這裡不代表 LINE 已送出。\n判讀來源：$source"
         else "已打開分享畫面，請選 App 和「$name」再按傳送。照片沒有拍攝地點資訊。\n判讀來源：$source",
-            Color.rgb(27, 94, 32))
+            AppUi.SUCCESS)
     }
 
     private fun lineInstalled() = try {
@@ -529,7 +528,7 @@ class AssistantPanel(
             append("\n\n判讀來源：").append(source)
         }
         val action = CoreTasks.sopAction[sop]
-        say(body, if (action != null) Color.rgb(230, 81, 0) else Color.DKGRAY)
+        say(body, if (action != null) AppUi.WARNING else AppUi.NEUTRAL)
         val builder = dialog().setTitle(if (action != null) "找到可能的原因" else "手機檢查結果").setMessage(body)
         if (action != null && scope == "guided_help") {
             builder.setPositiveButton(action) { _, _ ->
@@ -555,7 +554,7 @@ class AssistantPanel(
                 am.setStreamVolume(AudioManager.STREAM_RING, target, AudioManager.FLAG_SHOW_UI or AudioManager.FLAG_PLAY_SOUND)
                 // Some phones ignore the change silently; only report success when it actually took effect.
                 if (am.getStreamVolume(AudioManager.STREAM_RING) >= target) {
-                    say("已把鈴聲調到七成。如果還是聽不到，請再按一次「手機救援」。", Color.rgb(27, 94, 32))
+                    say("已把鈴聲調到七成。如果還是聽不到，請再按一次「手機救援」。", AppUi.SUCCESS)
                     return
                 }
             } catch (_: SecurityException) {
@@ -575,6 +574,6 @@ class AssistantPanel(
         try { activity.startActivity(intent) } catch (_: ActivityNotFoundException) {
             activity.startActivity(Intent(Settings.ACTION_SETTINGS))
         }
-        say("已打開設定頁，請照畫面調整；我不會自動幫你改。調好後可以再按一次「手機救援」確認。", Color.rgb(27, 94, 32))
+        say("已打開設定頁，請照畫面調整；我不會自動幫你改。調好後可以再按一次「手機救援」確認。", AppUi.SUCCESS)
     }
 }
